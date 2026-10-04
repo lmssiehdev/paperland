@@ -10,7 +10,33 @@ import { Project, Node } from "ts-morph";
 
 // "Class.member" -> new name
 const RENAMES: Record<string, string> = {
-  // filled in after typing is done
+  // units
+  "Unit.in": "insideBase",            // base the unit is currently inside (own base = safe)
+  "Unit.vrange": "viewRange",         // world-space radius visible around the unit
+  "Unit.top": "rank",                 // leaderboard position (1-based)
+  "Unit.log": "positionLog",
+  "Unit.lastSquare": "lastArea",
+  "Bot.def": "defense",
+  "Bot.capSquare": "captureArea",     // area the current loop would capture
+  // area ("square" in the original = area)
+  "Base.square": "area",
+  "Base.calcSquare": "calcArea",
+  "Game.square": "arenaArea",
+  "Polygon.square": "area",
+  "Polygon.rawSquare": "signedArea",
+  // trails / polygons
+  "Track.simplyline": "simplifiedPoints",
+  "Polygon.simplify": "simplifiedPoints",
+  "Polyline.add2": "addPoint",
+  // geometry
+  "Segment.a": "normalX",             // unit normal of the line (a*x + b*y + c = 0)
+  "Segment.b": "normalY",
+  "Segment.c": "lineOffset",
+  "Game.space": "grid",               // SpatialGrid
+  "Vec2.space": "grid",
+  // misc
+  "Game.qas": "qualityEventsPending", // one-shot analytics flags per quality level
+  "NamePool.aviable": "available",    // typo in original
 };
 
 const dry = process.argv.includes("--dry");

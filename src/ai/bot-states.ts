@@ -48,23 +48,23 @@ const botNearPlayerTrack = (bot: Bot) => {
     player
   } = bot.game;
   if (player) {
-    const range = Math.max(bot.vrange, player.vrange);
+    const range = Math.max(bot.viewRange, player.viewRange);
     const aggroRange = range * bot.aggro * 0.75;
     const {
-      simplyline
+      simplifiedPoints
     } = player.track;
-    for (let i = 0, count = simplyline.length; i < count; i++) {
-      if (bot.position.distance2(simplyline[i]) < aggroRange * aggroRange) {
+    for (let i = 0, count = simplifiedPoints.length; i < count; i++) {
+      if (bot.position.distance2(simplifiedPoints[i]) < aggroRange * aggroRange) {
         return true;
       }
     }
   }
 };
 const botFeelsThreatened = (bot: Bot, _unused?: unknown) => {
-  if (bot.in === bot.base) {
+  if (bot.insideBase === bot.base) {
     return false;
   }
-  return bot.maxDanger > bot.def * 0.8;
+  return bot.maxDanger > bot.defense * 0.8;
 };
 export var BOT_STATES: BotStates = {
   idle: {
@@ -72,7 +72,7 @@ export var BOT_STATES: BotStates = {
       return {};
     },
     update: function (bot: Bot, ctx: EmptyContext) {
-      if (bot.in === bot.base) {
+      if (bot.insideBase === bot.base) {
         if (bot.game.rng() < 0.25) {
           return "cut";
         } else {
@@ -85,19 +85,19 @@ export var BOT_STATES: BotStates = {
   },
   capital: {
     update: function (bot: Bot, ctx: CapitalContext) {
-      if (bot.in !== bot.base) {
+      if (bot.insideBase !== bot.base) {
         return "capture";
       }
-      const dist = bot.position.distance(bot.game.space.center);
+      const dist = bot.position.distance(bot.game.grid.center);
       const borderDistance = bot.game.border.radius - dist;
       bot.target = ctx.point;
     }
   },
   cut: {
     enter: function (bot: Bot) {
-      const delta = bot.position.clone().sub(bot.game.space.center);
+      const delta = bot.position.clone().sub(bot.game.grid.center);
       const len = delta.magnitude();
-      const segment = new Segment(bot.position, delta.normalize().mulScalar(bot.game.border.radius + 10).add(bot.game.space.center));
+      const segment = new Segment(bot.position, delta.normalize().mulScalar(bot.game.border.radius + 10).add(bot.game.grid.center));
       const intersections = bot.base.polygon.intersections(segment);
       const result: CutContext = {};
       if (!intersections.length) {
@@ -109,10 +109,10 @@ export var BOT_STATES: BotStates = {
       return result;
     },
     update: function (bot: Bot, ctx: CutContext) {
-      if (bot.in !== bot.base) {
+      if (bot.insideBase !== bot.base) {
         return "capture";
       }
-      const dist = bot.position.distance(bot.game.space.center);
+      const dist = bot.position.distance(bot.game.grid.center);
       const borderDistance = bot.game.border.radius - dist;
       if (!ctx.exitPoint || borderDistance < 1) {
         return "idle";
@@ -146,7 +146,7 @@ export var BOT_STATES: BotStates = {
       return result;
     },
     update: function (bot: Bot, ctx: ExitContext) {
-      if (bot.in !== bot.base) {
+      if (bot.insideBase !== bot.base) {
         // ORIGINAL: reassigns the local parameter only (no effect on the FSM context).
         ctx = {} as ExitContext;
         return "capture";
@@ -170,7 +170,7 @@ export var BOT_STATES: BotStates = {
         if (!Object.values(ctx.exitPoint.segments).some(item => item && item.shape === bot.base.polygon)) {
           ctx.exitPoint = start;
         }
-        if (bot.target && bot.target.distance(bot.game.space.center) > bot.game.border.radius - 1) {
+        if (bot.target && bot.target.distance(bot.game.grid.center) > bot.game.border.radius - 1) {
           ctx.exitPoint = start;
         }
       }
@@ -179,7 +179,7 @@ export var BOT_STATES: BotStates = {
   },
   capture: {
     update: function (bot: Bot, ctx: object) {
-      if (bot.in === bot.base) {
+      if (bot.insideBase === bot.base) {
         return "idle";
       }
       if (botNearPlayerTrack(bot)) {
@@ -190,7 +190,7 @@ export var BOT_STATES: BotStates = {
       } = bot.game.config;
       const {
         center
-      } = bot.game.space;
+      } = bot.game.grid;
       const {
         radius
       } = bot.game.border;
@@ -206,39 +206,39 @@ export var BOT_STATES: BotStates = {
         return;
       }
       let loopArea = 0;
-      for (let i = 1, count = bot.track.simplyline.length; i < count; i++) {
-        const point = bot.track.simplyline[i - 1];
-        const point2 = bot.track.simplyline[i];
+      for (let i = 1, count = bot.track.simplifiedPoints.length; i < count; i++) {
+        const point = bot.track.simplifiedPoints[i - 1];
+        const point2 = bot.track.simplifiedPoints[i];
         loopArea += (point.x + point2.x) * (point2.y - point.y);
       }
-      let point = bot.track.simplyline[bot.track.simplyline.length - 1];
+      let point = bot.track.simplifiedPoints[bot.track.simplifiedPoints.length - 1];
       let baseNearestPoint = bot.baseNearestPoint;
       loopArea += (point.x + baseNearestPoint.x) * (baseNearestPoint.y - point.y);
       point = bot.baseNearestPoint;
-      baseNearestPoint = bot.track.simplyline[0];
+      baseNearestPoint = bot.track.simplifiedPoints[0];
       loopArea += (point.x + baseNearestPoint.x) * (baseNearestPoint.y - point.y);
       const sign = Math.sign(loopArea);
       loopArea = Math.abs(loopArea / 2);
-      bot.capSquare = loopArea;
+      bot.captureArea = loopArea;
       const {
-        def,
+        defense,
         greed,
         safety
       } = bot;
-      const maxTrackLength = Math.PI * 2 * bot.vrange * greed;
+      const maxTrackLength = Math.PI * 2 * bot.viewRange * greed;
       const trackLengthRatio = bot.track.length / maxTrackLength;
-      const maxCapSquare = Math.min(bot.base.square, Math.PI * bot.vrange * bot.vrange) * greed;
-      const capSquareRatio = bot.capSquare / maxCapSquare;
-      const maxStartDistance = bot.vrange * lerp(3, 0.7, safety);
+      const maxCapSquare = Math.min(bot.base.area, Math.PI * bot.viewRange * bot.viewRange) * greed;
+      const capSquareRatio = bot.captureArea / maxCapSquare;
+      const maxStartDistance = bot.viewRange * lerp(3, 0.7, safety);
       const startDistanceRatio = bot.position.distance(bot.track.polyline.start) / maxStartDistance;
-      const safeBaseDistance = bot.unitToTrackDistances.reduce((acc, unitToTrackDistance) => Math.min(unitToTrackDistance.trackDistance, acc), Infinity) * 0.8 * def;
+      const safeBaseDistance = bot.unitToTrackDistances.reduce((acc, unitToTrackDistance) => Math.min(unitToTrackDistance.trackDistance, acc), Infinity) * 0.8 * defense;
       const dangerRatio = bot.baseDistance / safeBaseDistance;
       const returnUrge = Math.max(trackLengthRatio, capSquareRatio, startDistanceRatio, dangerRatio);
       if (returnUrge > 1) {
         return "back";
       }
-      const greedRange = bot.vrange * greed;
-      const dangerRange = bot.distanceDanger * 0.6 * def;
+      const greedRange = bot.viewRange * greed;
+      const dangerRange = bot.distanceDanger * 0.6 * defense;
       const farDistance = greedRange;
       const nearDistance = farDistance * 0.8;
       const delta = bot.target.clone().sub(bot.position);
@@ -296,11 +296,11 @@ export var BOT_STATES: BotStates = {
   back: {
     enter: function (bot: Bot, ctx: object) {},
     update: function (bot: Bot, ctx: object) {
-      if (bot.in === bot.base) {
+      if (bot.insideBase === bot.base) {
         return "idle";
       }
-      bot.smoothness = lerp(1, Math.max(1, Math.max(1, Math.min(bot.def, bot.greed) * 4)), Math.max(1, bot.maxDanger));
-      const borderDistance = bot.game.border.radius - bot.position.distance(bot.game.space.center);
+      bot.smoothness = lerp(1, Math.max(1, Math.max(1, Math.min(bot.defense, bot.greed) * 4)), Math.max(1, bot.maxDanger));
+      const borderDistance = bot.game.border.radius - bot.position.distance(bot.game.grid.center);
       if (borderDistance < 20) {
         bot.smoothness = 1;
       }
@@ -317,9 +317,9 @@ export var BOT_STATES: BotStates = {
         return "idle";
       }
       const {
-        simplyline
+        simplifiedPoints
       } = player.track;
-      if (!simplyline.length) {
+      if (!simplifiedPoints.length) {
         return "idle";
       }
       if (player.track.length < bot.game.config.botAttackTrackLength && botFeelsThreatened(bot)) {
@@ -327,14 +327,14 @@ export var BOT_STATES: BotStates = {
       }
       let nearestIndex = 0;
       let min = Infinity;
-      simplyline.forEach((point, index) => {
+      simplifiedPoints.forEach((point, index) => {
         const distSq = bot.position.distance2(point);
         if (distSq < min) {
           min = distSq;
           nearestIndex = index;
         }
       });
-      bot.target = simplyline[nearestIndex];
+      bot.target = simplifiedPoints[nearestIndex];
     }
   }
 };

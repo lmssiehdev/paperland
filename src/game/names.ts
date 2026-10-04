@@ -14,7 +14,7 @@ export class NamePool {
     let result = this.pool[~~(roll * this.pool.length)];
     return result;
   }
-  aviable() {
+  available() {
     return true;
   }
   request() {}

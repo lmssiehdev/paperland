@@ -52,7 +52,7 @@ export class SpatialGrid {
         this.cells.push(new GridCell(j, i));
       }
     }
-    Vec2.space = this;
+    Vec2.grid = this;
   }
   count(): number {
     let result = 0;

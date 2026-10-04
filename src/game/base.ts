@@ -10,7 +10,7 @@ export class Base {
     merges: unknown[];
     polygon: Polygon;
     path: Path2D;
-    square: number;
+    area: number;
 
   constructor(unit: Unit, points: Vec2[]) {
     this.unit = undefined;
@@ -19,7 +19,7 @@ export class Base {
     this.merges = [];
     this.polygon = new Polygon(points);
     this.polygon.commit(this);
-    this.calcSquare();
+    this.calcArea();
     this.polygon.calcPath();
   }
   calcPath() {
@@ -43,8 +43,8 @@ export class Base {
     this.path.closePath();
     return this.path;
   }
-  calcSquare() {
-    this.square = this.polygon.square();
+  calcArea() {
+    this.area = this.polygon.area();
   }
   remove() {
     this.polygon.remove();
@@ -66,7 +66,7 @@ export class Base {
       point: point,
       segment: segment
     } = intersection;
-    if (unit.in === this) {
+    if (unit.insideBase === this) {
       if (intersection.zn < 0) {
         return;
       }
@@ -75,7 +75,7 @@ export class Base {
       }
       this.polygon.insert(segment, point);
       unit.track.add(point);
-      unit.in = null;
+      unit.insideBase = null;
       if (unit.schemes) {
         unit.schemes.out();
       }
@@ -89,7 +89,7 @@ export class Base {
       if (point.equal(movement.start)) {
         return;
       }
-      if (unit.in) {
+      if (unit.insideBase) {
         return;
       }
       this.polygon.insert(segment, point);
@@ -97,7 +97,7 @@ export class Base {
       if (unit.track.polyline.end) {
         this.unit.game.handleReturn(unit);
       }
-      unit.in = this;
+      unit.insideBase = this;
       unit.track.remove();
     }
   }
@@ -106,14 +106,14 @@ export class Base {
       point: point,
       segment: segment
     } = intersection;
-    if (unit.in === this) {
+    if (unit.insideBase === this) {
       if (intersection.zn < 0) {
         return;
       }
       this.polygon.insert(segment, point);
       unit.track.add(point);
       unit.track.intersect(intersection, this, false);
-      unit.in = null;
+      unit.insideBase = null;
     } else {
       if (intersection.zn > 0) {
         return;
@@ -124,13 +124,13 @@ export class Base {
       if (point.equal(movement.end)) {
         return;
       }
-      if (unit.in) {
+      if (unit.insideBase) {
         return;
       }
       this.polygon.insert(segment, point);
       unit.track.add(point);
       unit.track.intersect(intersection, this, true);
-      unit.in = this;
+      unit.insideBase = this;
     }
   }
 }

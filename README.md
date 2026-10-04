@@ -35,7 +35,22 @@ deob/                    intermediate: stage1 (strings), stage2 (webcrack), game
 scripts/                 the pipeline + headless tools
 ```
 
-## Pipeline
+## Checks
+
+```sh
+bun run typecheck   # 0 errors, no `any`, no ts-ignore
+bun run golden      # deterministic sim hash; must not change on refactors
+```
+
+`golden` seeds `Math.random`, builds a fresh `Game`, runs 4000 ticks (player joins at 1000) and
+hashes unit positions/areas/FSM states. Current hash: `11a98dae6745f942`.
+The original obfuscated game gives `0f69990241912066`; the only cause is the domain-lock patch
+(`Player.prototype.moveTo = true`, which the real site also sets). With that line removed the
+hashes match, so deobfuscation + split + TS migration + renames are behavior-identical.
+
+Property renames go through `scripts/rename-props.ts` (TS language service, type-linked).
+
+## Pipeline (historical: produced the initial src/, now hand-maintained TypeScript)
 
 `bun run regen` rebuilds `src/` from `original/app2.js`. It overwrites `src/`, so stop using it
 once you start editing `src/` by hand.

@@ -14,7 +14,7 @@ export class Vec2 {
     cell: GridCell | null;
     segments: Segment[];
     /** Grid that committed points register into; set by SpatialGrid's constructor. */
-    static space: SpatialGrid | undefined;
+    static grid: SpatialGrid | undefined;
 
   constructor(x?: number, y?: number) {
     this.x = undefined;
@@ -33,7 +33,7 @@ export class Vec2 {
       this.segments.push(segment);
     }
     if (!this.cell) {
-      const _0x19525f = Vec2.space.cell(this);
+      const _0x19525f = Vec2.grid.cell(this);
       _0x19525f.commit(this);
     }
   }
@@ -149,4 +149,4 @@ export class Vec2 {
     }
   }
 }
-Vec2.space = undefined;
+Vec2.grid = undefined;

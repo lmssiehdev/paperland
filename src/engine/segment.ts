@@ -23,9 +23,9 @@ export interface Intersection {
 /** Directed line segment between two Vec2 points, with cached direction vector and normalized line equation ax + by + c = 0. */
 export class Segment {
     vector: Vec2;
-    a: number;
-    b: number;
-    c: number;
+    normalX: number;
+    normalY: number;
+    lineOffset: number;
     mark: number;
     shape: Shape | null;
     start: Vec2;
@@ -33,9 +33,9 @@ export class Segment {
 
   constructor(start: Vec2, end: Vec2) {
     this.vector = undefined;
-    this.a = undefined;
-    this.b = undefined;
-    this.c = undefined;
+    this.normalX = undefined;
+    this.normalY = undefined;
+    this.lineOffset = undefined;
     if (start.equal(end)) {}
     this.mark = 0;
     this.shape = null;
@@ -57,9 +57,9 @@ export class Segment {
     const dist = Math.sqrt(dy * dy + dx * dx);
     dy /= dist;
     dx /= dist;
-    this.a = dy;
-    this.b = dx;
-    this.c = -(dy * start.x + dx * start.y);
+    this.normalX = dy;
+    this.normalY = dx;
+    this.lineOffset = -(dy * start.x + dx * start.y);
   }
   clone(): Segment {
     return new Segment(this.start, this.end);
@@ -86,31 +86,31 @@ export class Segment {
     return this.vector.magnitude();
   }
   zn(_0xc6e8f: Segment): number {
-    const a2 = _0xc6e8f.a;
-    const b2 = _0xc6e8f.b;
+    const a2 = _0xc6e8f.normalX;
+    const b2 = _0xc6e8f.normalY;
     const {
-      a,
-      b
+      normalX,
+      normalY
     } = this;
-    return cross2d(a2, b2, a, b);
+    return cross2d(a2, b2, normalX, normalY);
   }
   intersect(segment: Segment): Intersection | null {
-    const a2 = segment.a;
-    const b2 = segment.b;
-    const c2 = segment.c;
+    const a2 = segment.normalX;
+    const b2 = segment.normalY;
+    const c2 = segment.lineOffset;
     const start2 = segment.start;
     const end2 = segment.end;
     const {
-      a,
-      b,
-      c,
+      normalX,
+      normalY,
+      lineOffset,
       start,
       end
     } = this;
-    const distance = cross2d(a2, b2, a, b);
+    const distance = cross2d(a2, b2, normalX, normalY);
     if (!isZero(distance)) {
-      const x = -cross2d(c2, b2, c, b) / distance;
-      const y = -cross2d(a2, c2, a, c) / distance;
+      const x = -cross2d(c2, b2, lineOffset, normalY) / distance;
+      const y = -cross2d(a2, c2, normalX, lineOffset) / distance;
       const point = inRange(start2.x, end2.x, x) && inRange(start2.y, end2.y, y) && inRange(start.x, end.x, x) && inRange(start.y, end.y, y) && new Vec2(x, y);
       if (!point) {
         return null;
@@ -125,7 +125,7 @@ export class Segment {
     }
     const _0x4d2c22 = rangeOverlap(start2.x, end2.x, start.x, end.x);
     const _0x599176 = rangeOverlap(start2.y, end2.y, start.y, end.y);
-    if (isZero(cross2d(a2, c2, a, c)) && isZero(cross2d(b2, c2, b, c)) && _0x4d2c22 >= -EPSILON && _0x599176 >= -EPSILON) {
+    if (isZero(cross2d(a2, c2, normalX, lineOffset)) && isZero(cross2d(b2, c2, normalY, lineOffset)) && _0x4d2c22 >= -EPSILON && _0x599176 >= -EPSILON) {
       if (_0x4d2c22 >= EPSILON || _0x599176 >= EPSILON) {
         let _0x357b15;
         if (inRange(start.x, end.x, start2.x) && inRange(start.y, end.y, start2.y)) {

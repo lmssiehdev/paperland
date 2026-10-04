@@ -47,21 +47,21 @@ export class Unit {
     position: Vec2;
     base: Base;
     track: Track;
-    lastSquare: number;
-    in: Base;
+    lastArea: number;
+    insideBase: Base;
     target: Vec2;
     respawn: boolean;
     statistics: { kills: number; };
-    log: Vec2[];
+    positionLog: Vec2[];
     bornTime: number;
     cities: City[];
     labels: UnitLabel[];
     percent: number;
     bestPercent: number;
     scale: number;
-    vrange: number;
+    viewRange: number;
     direction: number;
-    top: number;
+    rank: number;
     scores: { accumulator: number; kills: number; };
     schemes: SchemeSet;
     baseDistance: number;
@@ -83,23 +83,23 @@ export class Unit {
     this.position = position;
     this.base = new Base(this, basePoints);
     this.track = new Track(this);
-    this.lastSquare = this.base.square;
-    this.in = this.base;
+    this.lastArea = this.base.area;
+    this.insideBase = this.base;
     this.target = null;
     this.respawn = false;
     this.statistics = {
       kills: 0
     };
-    this.log = [];
+    this.positionLog = [];
     this.bornTime = now();
     this.cities = [];
     this.labels = [];
     this.percent = 0;
     this.bestPercent = 0;
     this.scale = 0;
-    this.vrange = 1;
+    this.viewRange = 1;
     this.direction = 0;
-    this.top = 0;
+    this.rank = 0;
     this.scores = {
       accumulator: 0,
       kills: 0
@@ -123,20 +123,20 @@ export class Unit {
     }
   }
   update(dt: number) {
-    this.log.push(this.position);
-    if (this.in !== this.base) {
+    this.positionLog.push(this.position);
+    if (this.insideBase !== this.base) {
       this.scores.accumulator += this.percent * 100 * dt / 1000;
     }
     let nearestDistance = 0;
     let nearestPoint: Vec2 = null;
     let tangent: Vec2 = null;
-    if (this.in !== this.base) {
+    if (this.insideBase !== this.base) {
       nearestDistance = Infinity;
       let nearestIndex = 0;
       const {
-        simplify
+        simplifiedPoints
       } = this.base.polygon;
-      simplify.forEach((item, index) => {
+      simplifiedPoints.forEach((item, index) => {
         const distSq = item.distance2(this.position);
         if (distSq < nearestDistance) {
           nearestDistance = distSq;
@@ -144,8 +144,8 @@ export class Unit {
           nearestIndex = index;
         }
       });
-      const prev = simplify[nearestIndex > 0 ? nearestIndex - 1 : simplify.length - 1];
-      const next = simplify[nearestIndex < simplify.length - 1 ? nearestIndex + 1 : 0];
+      const prev = simplifiedPoints[nearestIndex > 0 ? nearestIndex - 1 : simplifiedPoints.length - 1];
+      const next = simplifiedPoints[nearestIndex < simplifiedPoints.length - 1 ? nearestIndex + 1 : 0];
       tangent = next.clone().sub(prev).normalize();
     }
     nearestDistance = Math.sqrt(nearestDistance);
@@ -187,14 +187,14 @@ export class Bot extends Unit {
     aggro: number;
     greed: number;
     safety: number;
-    def: number;
+    defense: number;
     targets: Vec2[];
     maxDanger: number;
     unitDanger: Unit;
     unitToTrackDistances: UnitToTrackDistance[];
     distanceDanger: number;
     /** Area of the loop the current trail would close (set by the "capture" state). */
-    declare capSquare: number;
+    declare captureArea: number;
     /** Debug label of the current capture maneuver (set by the "capture" state). */
     declare aspect: string;
 
@@ -203,7 +203,7 @@ export class Bot extends Unit {
     this.aggro = 0;
     this.greed = 0;
     this.safety = 0;
-    this.def = 0;
+    this.defense = 0;
     this.type = type;
     this.jitter = (this.game.rng() * 2 - 1) * 0.1;
     this.targets = [];
@@ -218,16 +218,16 @@ export class Bot extends Unit {
     let maxDanger = 0;
     let dangerDistance = 0;
     let dangerUnit: Unit = null;
-    if (this.in !== this.base) {
+    if (this.insideBase !== this.base) {
       const {
         player
       } = this.game;
       this.game.units.forEach((unit: Unit) => {
-        const isFarPlayer = player === unit && this.position.distance(unit.position) > this.vrange;
+        const isFarPlayer = player === unit && this.position.distance(unit.position) > this.viewRange;
         if (unit !== this && !isFarPlayer) {
           let min = Infinity;
           let nearestTrackPoint: Vec2 = null;
-          this.track.simplyline.forEach(point => {
+          this.track.simplifiedPoints.forEach(point => {
             const distSq = point.distance2(unit.position);
             if (distSq < min) {
               min = distSq;

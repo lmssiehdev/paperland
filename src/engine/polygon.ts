@@ -34,14 +34,14 @@ const rayCrossingSign = (point: Vec2, point2: Vec2, point3: Vec2) => {
 export class Polygon {
     segments: Segment[];
     /** Outline vertices thinned to roughly CELL_RADIUS spacing; used for bounds. */
-    simplify: Vec2[];
+    simplifiedPoints: Vec2[];
     owner: Base | null;
     bounds: Bounds | null;
     path: Path2D;
 
   constructor(points: Vec2[]) {
     this.segments = [];
-    this.simplify = [];
+    this.simplifiedPoints = [];
     this.owner = null;
     this.bounds = null;
     const {
@@ -154,7 +154,7 @@ export class Polygon {
   insideNew(point: Vec2): boolean {
     return !!pointInPolygon(this.segments.map(segment => [segment.start.x, segment.start.y]), point.x, point.y);
   }
-  rawSquare(): number {
+  signedArea(): number {
     let _0x3e0443 = 0;
     this.segments.forEach(segment => {
       const {
@@ -165,8 +165,8 @@ export class Polygon {
     });
     return _0x3e0443 / 2;
   }
-  square(): number {
-    let result = this.rawSquare();
+  area(): number {
+    let result = this.signedArea();
     if (result < 0) {
       {
         result *= -1;
@@ -197,21 +197,21 @@ export class Polygon {
     this.updateBounds();
   }
   calcSimplify(): void {
-    this.simplify = [];
+    this.simplifiedPoints = [];
     let _0x3ed40b = 0;
     this.segments.forEach(segment => {
       const {
         start
       } = segment;
       if (_0x3ed40b < 2) {
-        this.simplify.push(start);
+        this.simplifiedPoints.push(start);
         _0x3ed40b++;
       } else {
-        const point = this.simplify[_0x3ed40b - 2];
+        const point = this.simplifiedPoints[_0x3ed40b - 2];
         if (start.distance2(point) < CELL_RADIUS_SQ) {
-          this.simplify[_0x3ed40b - 1] = start;
+          this.simplifiedPoints[_0x3ed40b - 1] = start;
         } else {
-          this.simplify.push(start);
+          this.simplifiedPoints.push(start);
           _0x3ed40b++;
         }
       }
@@ -223,7 +223,7 @@ export class Polygon {
     let max = -Infinity;
     let min2 = Infinity;
     let max2 = -Infinity;
-    this.simplify.forEach(item => {
+    this.simplifiedPoints.forEach(item => {
       const {
         x,
         y

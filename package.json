@@ -27,7 +27,10 @@
     "autopilot": "bun scripts/autopilot.ts",
     "split": "bun scripts/split.ts",
     "build": "bun build src/main.ts --format=iife --outfile dist/app2.js",
-    "regen": "bun run deob && bun run split && bun run build"
+    "regen": "bun run deob && bun run split && bun run build",
+    "golden": "bun scripts/golden.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "rename-props": "bun scripts/rename-props.ts"
   },
   "dependencies": {
     "js-cookie": "2",

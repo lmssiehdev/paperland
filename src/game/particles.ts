@@ -109,7 +109,7 @@ export class Particle {
     const acceleration = segment.vector.clone().normalize().mulScalar(unitSpeed * -6).rotate(sign * Math.random() * (Math.PI / 10));
     const {
       particles
-    } = unit.in.unit.skin.colors;
+    } = unit.insideBase.unit.skin.colors;
     const scale = 0.75 + Math.random() * 0.5;
     const particle = new Particle(null, particles[~~(Math.random() * particles.length)], segment.start.clone().add(sideOffset).add(forwardOffset).add(new Vec2(0, -baseHeight)), velocity, acceleration, Math.PI + Math.random() * Math.PI, scale, scale * -2, 300);
     return particle;

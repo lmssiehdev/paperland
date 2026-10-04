@@ -254,7 +254,7 @@ export class Game {
     skinManager: SkinManager;
     nameManager: NamePool;
     achievementsProfile: AchievementStore;
-    space: SpatialGrid;
+    grid: SpatialGrid;
     view: HTMLCanvasElement | null;
     border: Border;
     player: Player | null;
@@ -270,7 +270,7 @@ export class Game {
     labels: FloatingLabel[];
     notifications: GameNotification[];
     scale: number;
-    square: number;
+    arenaArea: number;
     gameOverCallback: ((result: GameResult) => void) | null;
     visible: boolean;
     stopped: boolean;
@@ -291,7 +291,7 @@ export class Game {
     quality: number;
     fpsSequence: number[];
     /** Quality levels already reported to analytics, keyed "q5".."q9". */
-    qas: Record<string, boolean>;
+    qualityEventsPending: Record<string, boolean>;
     stats: GameStats;
     timings: GameTimings;
     events: GameEvents;
@@ -319,7 +319,7 @@ export class Game {
     this.skinManager = skinManager;
     this.nameManager = nameManager;
     this.achievementsProfile = achievementsProfile;
-    this.space = space;
+    this.grid = space;
     this.view = view;
     this.border = border;
     this.player = null;
@@ -336,7 +336,7 @@ export class Game {
     this.labels = [];
     this.notifications = [];
     this.scale = config.maxScale;
-    this.square = this.border.polygon.square();
+    this.arenaArea = this.border.polygon.area();
     this.gameOverCallback = gameOverCallback;
     this.visible = false;
     this.stopped = false;
@@ -357,7 +357,7 @@ export class Game {
     this.border.polygon.calcPath();
     this.quality = 1;
     this.fpsSequence = [];
-    this.qas = {
+    this.qualityEventsPending = {
       q9: true,
       q8: true,
       q7: true,
@@ -422,7 +422,7 @@ export class Game {
   getSpawnPosition(zone: SpawnZone, baseRadius2?: number): Vec2 | undefined {
     const {
       center
-    } = this.space;
+    } = this.grid;
     const {
       radius
     } = this.border;
@@ -466,12 +466,12 @@ export class Game {
       if (unit.base.polygon.inside(point3)) {
         return;
       }
-      if (unit.base.polygon.simplify.some(function (item: Vec2) {
+      if (unit.base.polygon.simplifiedPoints.some(function (item: Vec2) {
         return point3.distance2(item) < _0x513981;
       })) {
         return;
       }
-      if (unit.track.simplyline.some(function (point: Vec2) {
+      if (unit.track.simplifiedPoints.some(function (point: Vec2) {
         return point3.distance2(point) < _0x2b6b9f;
       })) {
         return;
@@ -495,7 +495,7 @@ export class Game {
     if (this.units.length - (this.player ? 1 : 0) >= botsCount) {
       return;
     }
-    if (!this.nameManager || !this.nameManager.aviable()) {
+    if (!this.nameManager || !this.nameManager.available()) {
       return;
     }
     if (!this.skinManager || !this.skinManager.available()) {
@@ -544,7 +544,7 @@ export class Game {
     }
     let position;
     let attempts = 0;
-    var baseRadius2 = extraLife ? Math.sqrt(this.square * extraLife / Math.PI) : baseRadius;
+    var baseRadius2 = extraLife ? Math.sqrt(this.arenaArea * extraLife / Math.PI) : baseRadius;
     while (!position) {
       if (attempts++ > 50) {
         attempts = 0;
@@ -556,7 +556,7 @@ export class Game {
     const playerSkin = this.skinManager.getPlayerSkin(skinName);
     player.setSkin(playerSkin);
     this.addPlayer(player);
-    this.scale = maxScale - ~~(player.base.square / this.square * 20) / 20 * (maxScale - minScale);
+    this.scale = maxScale - ~~(player.base.area / this.arenaArea * 20) / 20 * (maxScale - minScale);
     this.startTime = now();
   }
   gameOver(reason: DeathReason) {
@@ -608,7 +608,7 @@ export class Game {
         score: player.schemes && player.schemes.result(),
         newBest: player.schemes && player.schemes.result() > this.best,
         name: player.name,
-        top: player.top,
+        top: player.rank,
         best: this.best,
         bestPercent: player.bestPercent,
         time: now() - this.startTime,
@@ -666,8 +666,8 @@ export class Game {
       this.skinManager.release(unit.skin);
     }
     this.units.forEach(unit2 => {
-      if (unit2 !== unit && unit2.in === unit.base) {
-        unit2.in = null;
+      if (unit2 !== unit && unit2.insideBase === unit.base) {
+        unit2.insideBase = null;
       }
     });
     if (reason !== DEATH_REMOVED) {
@@ -827,7 +827,7 @@ export class Game {
   }
   recoverTail() {
     let player = this.player;
-    if (player && player.in == player.base && !player.base.polygon.inside(player.position)) {
+    if (player && player.insideBase == player.base && !player.base.polygon.inside(player.position)) {
       {
         if (!(player as Player & DebugMoveTo).moveTo) {
           return;
@@ -859,7 +859,7 @@ export class Game {
     if (this.stopped) {
       return false;
     }
-    Vec2.space = this.space;
+    Vec2.grid = this.grid;
     if (dt == null) {
       dt = 1000 / 60;
     }
@@ -889,14 +889,14 @@ export class Game {
     this.timings.aiEndTime = now();
     this.handleUnitMovements(dt);
     this.units.forEach(unit => {
-      unit.lastSquare = unit.base.square;
+      unit.lastArea = unit.base.area;
     });
     this.units.forEach(unit => {
-      const percent = unit.base.square / this.square;
+      const percent = unit.base.area / this.arenaArea;
       unit.percent = percent;
       unit.bestPercent = Math.max(unit.bestPercent, percent);
       unit.scale = lerp(maxScale, minScale, easeOutCubic(~~(percent * 20) / 20));
-      unit.vrange = Math.sqrt(2455780) / 2 / unit.scale * 0.8;
+      unit.viewRange = Math.sqrt(2455780) / 2 / unit.scale * 0.8;
       if (unit.schemes) {
         unit.schemes.update(dt);
       }
@@ -913,7 +913,7 @@ export class Game {
     });
     this.units.sort((a, b) => b.schemes && a.schemes ? b.schemes.scores() - a.schemes.scores() : 0);
     this.units.forEach((unit, index) => {
-      unit.top = index + 1;
+      unit.rank = index + 1;
     });
     this.labels = this.labels.filter(label => {
       label.update(dt);
@@ -975,7 +975,7 @@ export class Game {
         unit.aggro = lerp(botAggroMin, botAggroMax, skill);
         unit.greed = lerp(botGreedMin, botGreedMax, skill);
         unit.safety = lerp(botSafetyMin, botSafetyMax, skill);
-        unit.def = lerp(botDefMin, botDefMax, skill);
+        unit.defense = lerp(botDefMin, botDefMax, skill);
       }
     });
     if (this.player && this.player.achievements) {
@@ -987,7 +987,7 @@ export class Game {
       this.units.forEach(unit => {
         if (unit instanceof Bot) {
           let min2 = Infinity;
-          player.track.simplyline.forEach(point => {
+          player.track.simplifiedPoints.forEach(point => {
             const distSq = point.distance2(unit.position);
             if (distSq < min2) {
               min2 = distSq;
@@ -1057,7 +1057,7 @@ export class Game {
         point = this.player.killer.position;
       }
     } else {
-      point = this.space.center;
+      point = this.grid.center;
     }
     if (this.origin && (!this.player || this.player.killer)) {
       const dist = this.origin.distance(point);
@@ -1165,8 +1165,8 @@ export class Game {
       this.quality = qualityLevel / 10;
       if (qualityLevel < 10) {
         const qualityKey = "q" + qualityLevel;
-        if (this.qas[qualityKey]) {
-          this.qas[qualityKey] = false;
+        if (this.qualityEventsPending[qualityKey]) {
+          this.qualityEventsPending[qualityKey] = false;
           if (window.ga) {
             window.ga("send", "event", "fps", qualityKey);
           }
@@ -1274,7 +1274,7 @@ export class Game {
       _0x136bc7 += unit.base.polygon.segments.length;
       _0x136bc7 += unit.track.polyline.segments.length;
     });
-    const _0x33065f = this.space.segmentsCount();
+    const _0x33065f = this.grid.segmentsCount();
     const count = Object.keys(_0x33065f).length;
   }
   handleReturn(returningUnit: Unit) {
@@ -1302,18 +1302,18 @@ export class Game {
     removed.push(...trackPoints);
     const polygon = new Polygon(removed);
     let captured: Polygon;
-    if (polygon.rawSquare() < 0) {
+    if (polygon.signedArea() < 0) {
       captured = new Polygon(basePoints.reverse());
       base.polygon.unsplice(polylineCopy, startIndex, endIndex);
     } else {
       captured = polygon;
       base.polygon.splice(polylineCopy, startIndex, endIndex);
     }
-    base.square += captured.square();
+    base.area += captured.area();
     base.polygon.calcPath();
     this.units.filter(unit => unit !== returningUnit).forEach(item => {
       if (!item.death) {
-        if (item.in === item.base && captured.inside(item.position)) {
+        if (item.insideBase === item.base && captured.inside(item.position)) {
           this.kill(item, returningUnit, DEATH_SURROUNDED);
         }
         if (item.track.polyline.start && captured.inside(item.track.polyline.start)) {
@@ -1394,22 +1394,22 @@ export class Game {
               const polygon = new Polygon(removed2);
               const polygon2 = new Polygon(points);
               let lost: Polygon;
-              if (owner.unit.in === owner.unit.base && polygon.inside(owner.unit.position) || owner.unit.in !== owner.unit.base && polygon.inside(owner.unit.track.polyline.start)) {
+              if (owner.unit.insideBase === owner.unit.base && polygon.inside(owner.unit.position) || owner.unit.insideBase !== owner.unit.base && polygon.inside(owner.unit.track.polyline.start)) {
                 owner.polygon.right(removed, cutStart, cutEnd);
                 lost = polygon2;
               } else {
                 owner.polygon.left(removed, cutStart, cutEnd);
                 lost = polygon;
               }
-              owner.square -= lost.square();
+              owner.area -= lost.area();
               owner.polygon.calcPath();
               victims.push({
                 base: owner,
                 poly: lost
               });
               this.units.forEach(unit => {
-                if (owner.unit !== unit && unit.in === owner && lost.inside(unit.position)) {
-                  unit.in = null;
+                if (owner.unit !== unit && unit.insideBase === owner && lost.inside(unit.position)) {
+                  unit.insideBase = null;
                 }
               });
             };
@@ -1437,10 +1437,10 @@ export class Game {
     }
     this.units.forEach(unit => {
       if (returningUnit !== unit && captured.inside(unit.position)) {
-        unit.in = returningUnit.base;
+        unit.insideBase = returningUnit.base;
       }
     });
-    const increment = (returningUnit.base.square - returningUnit.lastSquare) / this.square;
+    const increment = (returningUnit.base.area - returningUnit.lastArea) / this.arenaArea;
     if (returningUnit.schemes) {
       returningUnit.schemes.comeback({
         increment: increment,
@@ -1462,8 +1462,8 @@ export class Game {
       }
       let movement = this.getMovement(dt, unit);
       {
-        if (unit === this.player && !(this.player as Player & DebugMoveTo).moveTo && unit.in === null && Math.random() < 0.0005) {
-          unit.in = unit.base;
+        if (unit === this.player && !(this.player as Player & DebugMoveTo).moveTo && unit.insideBase === null && Math.random() < 0.0005) {
+          unit.insideBase = unit.base;
         }
       }
       while (movement.length) {
@@ -1471,7 +1471,7 @@ export class Game {
           return;
         }
         const step = movement.shift();
-        const intersections = this.space.intersections(step);
+        const intersections = this.grid.intersections(step);
         const pointGroups: IntersectionGroup[] = [];
         intersections.forEach(intersection => {
           const index = pointGroups.findIndex(group => group.point.equal(intersection.point));
@@ -1524,7 +1524,7 @@ export class Game {
             }
           });
           while (shapes.length) {
-            const index = shapes.findIndex(shape => shape.owner === unit.in);
+            const index = shapes.findIndex(shape => shape.owner === unit.insideBase);
             if (index > 0) {
               const _0x277c6a = shapes[0];
               shapes[0] = shapes[index];
@@ -1545,7 +1545,7 @@ export class Game {
             });
             while (!unit.death && shapeIntersections.length) {
               shapeIntersections.sort((a, b) => {
-                if (unit.in) {
+                if (unit.insideBase) {
                   return b.zn - a.zn;
                 } else {
                   return a.zn - b.zn;
@@ -1564,11 +1564,11 @@ export class Game {
         const {
           end
         } = step;
-        if (unit.in !== unit.base) {
+        if (unit.insideBase !== unit.base) {
           unit.track.add(end);
         }
         unit.position = end;
-        if (this.visible && !movement.length && unit.in && unit.in !== unit.base) {
+        if (this.visible && !movement.length && unit.insideBase && unit.insideBase !== unit.base) {
           let trailParticle = Particle.nom(unit, step, this.config.trackWidth);
           this.particles.push(trailParticle);
         }

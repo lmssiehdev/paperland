@@ -316,7 +316,7 @@ const drawTracks = (renderContext: RenderContext) => {
   ctx.lineCap = "round";
   ctx.globalAlpha = 0.6;
   game.units.forEach(unit => {
-    if (unit.in !== unit.base) {
+    if (unit.insideBase !== unit.base) {
       if (boundsInView(unit.track.polyline, trackWidth)) {
         drawTrack(ctx, game.tailRecovered && unit == game.player ? "#f00" : unit.skin.colors.main, unit.track, unit.position, trackWidth);
       }
@@ -357,8 +357,8 @@ const drawArena = (renderContext: RenderContext) => {
   ctx.translate(0, baseHeight * 3);
   fillPath(ctx, game.border.polygon.path, borderColor);
   ctx.translate(0, baseHeight * -3);
-  ctx.fillStyle = getBackgroundGradient(ctx, game.space, backgroundTopColor, backgroundBottomColor);
-  ctx.fillRect(viewScreenWidth / -2, viewScreenHeight / -2, game.space.width + viewScreenWidth, game.space.height + viewScreenHeight);
+  ctx.fillStyle = getBackgroundGradient(ctx, game.grid, backgroundTopColor, backgroundBottomColor);
+  ctx.fillRect(viewScreenWidth / -2, viewScreenHeight / -2, game.grid.width + viewScreenWidth, game.grid.height + viewScreenHeight);
 };
 const drawParticles = (renderContext: RenderContext) => {
   const {
@@ -410,15 +410,15 @@ const drawMinimap = (renderContext: RenderContext) => {
     padding
   } = renderContext;
   const minimapSize = viewScreenWidth / calcMult(8, 3);
-  const markerSize = game.space.width / minimapSize * scaler * 3;
+  const markerSize = game.grid.width / minimapSize * scaler * 3;
   ctx.save();
   ctx.translate(viewScreenWidth - padding - minimapSize, viewScreenHeight - padding - minimapSize);
-  ctx.scale(minimapSize / game.space.width, minimapSize / game.space.height);
+  ctx.scale(minimapSize / game.grid.width, minimapSize / game.grid.height);
   fillPath(ctx, game.border.polygon.path, "#c2d6cdaa");
   fillPath(ctx, game.player.base.polygon.path, game.player.skin.colors.main);
   strokePath(ctx, game.player.base.polygon.path, game.player.skin.colors.back, markerSize / 2);
   drawTrack(ctx, game.player.skin.colors.back, game.player.track, game.player.position, markerSize / 2);
-  const borderStyle = game.units.some(unit => !game.isPlayer(unit) && unit.in === game.player.base) ? "#ff0000" : "#00000099";
+  const borderStyle = game.units.some(unit => !game.isPlayer(unit) && unit.insideBase === game.player.base) ? "#ff0000" : "#00000099";
   strokePath(ctx, game.border.polygon.path, borderStyle, markerSize);
   ctx.beginPath();
   ctx.arc(game.player.position.x, game.player.position.y, markerSize, 0, Math.PI * 2);
@@ -667,7 +667,7 @@ export function renderGame(game: Game) {
   } = renderContext;
   if (game.debugView) {
     scale = 0.5;
-    origin = game.space.center;
+    origin = game.grid.center;
   }
   ctx.resetTransform();
   ctx.clearRect(0, 0, viewWidth, viewHeight);

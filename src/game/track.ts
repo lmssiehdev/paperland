@@ -23,7 +23,7 @@ export interface TrackIntersection {
 export class Track {
     polyline: Polyline;
     /** Coarse copy of the trail (points at least CELL_RADIUS apart), used by the AI. */
-    simplyline: Vec2[];
+    simplifiedPoints: Vec2[];
     unit: Unit;
     length: number;
     intersections: TrackIntersection[];
@@ -31,34 +31,34 @@ export class Track {
 
   constructor(unit: Unit) {
     this.polyline = new Polyline(this);
-    this.simplyline = [];
+    this.simplifiedPoints = [];
     this.unit = unit;
     this.length = 0;
     this.intersections = [];
     this.isTrack = true;
   }
   add(end: Vec2) {
-    if (this.polyline.add2(end)) {
+    if (this.polyline.addPoint(end)) {
       const count = this.polyline.segments.length;
       if (count > 0) {
         const segment = this.polyline.segments[count - 1];
         this.length += segment.start.distance(segment.end);
       }
       const {
-        simplyline
+        simplifiedPoints
       } = this;
       const {
         length
-      } = simplyline;
+      } = simplifiedPoints;
       if (length > 2) {
-        const point = simplyline[length - 2];
+        const point = simplifiedPoints[length - 2];
         if (end.distance2(point) < CELL_RADIUS_SQ) {
-          simplyline[length - 1] = end;
+          simplifiedPoints[length - 1] = end;
         } else {
-          simplyline.push(end);
+          simplifiedPoints.push(end);
         }
       } else {
-        simplyline.push(end);
+        simplifiedPoints.push(end);
       }
     }
   }
@@ -85,7 +85,7 @@ export class Track {
     this.polyline.remove();
     this.polyline = new Polyline(this);
     this.length = 0;
-    this.simplyline = [];
+    this.simplifiedPoints = [];
     this.intersections = [];
   }
   /** `unit` moved along `movement` and crossed this trail at `intersection`. */
@@ -94,7 +94,7 @@ export class Track {
     if (unit === this.unit) {
       if (intersection.overlay === true || intersection.point !== this.polyline.segments[this.polyline.segments.length - 1].end) {
         this.unit.position = intersection.point;
-        const reason: DeathReason = game.border.radius - unit.position.distance(game.space.center) < 5 ? DEATH_WALL : DEATH_SELF_INTERSECT;
+        const reason: DeathReason = game.border.radius - unit.position.distance(game.grid.center) < 5 ? DEATH_WALL : DEATH_SELF_INTERSECT;
         game.kill(this.unit, undefined, reason);
       }
     } else {

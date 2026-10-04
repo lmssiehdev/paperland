@@ -47,7 +47,7 @@ export const createApi = (config: GameConfig, language: Language, createSkinMana
         borderPoints
       } = config;
       const spatialGrid = new SpatialGrid(arenaSize, arenaSize, quadSize);
-      Vec2.space = spatialGrid;
+      Vec2.grid = spatialGrid;
       const vec2 = new Vec2(arenaSize / 2, arenaSize / 2);
       const baseRadius = Math.min(vec2.x, vec2.y) * 0.95;
       const border = Border.circular(vec2, borderPoints, baseRadius);
@@ -84,7 +84,7 @@ export const createApi = (config: GameConfig, language: Language, createSkinMana
         game: game
       } = result;
       prepareInterval = setInterval(() => {
-        if (nameManager.aviable()) {
+        if (nameManager.available()) {
           runPrepareBatch();
           if (preparedCycles > config.prepareCounter) {
             clearInterval(prepareInterval);

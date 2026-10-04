@@ -31,7 +31,7 @@ async function runTrial(mode: "straight" | "autopilot") {
     if (mode === "autopilot") {
       // Bot AI minus "attack" (attack targets game.player's track, i.e. ourselves).
       const { attack, ...states } = BOT_STATES;
-      Object.assign(player, { aggro: 0, greed: 0.35, safety: 0.9, def: 1.2, jitter: 0, smoothness: 1, targets: [], maxDanger: 0 });
+      Object.assign(player, { aggro: 0, greed: 0.35, safety: 0.9, defense: 1.2, jitter: 0, smoothness: 1, targets: [], maxDanger: 0 });
       player.fsm = new StateMachine(states, "idle", player);
       player.update = function (dt: number) { Bot.prototype.update.call(this, dt); };
       game.readInput = () => {}; // ignore (absent) mouse/keyboard
@@ -48,7 +48,7 @@ async function runTrial(mode: "straight" | "autopilot") {
       finalPct: +(player.percent * 100).toFixed(2),
       bestPct: +(player.bestPercent * 100).toFixed(2),
       kills: player.statistics.kills,
-      rank: player.top,
+      rank: player.rank,
       fsmState: player.fsm?.state,
     };
   }, { mode, ticks: seconds * 60 });
