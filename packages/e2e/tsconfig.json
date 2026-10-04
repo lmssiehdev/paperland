@@ -1,0 +1,6 @@
+{
+  // DOM is needed for the page.evaluate() callbacks, which run in the browser.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "lib": ["ES2022", "DOM"], "types": ["bun"] },
+  "include": ["src", "test"]
+}

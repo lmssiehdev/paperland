@@ -1,0 +1,12 @@
+{
+  "name": "@paperio/core",
+  "description": "The game: engine, rules, bot AI, modes, config. Headless: no DOM, no runtime-specific APIs.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p test"
+  }
+}

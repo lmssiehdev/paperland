@@ -1,0 +1,19 @@
+{
+  "name": "@paperio/client",
+  "description": "Browser client: canvas renderer, Preact UI, input, skins artwork. Bundled to dist/app2.js.",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@paperio/core": "workspace:*",
+    "@paperio/protocol": "workspace:*",
+    "js-cookie": "2",
+    "preact": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/js-cookie": "2"
+  },
+  "scripts": {
+    "build": "bun build src/main.ts --format=iife --outfile dist/app2.js",
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

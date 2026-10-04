@@ -1,0 +1,15 @@
+{
+  "name": "@paperio/server",
+  "description": "Bun + Elysia server: static site, HTTP /api/*, WebSocket /play, headless game rooms.",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@paperio/core": "workspace:*",
+    "@paperio/protocol": "workspace:*"
+  },
+  "scripts": {
+    "start": "bun src/index.ts",
+    "dev": "bun --watch src/index.ts",
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

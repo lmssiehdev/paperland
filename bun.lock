@@ -4,24 +4,52 @@
   "workspaces": {
     "": {
       "name": "paperio",
-      "dependencies": {
-        "js-cookie": "2",
-        "preact": "^11.0.0",
-      },
       "devDependencies": {
         "@babel/generator": "^8.0.6",
         "@babel/parser": "^7.29.9",
         "@babel/traverse": "^8.0.6",
         "@babel/types": "^8.0.6",
         "@types/bun": "latest",
-        "@types/js-cookie": "2",
-        "playwright": "^1.63.0",
         "prettier": "^3.9.9",
         "ts-morph": "^28.0.0",
         "webcrack": "^2.16.0",
       },
       "peerDependencies": {
         "typescript": "^7.0.2",
+      },
+    },
+    "packages/client": {
+      "name": "@paperio/client",
+      "dependencies": {
+        "@paperio/core": "workspace:*",
+        "@paperio/protocol": "workspace:*",
+        "js-cookie": "2",
+        "preact": "^11.0.0",
+      },
+      "devDependencies": {
+        "@types/js-cookie": "2",
+      },
+    },
+    "packages/core": {
+      "name": "@paperio/core",
+    },
+    "packages/e2e": {
+      "name": "@paperio/e2e",
+      "dependencies": {
+        "playwright": "^1.63.0",
+      },
+    },
+    "packages/protocol": {
+      "name": "@paperio/protocol",
+      "dependencies": {
+        "@paperio/core": "workspace:*",
+      },
+    },
+    "packages/server": {
+      "name": "@paperio/server",
+      "dependencies": {
+        "@paperio/core": "workspace:*",
+        "@paperio/protocol": "workspace:*",
       },
     },
   },
@@ -73,6 +101,16 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.6.0", "", {}, "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@paperio/client": ["@paperio/client@workspace:packages/client"],
+
+    "@paperio/core": ["@paperio/core@workspace:packages/core"],
+
+    "@paperio/e2e": ["@paperio/e2e@workspace:packages/e2e"],
+
+    "@paperio/protocol": ["@paperio/protocol@workspace:packages/protocol"],
+
+    "@paperio/server": ["@paperio/server@workspace:packages/server"],
 
     "@ts-morph/common": ["@ts-morph/common@0.29.0", "", { "dependencies": { "minimatch": "^10.0.1", "path-browserify": "^1.0.1", "tinyglobby": "^0.2.14" } }, "sha512-35oUmphHbJvQ/+UTwFNme/t2p3FoKiGJ5auTjjpNTop2dyREspirjMy82PLSC1pnDJ8ah1GU98hwpVt64YXQsg=="],
 

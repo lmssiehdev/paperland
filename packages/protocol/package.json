@@ -1,0 +1,15 @@
+{
+  "name": "@paperio/protocol",
+  "description": "Wire format shared by client and server: BitStream and the game messages.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@paperio/core": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p test"
+  }
+}

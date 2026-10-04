@@ -1,0 +1,16 @@
+{
+  // Shared compiler options. Every package extends this and picks its own `lib`/`types`:
+  //   core, protocol: ES2022 only (no DOM, no Bun) -> a DOM or runtime leak is a compile error
+  //   client:         ES2022 + DOM
+  //   server, e2e, tests: ES2022 + bun types
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": [],
+    "target": "ES2022",
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true
+  }
+}

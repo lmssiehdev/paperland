@@ -1,0 +1,6 @@
+{
+  // No DOM and no Bun/Node types: core may only use ES2022 plus the host APIs declared in src/host.d.ts.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "lib": ["ES2022"], "types": [] },
+  "include": ["src"]
+}
