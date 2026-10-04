@@ -1,49 +1,14 @@
 import { Fragment, createContext, createElement } from "preact";
-import type { RefObject, TargetedEvent } from "preact";
+import type { TargetedEvent } from "preact";
 import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import type { StateUpdater, Dispatch } from "preact/hooks";
-import type { Game } from "../game/game";
+import type { PaperioApi } from "../api";
+import type { GameResult } from "../game/game";
 import { LANGUAGES, getLanguage } from "./i18n";
 import type { Language } from "./i18n";
 
 /** Screens the root App can show. */
-export type Route = "menu" | "game" | "results" | "config" | "skins";
-
-/** Value of one editable game config entry (DEFAULT_CONFIG holds numbers, strings and booleans). */
-type ConfigValue = string | number | boolean;
-/** Game config viewed as a mutable string-keyed record, as the config editor treats it. */
-type EditableConfig = Record<string, ConfigValue>;
-
-/** Object passed by Game to the game-over callback (see Game's gameOverCallback call). */
-export interface GameResults {
-  build?: unknown;
-  game?: Game;
-  percent: number;
-  score: number;
-  newBest: boolean;
-  name: string;
-  top?: number;
-  best: number;
-  bestPercent: number;
-  time: number;
-  kills: number;
-  image: string;
-  reason: number;
-}
-
-/**
- * The parts of window.paperio2api (created by createApi in src/api.ts) the UI uses.
- * Declared locally because createApi's return type is not typed yet.
- */
-export interface PaperioApi {
-  game?: Game;
-  preparing?: boolean;
-  create(view: HTMLCanvasElement): void;
-  prepare(onReady: () => void): void;
-  start(name: string, skin: string, bestScore: number, onGameOver: (results: GameResults) => void, extraLife?: number): void;
-  /** Installed by App: same as pressing Play (used by the headless scripts). */
-  startGame?: () => void;
-}
+export type Route = "menu" | "game" | "results" | "skins";
 
 /** Cookie storage (the js-cookie default export); only the methods the UI calls. */
 export interface CookieStorage {
@@ -65,7 +30,17 @@ export interface SkinInfo {
 
 type Setter<T> = Dispatch<StateUpdater<T>>;
 
-const LanguageContext = createContext<Language>(undefined);
+/** Current UI language; App always provides it. */
+const LanguageContext = createContext<Language | null>(null);
+
+/** Reads LanguageContext; every screen is rendered under App's Provider. */
+const useLanguage = (): Language => {
+  const language = useContext(LanguageContext);
+  if (!language) {
+    throw new Error("LanguageContext used outside App's Provider");
+  }
+  return language;
+};
 
 interface TipsProps {
   messages: string[];
@@ -86,83 +61,13 @@ const Tips = ({
   }, messages[tipIndex]));
 };
 
-interface ConfigFormProps {
-  config: EditableConfig;
-  apply: (event: TargetedEvent<HTMLFormElement, SubmitEvent>) => void;
-}
-const ConfigForm = ({
-  config,
-  apply
-}: ConfigFormProps) => {
-  if (!config) {
-    return null;
-  }
-  return createElement("form", {
-    class: "config",
-    onSubmit: apply
-  }, Object.entries(config).map(([key, value]) => createElement("label", {
-    style: "color: white;"
-  }, key, "\xA0", createElement("input", {
-    type: "text",
-    id: key,
-    name: key,
-    // Booleans are stringified by the DOM ("true"/"false").
-    value: value as string | number,
-    autocomplete: "off",
-    maxlength: "10"
-  }))), createElement("button", {
-    id: "apply",
-    name: "apply",
-    class: "yellow"
-  }, "Применить"));
-};
-interface ConfigScreenProps {
-  api: PaperioApi;
-  view: RefObject<HTMLCanvasElement>;
-  setPreparing: Setter<boolean>;
-  setState: Setter<Route>;
-}
-const ConfigScreen = ({
-  api,
-  view,
-  setPreparing,
-  setState
-}: ConfigScreenProps) => {
-  const config: EditableConfig = api && api.game && api.game.config;
-  const applyConfig = (event: TargetedEvent<HTMLFormElement, SubmitEvent>) => {
-    event.preventDefault();
-    Object.keys(config).forEach(item => {
-      const elementById = document.getElementById(item) as HTMLInputElement | null;
-      if (elementById) {
-        const parsed = parseFloat(elementById.value);
-        // parsed !== parsed is a NaN check: keep non-numeric input as a string.
-        config[item] = parsed !== parsed ? elementById.value : parsed;
-      }
-    });
-    api.game.stopped = true;
-    api.create(view.current);
-    setPreparing(true);
-    api.prepare(() => setPreparing(false));
-    setState("menu");
-  };
-  return createElement("div", {
-    class: "uibox"
-  }, createElement("div", {
-    class: "logo"
-  }, createElement("img", {
-    src: "assets/images/logo.png"
-  })), createElement(ConfigForm, {
-    config: config,
-    apply: applyConfig
-  }));
-};
 interface LanguageFooterProps {
   setLanguage: Setter<Language>;
 }
 const LanguageFooter = ({
   setLanguage
 }: LanguageFooterProps) => {
-  const currentLanguage = useContext(LanguageContext);
+  const currentLanguage = useLanguage();
   const languageItems = LANGUAGES.map((item, index) => createElement("li", {
     class: item === currentLanguage ? "active" : "",
     onClick: () => setLanguage(LANGUAGES[index])
@@ -176,25 +81,15 @@ const LanguageFooter = ({
 interface MainMenuProps {
   nickName: string;
   setNickName: Setter<string>;
-  /** Unused by the menu. */
-  playable?: boolean;
-  /** Unused by the menu. */
-  preparing?: boolean;
   start: () => void;
   route: Setter<Route>;
   setLanguage: Setter<Language>;
   api: PaperioApi | null;
-  /** Passed by App but unused by the menu. */
-  setState?: Setter<Route>;
-  /** Passed by App but unused by the menu. */
-  skins?: SkinInfo[];
   skin: string;
 }
 const MainMenu = ({
   nickName,
   setNickName,
-  playable,
-  preparing,
   start,
   route,
   setLanguage,
@@ -203,14 +98,12 @@ const MainMenu = ({
 }: MainMenuProps) => {
   const {
     lng
-  } = useContext(LanguageContext);
-  const config = api && api.game && api.game.config;
+  } = useLanguage();
   const supported = !!api;
   const onNickInput = (event: TargetedEvent<HTMLInputElement, Event>) => setNickName(event.currentTarget.value);
-  const canPlay = supported;
   const onPlayClick = (event: TargetedEvent<HTMLButtonElement, MouseEvent>) => {
     event.preventDefault();
-    if (canPlay) {
+    if (supported) {
       start();
     }
   };
@@ -238,7 +131,7 @@ const MainMenu = ({
   }), createElement("button", {
     id: "play",
     name: "play",
-    class: "yellow" + (canPlay ? "" : " disabled"),
+    class: "yellow" + (supported ? "" : " disabled"),
     onClick: onPlayClick
   }, lng.btnPlay), createElement("button", {
     id: "skins",
@@ -259,7 +152,7 @@ interface GameScreenProps {
   nickName: string;
   bestScore: number;
   setBestScore: Setter<number>;
-  setResults: Setter<GameResults | null>;
+  setResults: Setter<GameResult | null>;
   setPreparing: Setter<boolean>;
   api: PaperioApi;
   route: Setter<Route>;
@@ -279,9 +172,9 @@ const GameScreen = ({
   skin,
   lastPercent
 }: GameScreenProps): null => {
-  const language = useContext(LanguageContext);
+  const language = useLanguage();
   useEffect(() => {
-    const onGameOver = (results: GameResults) => {
+    const onGameOver = (results: GameResult) => {
       if (results.newBest) {
         setBestScore(results.score);
       }
@@ -300,21 +193,18 @@ const GameScreen = ({
 };
 interface ResultsProps {
   bestScore: number;
-  results: GameResults;
-  /** Unused by the results screen. */
-  start?: () => void;
+  results: GameResult;
   route: Setter<Route>;
 }
 const Results = ({
   bestScore,
   results,
-  start,
   route
 }: ResultsProps) => {
   const goToMenu = () => route("menu");
   const {
     lng
-  } = useContext(LanguageContext);
+  } = useLanguage();
   return createElement(Fragment, null, createElement("div", {
     id: "left_side"
   }), createElement("div", {
@@ -387,7 +277,7 @@ const SkinPicker = ({
 }: SkinPickerProps) => {
   const {
     lng
-  } = useContext(LanguageContext);
+  } = useLanguage();
   const index = skins.findIndex(skin2 => skin2.name === skin);
   const [selectedIndex, setSelectedIndex] = useState(index > 0 ? index : 0);
   const selectSkin = (nextIndex: number) => {
@@ -453,21 +343,17 @@ export interface AppProps {
   api: PaperioApi | null;
   storage: CookieStorage;
   skins: SkinInfo[];
-  /** Unused. */
-  mode?: string;
 }
 export const App = ({
   api,
   storage,
-  skins,
-  mode = "common"
+  skins
 }: AppProps) => {
   const viewRef = useRef<HTMLCanvasElement>(null);
-  const [playable, setPlayable] = useState(false);
   const [route, setRoute] = useState<Route>("menu");
   const [preparing, setPreparing] = useState(true);
   const [language, setLanguage] = useState(getLanguage());
-  const [results, setResults] = useState<GameResults | null>(null);
+  const [results, setResults] = useState<GameResult | null>(null);
   const storageKey = "paper.io.storage";
   const stored: StoredProfile = (storage.getJSON(storageKey) as StoredProfile) || {};
   const [nickName, setNickName] = useState(stored.nickName || "");
@@ -485,9 +371,9 @@ export const App = ({
   }
   useEffect(() => {
     if (api) {
-      api.create(viewRef.current);
+      // The canvas is mounted by this render, so the ref is set when the effect runs.
+      api.create(viewRef.current!);
       api.prepare(() => setPreparing(false));
-      setPlayable(true);
     }
   }, []);
   /** Starts a round (Play button). */
@@ -497,7 +383,9 @@ export const App = ({
     }
     setRoute("game");
   };
-  api.startGame = startGame;
+  if (api) {
+    api.startGame = startGame;
+  }
   return createElement(Fragment, null, createElement("canvas", {
     class: route === "game" || preparing ? "" : "fadein",
     id: "view",
@@ -512,16 +400,12 @@ export const App = ({
   }, route === "menu" && createElement(MainMenu, {
     nickName: nickName,
     setNickName: setNickName,
-    playable: playable,
-    preparing: preparing,
     start: startGame,
     route: setRoute,
     setLanguage: setLanguage,
     api: api,
-    setState: setRoute,
-    skins: skins,
     skin: skin
-  }), route === "game" && createElement(GameScreen, {
+  }), route === "game" && api && createElement(GameScreen, {
     nickName: nickName,
     bestScore: bestScore,
     setBestScore: setBestScore,
@@ -530,16 +414,10 @@ export const App = ({
     api: api,
     route: setRoute,
     skin: skin
-  }), route === "results" && createElement(Results, {
+  }), route === "results" && results && createElement(Results, {
     bestScore: bestScore,
     results: results,
-    start: startGame,
     route: setRoute
-  }), route === "config" && createElement(ConfigScreen, {
-    api: api,
-    view: viewRef,
-    setPreparing: setPreparing,
-    setState: setRoute
   }), route === "skins" && createElement(SkinsScreen, {
     skins: skins,
     skin: skin,
