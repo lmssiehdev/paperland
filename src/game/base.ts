@@ -2,9 +2,14 @@ import { Polygon } from "../engine/polygon";
 import type { Unit } from "./units";
 import type { Intersection, Segment } from "../engine/segment";
 import type { Vec2 } from "../engine/vec2";
+import type { Team } from "./team";
 
 export class Base {
-    unit: Unit;
+    /**
+     * Units that own this territory. Classic: exactly the unit that built it. Team modes: every teammate
+     * sharing it (they join an existing base instead of building one). Empty only once the base is removed.
+     */
+    hosts: Unit[];
     /** Always unset for bases (Track sets it to true); used to tell segment owners apart. */
     isTrack: undefined;
     merges: unknown[];
@@ -16,12 +21,35 @@ export class Base {
 
   constructor(unit: Unit, points: Vec2[]) {
     this.isTrack = undefined;
-    this.unit = unit;
+    this.hosts = [unit];
     this.merges = [];
     this.polygon = new Polygon(points);
     this.polygon.commit(this);
     this.calcArea();
     this.polygon.calcPath();
+  }
+  /** Primary host (the unit that built the base, or its oldest surviving co-host). */
+  get unit(): Unit {
+    return this.hosts[0]!;
+  }
+  /** Team of the hosts (they all share one); null in classic. */
+  get team(): Team | null {
+    return this.hosts.length ? this.hosts[0]!.team : null;
+  }
+  /** Adds `unit` as a host: it now owns this territory and stands in it. */
+  join(unit: Unit) {
+    this.hosts.push(unit);
+    unit.base = this;
+    unit.insideBase = this;
+  }
+  leave(unit: Unit) {
+    const index = this.hosts.indexOf(unit);
+    if (index !== -1) {
+      this.hosts.splice(index, 1);
+    }
+  }
+  hasHost(unit: Unit): boolean {
+    return this.hosts.includes(unit);
   }
   calcPath() {
     this.path = new Path2D();
@@ -52,7 +80,7 @@ export class Base {
   }
   /** `unit` moved along `movement` and crossed this base's outline at `intersection`. */
   handleIntersect(intersection: Intersection, unit: Unit, movement: Segment) {
-    if (unit === this.unit) {
+    if (this.hasHost(unit)) {
       this.handleSelfIntersect(intersection, unit, movement);
     } else {
       this.handleEnemyIntersect(intersection, unit, movement);
@@ -62,7 +90,7 @@ export class Base {
     if (intersection.overlay) {
       return;
     }
-    this.unit.onScoreChanged();
+    unit.onScoreChanged();
     const {
       point: point,
       segment: segment
@@ -96,7 +124,7 @@ export class Base {
       this.polygon.insert(segment, point);
       unit.track.add(point);
       if (unit.track.polyline.end) {
-        this.unit.game.handleReturn(unit);
+        unit.game.handleReturn(unit);
       }
       unit.insideBase = this;
       unit.track.remove();

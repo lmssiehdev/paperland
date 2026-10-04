@@ -1,6 +1,7 @@
 import type { Config } from "../config";
 import type { Game } from "../game/game";
-import type { Player } from "../game/units";
+import type { DeathReason } from "../game/constants";
+import type { Player, Unit } from "../game/units";
 
 export type ModeId = "classic" | "teams";
 
@@ -19,6 +20,8 @@ export interface GameMode {
   spawnBots(game: Game): void;
   /** Called right after the player has been added to the game. */
   onPlayerSpawned(game: Game, player: Player): void;
+  /** Called at the start of Game.kill, while the unit is still on its team. */
+  onUnitKilled?(game: Game, unit: Unit, reason: DeathReason): void;
   /** True when the player has won the round. */
   hasWon(game: Game, player: Player): boolean;
 }

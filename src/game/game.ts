@@ -361,8 +361,9 @@ export class Game {
   stop() {
     this.stopped = true;
     clearInterval(this.updateParticlesId);
-    for (let unit of this.units) {
-      this.skinManager.release(unit.skin);
+    // Teammates share one skin object; release each skin once.
+    for (let skin of new Set(this.units.map(unit => unit.skin))) {
+      this.skinManager.release(skin);
     }
   }
   addPlayer(player: Player) {
@@ -636,18 +637,29 @@ export class Game {
     if (this.skinManager && !this.units.some(other => other !== unit && other.skin === unit.skin)) {
       this.skinManager.release(unit.skin);
     }
+    this.mode.onUnitKilled?.(this, unit, reason);
     unit.team?.remove(unit);
-    this.units.forEach(unit2 => {
-      if (unit2 !== unit && unit2.insideBase === unit.base) {
-        unit2.insideBase = null;
-      }
-    });
+    // The territory outlives the unit while it has other hosts (team modes); classic bases have one host.
+    const base = unit.base;
+    base.leave(unit);
+    const baseRemoved = base.hosts.length === 0;
+    if (baseRemoved) {
+      this.units.forEach(unit2 => {
+        if (unit2 !== unit && unit2.insideBase === base) {
+          unit2.insideBase = null;
+        }
+      });
+    }
     if (reason !== DEATH_REMOVED) {
       spawnDeathParticles(unit, null, unit.track.polyline.segments);
-      spawnDeathParticles(unit, null, unit.base.polygon.segments);
+      if (baseRemoved) {
+        spawnDeathParticles(unit, null, base.polygon.segments);
+      }
     }
     unit.track.remove();
-    unit.base.remove();
+    if (baseRemoved) {
+      base.remove();
+    }
     const index = this.units.findIndex(unit2 => unit2 === unit);
     this.units.splice(index, 1);
     unit.killer = killer;

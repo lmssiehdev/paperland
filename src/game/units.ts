@@ -57,6 +57,8 @@ export class Unit {
     base: Base;
     track: Track;
     lastArea: number;
+    /** Territory captured in this unit's own returns, as a share of the arena (team score). */
+    personalPercent = 0;
     /** Base the unit is currently inside (its own or an enemy's); null while outside every base. */
     insideBase: Base | null;
     /** Team in team modes (set by Team.add); null in classic. */
@@ -82,7 +84,8 @@ export class Unit {
     baseNearestPointTangent: Vec2 | null;
     baseNearestPointNormal: Vec2 | null;
 
-  constructor(game: Game, name: string, position: Vec2, basePoints: Vec2[], unusedArg: unknown, schemesManager: SchemesManager) {
+  /** `basePoints` builds the unit its own base; passing an existing Base makes the unit a co-host of it (team modes). */
+  constructor(game: Game, name: string, position: Vec2, basePoints: Vec2[] | Base, unusedArg: unknown, schemesManager: SchemesManager) {
     this.killer = undefined;
     this.achievements = undefined;
     this.death = undefined;
@@ -93,7 +96,12 @@ export class Unit {
     this.game = game;
     this.name = name;
     this.position = position;
-    this.base = new Base(this, basePoints);
+    if (basePoints instanceof Base) {
+      this.base = basePoints;
+      basePoints.hosts.push(this);
+    } else {
+      this.base = new Base(this, basePoints);
+    }
     this.track = new Track(this);
     this.lastArea = this.base.area;
     this.insideBase = this.base;
@@ -182,7 +190,7 @@ export class Player extends Unit {
   get isPlayer() {
     return true;
   }
-  constructor(game: Game, name: string, position: Vec2, basePoints: Vec2[], unusedArg: unknown, schemesManager: SchemesManager) {
+  constructor(game: Game, name: string, position: Vec2, basePoints: Vec2[] | Base, unusedArg: unknown, schemesManager: SchemesManager) {
     super(game, name, position, basePoints, unusedArg, schemesManager);
     this.win = false;
   }
@@ -214,7 +222,7 @@ export class Bot extends Unit {
     /** Debug label of the current capture maneuver (set by the "capture" state). */
     declare aspect: string;
 
-  constructor(game: Game, type: number, name: string, position: Vec2, basePoints: Vec2[], unusedArg: unknown, schemesManager: SchemesManager) {
+  constructor(game: Game, type: number, name: string, position: Vec2, basePoints: Vec2[] | Base, unusedArg: unknown, schemesManager: SchemesManager) {
     super(game, name, position, basePoints, unusedArg, schemesManager);
     this.aggro = 0;
     this.greed = 0;
