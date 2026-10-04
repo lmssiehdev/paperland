@@ -1,3 +1,4 @@
+import { EPSILON } from "../engine/math";
 import { Polygon } from "../engine/polygon";
 import type { Unit } from "./units";
 import type { Intersection, Segment } from "../engine/segment";
@@ -102,6 +103,35 @@ export class Base {
   checkSelfEntry(movement: Segment, segments: Segment[]): boolean {
     return !(this.znSum(movement, segments) > 0);
   }
+  /**
+   * Ported from the teams build's handleReturn walk (L5633-5681): does the trail segment `movement` enter this
+   * base at `point`? `segments` are this base's outline segments through `point`. Parallel hits (zn 0) do not
+   * count, as the original's Segment.intersect returns null for them.
+   */
+  checkEnemyEntry(movement: Segment, point: Vec2, segments: Segment[]): boolean {
+    let hitCount = 0;
+    let znSum = 0;
+    let missed: Segment | undefined;
+    segments.forEach(segment => {
+      const hit = segment.intersect(movement);
+      if (hit && hit.zn !== 0) {
+        hitCount++;
+        znSum += hit.zn;
+      } else if (!missed) {
+        missed = segment;
+      }
+    });
+    if (hitCount === 0 || znSum > 0 || znSum === 0 || point.equal(movement.end)) {
+      return false;
+    }
+    if (znSum === -1 && missed) {
+      const ahead = point.clone().add(movement.vector.clone().normalize().mulScalar(EPSILON * 20));
+      if (missed.contains(ahead)) {
+        return false;
+      }
+    }
+    return true;
+  }
   handleSelfIntersect(intersection: Intersection, unit: Unit, movement: Segment) {
     if (intersection.overlay) {
       return;
@@ -149,6 +179,7 @@ export class Base {
         if (trail.polyline.end) {
           unit.game.handleReturn(unit, trail);
           crossed.forEach(mate => unit.game.handleCross(mate, unit));
+          unit.game.repairTrailStarts(unit.base);
         }
         return;
       }

@@ -223,8 +223,12 @@ export interface TeamEvents {
   crosses: number;
   /** Loops captured in a teammate's name by handleCross. */
   crossLoops: number;
-  /** handleCross left the teammate standing inside the base, so it was made home (fix for the original). */
+  /** handleCross left the teammate standing inside the base with a trail, so it was made home (fix for the original). */
   crossHome: number;
+  /** handleCross left the teammate's trail starting off the outline, so it was cut back again (fix for the original). */
+  crossRetruncate: number;
+  /** Hosts whose trail start a capture had swallowed, cut back by repairTrailStarts (fix for the original). */
+  repairedStarts: number;
   /** Returns dropped because a trail end was not a vertex of the base. */
   droppedReturns: number;
   /** Enemy captures that split a shared base in two. */
@@ -233,6 +237,8 @@ export interface TeamEvents {
   merges: number;
   /** Friendly merges skipped because the stitched outline was invalid. */
   mergesSkipped: number;
+  /** Equal but distinct grid points hit in one step, unified as the original teams build does. */
+  unifiedPoints: number;
 }
 
 export class Game {
@@ -297,7 +303,7 @@ export class Game {
     stats: GameStats;
     timings: GameTimings;
     events: GameEvents;
-    teamEvents: TeamEvents = { injects: 0, crosses: 0, crossLoops: 0, crossHome: 0, droppedReturns: 0, splits: 0, merges: 0, mergesSkipped: 0 };
+    teamEvents: TeamEvents = { injects: 0, crosses: 0, crossLoops: 0, crossHome: 0, crossRetruncate: 0, repairedStarts: 0, droppedReturns: 0, splits: 0, merges: 0, mergesSkipped: 0, unifiedPoints: 0 };
     updateParticlesId: number;
     /** Assigned by spawnPlayer; only read in gameOver, which needs a spawned player. */
     startTime!: number;
@@ -520,6 +526,7 @@ export class Game {
     const bot = new Bot(this, type, name, spawnPosition, leader ? leader.base : circlePoints(spawnPosition, baseCount, baseRadius), undefined, this.schemesManager);
     if (leader && leader.team) {
       leader.team.add(bot);
+      bot.percent = leader.percent;
     } else {
       bot.setSkin(this.skinManager.get());
     }
@@ -545,6 +552,7 @@ export class Game {
     if (placement) {
       const player = new Player(this, name || this.language.defaultPlayerName, placement.position, placement.leader.base, undefined, this.schemesManager);
       placement.leader.team?.add(player);
+      player.percent = placement.leader.percent;
       this.addPlayer(player);
       this.mode.onPlayerSpawned(this, player);
       this.scale = maxScale - ~~(player.base.area / this.arenaArea * 20) / 20 * (maxScale - minScale);
@@ -1316,7 +1324,122 @@ export class Game {
     const count = segments.length;
     const victims: CaptureVictim[] = [];
     const friendlyVisits = new Map<Base, FriendlyVisit[]>();
-    for (let i = 0; i <= count; i++) {
+    const cutBase = (cut: BaseCut): void => {
+      const {
+        owner,
+        startT,
+        endT,
+        startPoint,
+        endPoint
+      } = cut;
+      let {
+        enter,
+        leave
+      }: { enter: Segment | undefined; leave: Segment | undefined; } = cut;
+      if (enter.shape !== owner.polygon) {
+        enter = owner.polygon.segments.find(segment => segment.start === startPoint);
+      }
+      if (leave.shape !== owner.polygon) {
+        leave = owner.polygon.segments.find(segment => segment.start === endPoint);
+      }
+      if (enter === leave) {
+        return;
+      }
+      const removed = trail.polyline.points().splice(startT, endT - startT + 1);
+      const index = owner.polygon.segments.findIndex(segment => segment === enter);
+      const index2 = owner.polygon.segments.findIndex(segment => segment === leave);
+      const cutStart = Math.min(index2, index);
+      const cutEnd = Math.max(index2, index);
+      if (cutStart !== index) {
+        removed.reverse();
+      }
+      const points = owner.polygon.points();
+      const removed2 = points.splice(cutStart, cutEnd - cutStart + 1, ...removed);
+      removed2.shift();
+      removed2.pop();
+      removed2.push(...removed.slice().reverse());
+      const polygon = new Polygon(removed2);
+      const polygon2 = new Polygon(points);
+      let lost: Polygon;
+      // Each host is on the side of the chord where it stands (home) or where its trail starts (outside).
+      // Classic has one host, so exactly one side is non-empty.
+      const hostsCut = owner.hosts.filter(host => host.insideBase === host.base ? polygon.inside(host.position) : polygon.inside(host.track.polyline.start || host.position));
+      const hostsKept = owner.hosts.filter(host => !hostsCut.includes(host));
+      if (hostsCut.length && hostsKept.length) {
+        this.splitBase(owner, removed2, hostsCut, points, hostsKept);
+        return;
+      }
+      if (hostsCut.length) {
+        owner.polygon.right(removed, cutStart, cutEnd);
+        lost = polygon2;
+      } else {
+        owner.polygon.left(removed, cutStart, cutEnd);
+        lost = polygon;
+      }
+      owner.area -= lost.area();
+      owner.polygon.calcPath();
+      victims.push({
+        base: owner,
+        poly: lost
+      });
+      this.units.forEach(unit => {
+        if (!owner.hasHost(unit) && unit.insideBase === owner && lost.inside(unit.position)) {
+          unit.insideBase = null;
+        }
+      });
+    };
+    if (returningUnit.team) {
+      // Team modes walk the trail as the original teams build does (visitPoint, L5481-5688): entry into and
+      // exit from other bases are re-tested with crossing signs at every trail point, so a trail that leaves
+      // my base straight into an adjacent base (no recorded entry) still cuts it.
+      let open: { owner: Base; entryPoint: Vec2; entryIndex: number; } | null = null;
+      for (let i = 0; i <= count; i++) {
+        const nextSegment = segments[i];
+        const prevSegment = segments[i - 1];
+        const point = nextSegment ? nextSegment.start : prevSegment.end;
+        for (const segment of [prevSegment, nextSegment]) {
+          if (!segment) {
+            continue;
+          }
+          const byOwner = new Map<Base, Segment[]>();
+          point.segments.forEach(segment2 => {
+            const owner = segment2.shape?.owner;
+            if (owner instanceof Base && owner !== returningUnit.base) {
+              byOwner.set(owner, [...(byOwner.get(owner) ?? []), segment2]);
+            }
+          });
+          if (!byOwner.size) {
+            continue;
+          }
+          if (open) {
+            const visit: { owner: Base; entryPoint: Vec2; entryIndex: number; } = open;
+            const ownerSegments = byOwner.get(visit.owner);
+            if (ownerSegments && !(visit.owner.znSum(segment, ownerSegments) < 0)) {
+              open = null;
+              if (areAllies(visit.owner.unit, returningUnit)) {
+                const visits = friendlyVisits.get(visit.owner) ?? [];
+                visits.push({ entryPoint: visit.entryPoint, entryIndex: visit.entryIndex, leavePoint: point, leaveIndex: i });
+                friendlyVisits.set(visit.owner, visits);
+              } else {
+                const enter = visit.owner.polygon.segments.find(segment2 => segment2.start === visit.entryPoint);
+                const leave = visit.owner.polygon.segments.find(segment2 => segment2.start === point);
+                if (enter && leave) {
+                  cutBase({ owner: visit.owner, enter, startPoint: visit.entryPoint, startT: visit.entryIndex, leave, endPoint: point, endT: i });
+                }
+              }
+            }
+          } else {
+            for (const [owner, ownerSegments] of byOwner) {
+              if (owner.checkEnemyEntry(segment, point, ownerSegments)) {
+                open = { owner, entryPoint: point, entryIndex: i };
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    for (let i = 0; i <= count && !returningUnit.team; i++) {
       const point = i === count ? segments[i - 1].end : segments[i].start;
       // Segments held by a point are committed, so their shape is set.
       // In team modes a trail vertex can be shared with a teammate's trail; only bases are contacts.
@@ -1348,70 +1471,6 @@ export class Game {
             const entryContact = matching[0];
             // `matching` only keeps open contacts whose owner also appears in `contacts`.
             const exitContact = contacts.find(item => item.owner === entryContact.owner)!;
-            const cutBase = (cut: BaseCut): void => {
-              const {
-                owner,
-                startT,
-                endT,
-                startPoint,
-                endPoint
-              } = cut;
-              let {
-                enter,
-                leave
-              }: { enter: Segment | undefined; leave: Segment | undefined; } = cut;
-              if (enter.shape !== owner.polygon) {
-                enter = owner.polygon.segments.find(segment => segment.start === startPoint);
-              }
-              if (leave.shape !== owner.polygon) {
-                leave = owner.polygon.segments.find(segment => segment.start === endPoint);
-              }
-              if (enter === leave) {
-                return;
-              }
-              const removed = trail.polyline.points().splice(startT, endT - startT + 1);
-              const index = owner.polygon.segments.findIndex(segment => segment === enter);
-              const index2 = owner.polygon.segments.findIndex(segment => segment === leave);
-              const cutStart = Math.min(index2, index);
-              const cutEnd = Math.max(index2, index);
-              if (cutStart !== index) {
-                removed.reverse();
-              }
-              const points = owner.polygon.points();
-              const removed2 = points.splice(cutStart, cutEnd - cutStart + 1, ...removed);
-              removed2.shift();
-              removed2.pop();
-              removed2.push(...removed.slice().reverse());
-              const polygon = new Polygon(removed2);
-              const polygon2 = new Polygon(points);
-              let lost: Polygon;
-              // Each host is on the side of the chord where it stands (home) or where its trail starts (outside).
-              // Classic has one host, so exactly one side is non-empty.
-              const hostsCut = owner.hosts.filter(host => host.insideBase === host.base ? polygon.inside(host.position) : polygon.inside(host.track.polyline.start || host.position));
-              const hostsKept = owner.hosts.filter(host => !hostsCut.includes(host));
-              if (hostsCut.length && hostsKept.length) {
-                this.splitBase(owner, removed2, hostsCut, points, hostsKept);
-                return;
-              }
-              if (hostsCut.length) {
-                owner.polygon.right(removed, cutStart, cutEnd);
-                lost = polygon2;
-              } else {
-                owner.polygon.left(removed, cutStart, cutEnd);
-                lost = polygon;
-              }
-              owner.area -= lost.area();
-              owner.polygon.calcPath();
-              victims.push({
-                base: owner,
-                poly: lost
-              });
-              this.units.forEach(unit => {
-                if (!owner.hasHost(unit) && unit.insideBase === owner && lost.inside(unit.position)) {
-                  unit.insideBase = null;
-                }
-              });
-            };
             if (!(entryContact.owner instanceof Base)) {
               throw new Error("Это не база");
             }
@@ -1705,6 +1764,9 @@ export class Game {
       const loopPoints = points.slice(from, to + 1);
       return { polyline: sub, intersections: mate.track.intersections.filter(intersection => loopPoints.includes(intersection.point)) };
     });
+    // Truncate BEFORE replaying (as the original): a nested handleCross on this mate (reached through the
+    // replayed captures) then only sees the trail beyond the outline, not the loops being captured.
+    mate.track.truncateToBase();
     subTrails.forEach(sub => {
       this.teamEvents.crossLoops++;
       this.handleReturn(mate, sub);
@@ -1712,18 +1774,44 @@ export class Game {
     if (mate.death) {
       return;
     }
-    // The original truncated before replaying the loops, and a later loop could remove the vertex the trail
-    // was cut back to, leaving a trail that starts inside the base (a silently lost capture). Re-check after.
+    // Fix for the original: a later loop's capture can remove the vertex the trail was cut back to, leaving a
+    // trail that starts inside the base (its next return is then silently dropped). Re-check after replaying.
+    const { start } = mate.track.polyline;
     if (mate.base.polygon.inside(mate.position)) {
+      if (start && by) {
+        this.teamEvents.crossHome++;
+      }
       mate.insideBase = mate.base;
       mate.track.remove();
-      this.teamEvents.crossHome++;
-    } else {
+    } else if (start && !mate.base.polygon.hasPoint(start)) {
+      this.teamEvents.crossRetruncate++;
       mate.track.truncateToBase();
     }
     crossed.forEach(next => {
       if (next !== by) {
         this.handleCross(next, mate, depth + 1);
+      }
+    });
+  }
+  /**
+   * Team modes, after a return and its handleCross chain: a capture can swallow the outline vertex another host's
+   * trail starts at (the original skips recursing back into `by`, so its trail then starts inside the base and
+   * its next return is silently dropped). Cut such trails back to the outline, or make the host home.
+   */
+  repairTrailStarts(base: Base) {
+    base.hosts.slice().forEach(host => {
+      const start = () => host.track.polyline.start;
+      if (host.death || !start() || base.polygon.hasPoint(start()!)) {
+        return;
+      }
+      this.teamEvents.repairedStarts++;
+      this.handleCross(host);
+      if (host.death || host.base !== base) {
+        return;
+      }
+      if (base.polygon.inside(host.position)) {
+        host.insideBase = base;
+        host.track.remove();
       }
     });
   }
@@ -1756,7 +1844,13 @@ export class Game {
             if (intersection.point !== pointGroups[index].point) {
               if (intersection.point.cell) {
                 if (pointGroups[index].point.cell) {
-                  throw new Error("Бывает ли такое?");
+                  if (!unit.team) {
+                    throw new Error("Бывает ли такое?");
+                  }
+                  // Team modes: teammates that spawned on one spot can lay equal but distinct vertices. The
+                  // original teams build (updateState closeGroup) unifies the hits onto the first grid point.
+                  intersection.point = pointGroups[index].point;
+                  this.teamEvents.unifiedPoints++;
                 } else {
                   pointGroups[index].point = intersection.point;
                   pointGroups[index].intersections.forEach(intersection2 => {
