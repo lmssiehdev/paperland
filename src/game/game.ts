@@ -27,7 +27,6 @@ import { Track } from "./track";
 import type { ReturnTrail, TrackBaseCrossing } from "./track";
 import { Polyline } from "../engine/polyline";
 import { areAllies } from "./team";
-import type { Team } from "./team";
 import { ClassicMode } from "../modes/classic";
 import type { GameMode } from "../modes/mode";
 
@@ -207,10 +206,11 @@ export type SpawnZone = "near" | "bounds" | "center" | "random";
 
 /** Options for Game.spawnBot used by team modes. */
 export interface SpawnBotOptions {
-  /** Team the bot joins (it takes the team's skin instead of a fresh one). */
-  team?: Team;
-  /** Anchor for the "near" zone. */
-  near?: Unit;
+  /**
+   * Team modes: the bot spawns on this teammate (standing in its base), joins its base as a co-host and its
+   * team. No spawn spot is searched and no skin is drawn.
+   */
+  leader?: Unit;
 }
 
 export type GameRenderer = (game: Game) => void;
@@ -475,7 +475,7 @@ export class Game {
     return point3;
   }
   /** Spawns one bot if there is room; returns it, or undefined when no bot was spawned. */
-  spawnBot(zone: SpawnZone, { team, near }: SpawnBotOptions = {}): Bot | undefined {
+  spawnBot(zone: SpawnZone, { leader }: SpawnBotOptions = {}): Bot | undefined {
     const {
       baseCount,
       baseRadius,
@@ -494,10 +494,10 @@ export class Game {
     if (!this.nameManager || !this.nameManager.available()) {
       return;
     }
-    if (!team && (!this.skinManager || !this.skinManager.available())) {
+    if (!leader && (!this.skinManager || !this.skinManager.available())) {
       return;
     }
-    const spawnPosition = this.getSpawnPosition(zone, undefined, near);
+    const spawnPosition = leader ? leader.position.clone() : this.getSpawnPosition(zone);
     if (!spawnPosition) {
       return;
     }
@@ -517,9 +517,9 @@ export class Game {
     }
     const type = typeRotation[rotationIndex];
     const name = this.nameManager.get();
-    const bot = new Bot(this, type, name, spawnPosition, circlePoints(spawnPosition, baseCount, baseRadius), undefined, this.schemesManager);
-    if (team) {
-      team.add(bot);
+    const bot = new Bot(this, type, name, spawnPosition, leader ? leader.base : circlePoints(spawnPosition, baseCount, baseRadius), undefined, this.schemesManager);
+    if (leader && leader.team) {
+      leader.team.add(bot);
     } else {
       bot.setSkin(this.skinManager.get());
     }
@@ -540,6 +540,17 @@ export class Game {
         this.kill(this.units[~~(this.units.length / 2)], undefined, DEATH_REMOVED);
       }
     };
+    // Team modes: the player spawns on a teammate standing in its base and shares that base.
+    const placement = this.mode.placePlayer?.(this);
+    if (placement) {
+      const player = new Player(this, name || this.language.defaultPlayerName, placement.position, placement.leader.base, undefined, this.schemesManager);
+      placement.leader.team?.add(player);
+      this.addPlayer(player);
+      this.mode.onPlayerSpawned(this, player);
+      this.scale = maxScale - ~~(player.base.area / this.arenaArea * 20) / 20 * (maxScale - minScale);
+      this.startTime = now();
+      return;
+    }
     if (this.units.length && this.units.length >= botsCount) {
       removeMiddleUnit();
     }
@@ -1022,7 +1033,7 @@ export class Game {
       this.gameOver(DEATH_WIN);
     }
     this.timings.spawnStartTime = now();
-    this.mode.spawnBots(this);
+    this.mode.spawnBots(this, dt);
     this.timings.spawnEndTime = now();
     this.cycle++;
     return true;

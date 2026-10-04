@@ -1,5 +1,6 @@
 import { Vec2 } from "../engine/vec2";
 import { renderDebugOverlay } from "./debug-overlay";
+import type { Base } from "../game/base";
 import type { Track } from "../game/track";
 import type { Unit } from "../game/units";
 import type { Game, RenderContext } from "../game/game";
@@ -212,6 +213,17 @@ const fillPath = (ctx: CanvasRenderingContext2D, path: Path2D, style: FillStyle)
   ctx.fillStyle = style;
   ctx.fill(path);
 };
+/** One unit per distinct base, in unit order: teammates share a base, which must be drawn once. */
+const baseOwners = (units: Unit[]): Unit[] => {
+  const seen = new Set<Base>();
+  return units.filter(unit => {
+    if (seen.has(unit.base)) {
+      return false;
+    }
+    seen.add(unit.base);
+    return true;
+  });
+};
 const drawBases = (renderContext: RenderContext) => {
   const {
     game: game,
@@ -221,7 +233,7 @@ const drawBases = (renderContext: RenderContext) => {
   const {
     trackWidth
   } = game.config;
-  game.units.forEach(unit => {
+  baseOwners(game.units).forEach(unit => {
     if (boundsInView(unit.base.polygon, trackWidth) || game.debugView) {
       fillPath(ctx, unit.base.polygon.path, unit.skin.pattern && unit.skin.pattern.pattern || unit.skin.colors.main);
     }
@@ -334,7 +346,7 @@ const drawBaseSides = (renderContext: RenderContext) => {
   const {
     trackWidth
   } = game.config;
-  game.units.forEach(unit => {
+  baseOwners(game.units).forEach(unit => {
     if (boundsInView(unit.base.polygon, trackWidth)) {
       fillPath(ctx, unit.base.polygon.path, unit.skin.colors.back);
     }

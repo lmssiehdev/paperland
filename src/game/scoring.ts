@@ -35,6 +35,10 @@ export class SchemesManager {
   getSchemes(unit: Unit) {
     return new SchemeSet(this.Schemes.map(Scheme => new Scheme(unit)), this);
   }
+  /** Makes `Scheme` (one of the registered classes) the current scheme. */
+  select(Scheme: ScoreSchemeClass) {
+    this.current = Math.max(0, this.Schemes.indexOf(Scheme));
+  }
   next() {
     this.current++;
     if (this.current === this.Schemes.length) {
@@ -148,5 +152,26 @@ export class ClassicScoreScheme extends ScoreScheme {
         fading: true
       });
     }
+  }
+}
+/**
+ * Team modes (the original's TeamScoreScheme): a unit scores the territory it captured itself, including loops
+ * captured in its name by a teammate's return (Game.handleCross). Hosts of one base share `percent`.
+ */
+export class TeamScoreScheme extends ClassicScoreScheme {
+  constructor(unit: Unit) {
+    super(unit);
+    this.name = "team";
+  }
+  scores() {
+    return this.unit.personalPercent * 100;
+  }
+  comeback(info: ComebackInfo, silent: boolean) {
+    if (!this.unit.team) {
+      return;
+    }
+    const gain = info.rise.area() / info.game.arenaArea;
+    this.unit.personalPercent += gain;
+    super.comeback({ ...info, increment: gain }, silent);
   }
 }

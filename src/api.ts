@@ -51,6 +51,7 @@ export const createApi = (config: GameConfig, language: Language, createSkinMana
   result.create = (view: HTMLCanvasElement, mode: ModeId = "classic"): void => {
     currentView = view;
     const gameMode = createMode(mode);
+    schemesManager.select(gameMode.scoreScheme);
     const gameConfig = { ...config, ...gameMode.config };
     const {
       arenaSize,

@@ -10,7 +10,7 @@ import { Vec2 } from "./engine/vec2";
 import { AchievementStore } from "./game/achievements";
 import { Game } from "./game/game";
 import { BOT_NAMES, NamePool } from "./game/names";
-import { ClassicScoreScheme, SchemesManager } from "./game/scoring";
+import { ClassicScoreScheme, SchemesManager, TeamScoreScheme } from "./game/scoring";
 import { Bot, Player, Unit } from "./game/units";
 import Cookies from "js-cookie";
 import { createElement, render } from "preact";
@@ -43,7 +43,7 @@ Promise.all([languagesRequest, skinsRequest]).then(([languages, skinsList]) => {
     const skinManager = new SkinManager(coloredPool, classicSkinPool, 1);
     return skinManager;
   };
-  const schemesManager = new SchemesManager(ClassicScoreScheme);
+  const schemesManager = new SchemesManager(ClassicScoreScheme, TeamScoreScheme);
   const achievementStore = new AchievementStore([]);
   achievementStore.load();
   const api = createApi(CONFIG, getLanguage(), createSkinManager, new NamePool(BOT_NAMES, Math.random()), schemesManager, achievementStore);
