@@ -1,3 +1,21 @@
+/** Pointer position in page/client pixels. */
+export interface PointerPosition {
+  x: number;
+  y: number;
+}
+
+/** Handler bound to a single key code (fires on key up). */
+export interface KeyBinding {
+  code: number;
+  handler: () => void;
+}
+
+/** Handler fired on key down once all `codes` are held together. */
+export interface KeyChord {
+  codes: number[];
+  handler: () => void;
+}
+
 export class KeyboardModeSwitch {
     mode2: boolean;
 
@@ -15,16 +33,16 @@ export class Controller {
     left: boolean;
     right: boolean;
     modifiers: { shift: boolean; ctrl: boolean; alt: boolean; meta: boolean; };
-    mouse: {};
-    lastMouse: {};
+    mouse: PointerPosition;
+    lastMouse: PointerPosition;
     buttons: { left: boolean; middle: boolean; right: boolean; };
-    codes: any[];
-    sets: any[];
+    codes: KeyBinding[];
+    sets: KeyChord[];
     keyboardModeSwitch: KeyboardModeSwitch;
-    pressedButtons: any[];
+    pressedButtons: number[];
     dispose: () => void;
 
-  constructor(view: { addEventListener: (arg0: string, arg1: { (event: any): any; (event: any): void; (event: any): void; (event: any): void; (_0x5d0f61: any): void; (_0x2c9dbd: any): void; (event: any): void; (event: any): void; (event: any): void; (event: any): void; }, arg2: boolean) => void; removeEventListener: (arg0: string, arg1: { (event: any): any; (event: any): void; (event: any): void; (event: any): void; (_0x5d0f61: any): void; (_0x2c9dbd: any): void; }, arg2: boolean) => void; }, keyboardModeSwitch: KeyboardModeSwitch) {
+  constructor(view: HTMLElement, keyboardModeSwitch: KeyboardModeSwitch) {
     this.up = false;
     this.down = false;
     this.left = false;
@@ -46,32 +64,32 @@ export class Controller {
     this.sets = [];
     this.keyboardModeSwitch = keyboardModeSwitch;
     this.pressedButtons = [];
-    const _0x45f58d = (event: any) => this.onKeyChange(event, true);
-    const _0x5b7c33 = (event: any) => this.onKeyChange(event, false);
+    const onKeyDown = (event: KeyboardEvent) => this.onKeyChange(event, true);
+    const onKeyUp = (event: KeyboardEvent) => this.onKeyChange(event, false);
     if (keyboardModeSwitch) {
       keyboardModeSwitch.get();
-      window.addEventListener("keydown", _0x45f58d, false);
-      window.addEventListener("keyup", _0x5b7c33, false);
+      window.addEventListener("keydown", onKeyDown, false);
+      window.addEventListener("keyup", onKeyUp, false);
     }
-    const _0x285b73 = (event: any) => event.preventDefault();
-    view.addEventListener("contextmenu", _0x285b73, false);
-    const _0x5aba7e = (_0x5d0f61: { button: any; }): any => this.onMouseChange(_0x5d0f61, true);
-    const _0x48778e = (_0x2c9dbd: { button: any; }): any => this.onMouseChange(_0x2c9dbd, false);
-    const _0x36c59b = (event: any) => {
+    const onContextMenu = (event: Event) => event.preventDefault();
+    view.addEventListener("contextmenu", onContextMenu, false);
+    const onMouseDown = (event: MouseEvent): void => this.onMouseChange(event, true);
+    const onMouseUp = (event: MouseEvent): void => this.onMouseChange(event, false);
+    const onMouseLeave = (event: MouseEvent) => {
       this.lastMouse = this.mouse;
       this.mouse = null;
       event.preventDefault();
     };
-    const _0x4e6057 = (event: any) => {
+    const onMouseMove = (event: MouseEvent) => {
       if (this.mouse === null) {
-        this.mouse = {};
+        this.mouse = {} as PointerPosition;
       }
       this.mouse.x = event.pageX;
       this.mouse.y = event.pageY;
       event.preventDefault();
     };
-    const _0x14f737 = (event: any) => {
-      _0x4e6057(event);
+    const onMouseEnter = (event: MouseEvent) => {
+      onMouseMove(event);
       const {
         buttons
       } = event;
@@ -82,57 +100,57 @@ export class Controller {
       };
       event.preventDefault();
     };
-    view.addEventListener("mouseenter", _0x14f737, false);
-    view.addEventListener("mousemove", _0x4e6057, false);
-    view.addEventListener("mouseleave", _0x36c59b, false);
-    view.addEventListener("mousedown", _0x5aba7e, false);
-    view.addEventListener("mouseup", _0x48778e, false);
-    const _0x3f4b7e = (event: any) => {
+    view.addEventListener("mouseenter", onMouseEnter, false);
+    view.addEventListener("mousemove", onMouseMove, false);
+    view.addEventListener("mouseleave", onMouseLeave, false);
+    view.addEventListener("mousedown", onMouseDown, false);
+    view.addEventListener("mouseup", onMouseUp, false);
+    const onTouchEnd = (event: TouchEvent) => {
       this.lastMouse = this.mouse;
       this.mouse = null;
       event.preventDefault();
     };
-    const _0x137951 = (event: any) => {
+    const onTouchMove = (event: TouchEvent) => {
       if (this.mouse === null) {
-        this.mouse = {};
+        this.mouse = {} as PointerPosition;
       }
       const changedTouch = event.changedTouches[0];
       this.mouse.x = changedTouch.clientX;
       this.mouse.y = changedTouch.clientY;
       event.preventDefault();
     };
-    view.addEventListener("touchstart", _0x137951, false);
-    view.addEventListener("touchmove", _0x137951, false);
-    view.addEventListener("touchend", _0x3f4b7e, false);
-    view.addEventListener("touchcancel", _0x3f4b7e, false);
+    view.addEventListener("touchstart", onTouchMove, false);
+    view.addEventListener("touchmove", onTouchMove, false);
+    view.addEventListener("touchend", onTouchEnd, false);
+    view.addEventListener("touchcancel", onTouchEnd, false);
     this.dispose = () => {
-      view.removeEventListener("contextmenu", _0x285b73, false);
+      view.removeEventListener("contextmenu", onContextMenu, false);
       if (keyboardModeSwitch) {
-        window.removeEventListener("keydown", _0x45f58d, false);
-        window.removeEventListener("keyup", _0x5b7c33, false);
+        window.removeEventListener("keydown", onKeyDown, false);
+        window.removeEventListener("keyup", onKeyUp, false);
       }
-      view.removeEventListener("mouseenter", _0x14f737, false);
-      view.removeEventListener("mousemove", _0x4e6057, false);
-      view.removeEventListener("mouseleave", _0x36c59b, false);
-      view.removeEventListener("mousedown", _0x5aba7e, false);
-      view.removeEventListener("mouseup", _0x48778e, false);
+      view.removeEventListener("mouseenter", onMouseEnter, false);
+      view.removeEventListener("mousemove", onMouseMove, false);
+      view.removeEventListener("mouseleave", onMouseLeave, false);
+      view.removeEventListener("mousedown", onMouseDown, false);
+      view.removeEventListener("mouseup", onMouseUp, false);
     };
   }
   pressed() {
     return this.up || this.down || this.left || this.right;
   }
-  onKeyChange(event: any, up: boolean) {
+  onKeyChange(event: KeyboardEvent, isDown: boolean) {
     if (event.target === document.body) {
-      let _0x10b4f0 = true;
+      let handled = true;
       const {
         keyCode
       } = event;
       const index = this.pressedButtons.indexOf(keyCode);
-      if (up) {
+      if (isDown) {
         if (index < 0) {
           this.pressedButtons.push(keyCode);
         }
-        const set = this.sets.find(set => set.codes.every((code: any): any => this.pressedButtons.find(pressedButton => pressedButton === code)));
+        const set = this.sets.find(set => set.codes.every(code => this.pressedButtons.find(pressedButton => pressedButton === code)));
         if (set) {
           set.handler();
         }
@@ -148,61 +166,63 @@ export class Controller {
       switch (keyCode) {
         case 38:
         case 87:
-          this.up = up;
+          this.up = isDown;
           break;
         case 40:
         case 83:
-          this.down = up;
+          this.down = isDown;
           break;
         case 37:
         case 65:
-          this.left = up;
+          this.left = isDown;
           break;
         case 39:
         case 68:
-          this.right = up;
+          this.right = isDown;
           break;
         case 67:
-          if (!up) {
+          if (!isDown) {
             this.keyboardModeSwitch.switch();
           }
           break;
         default:
-          _0x10b4f0 = false;
+          handled = false;
           break;
       }
       this.modifiers.shift = event.shiftKey;
       this.modifiers.ctrl = event.ctrlKey;
       this.modifiers.alt = event.altKey;
       this.modifiers.meta = event.metaKey;
-      if (_0x10b4f0) {
+      if (handled) {
         event.preventDefault();
       }
     }
   }
-  onMouseChange(_0x323ccf: { button: any; }, _0xfc9f32: boolean) {
-    switch (_0x323ccf.button) {
+  onMouseChange(event: MouseEvent, isDown: boolean) {
+    switch (event.button) {
       case 0:
-        this.buttons.left = _0xfc9f32;
+        this.buttons.left = isDown;
         break;
       case 1:
-        this.buttons.middle = _0xfc9f32;
+        this.buttons.middle = isDown;
         break;
       case 2:
-        this.buttons.right = _0xfc9f32;
+        this.buttons.right = isDown;
         break;
     }
   }
-  addButton(_0x3af9c9: any, _0x25ce8f: any) {
+  /** Calls `handler` when the key `code` is released. */
+  addButton(code: number, handler: () => void) {
     this.codes.push({
-      code: _0x3af9c9,
-      handler: _0x25ce8f
+      code: code,
+      handler: handler
     });
   }
-  addSet(_0x24bcaa: any[], _0x4c1a93: any) {
+  /** Calls `handler` when all keys in `codes` are held down together. */
+  addSet(codes: number[], handler: () => void) {
     this.sets.push({
-      codes: _0x24bcaa.sort(),
-      handler: _0x4c1a93
+      codes: codes.sort(),
+      handler: handler
     });
   }
 }

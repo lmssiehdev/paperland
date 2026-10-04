@@ -1,7 +1,43 @@
+import type { Config } from "../config";
 import { loadImage } from "../engine/load-image";
 
+/** Bitmap a skin layer/pattern is drawn from (loaded image or generated canvas). */
+export type SkinImageSource = HTMLImageElement | HTMLCanvasElement;
+
+/** One avatar layer as described in skins.json (or generated for colored skins). */
+export interface SkinLayerConfig {
+  level?: number;
+  url?: string;
+  src?: SkinImageSource;
+  rotation?: number;
+  scale?: number;
+  /** "target": layer rotates toward the unit's target instead of its heading. */
+  direction?: string;
+  pivot?: { x?: number; y?: number };
+}
+
+/** `avatar` entry of skins.json. */
+export interface SkinAvatarConfig {
+  scale?: number;
+  x?: number;
+  y?: number;
+  layers: SkinLayerConfig[];
+}
+
+/** `pattern` entry of skins.json. */
+export interface SkinPatternConfig {
+  url: string;
+  scale?: number;
+}
+
+/** A layer of a SkinAvatar paired with its owning display (see SkinDisplay.sort). */
+export interface SkinDisplayLayer {
+  display: SkinAvatar;
+  layer: SkinLayer;
+}
+
 var _0x577878 = Object.assign;
-class SkinLayer {
+export class SkinLayer {
     level: number;
     scale: number;
     x: number;
@@ -9,12 +45,12 @@ class SkinLayer {
     direction: string;
     rotation: number;
     url: string;
-    src: any;
+    src: SkinImageSource;
     image: HTMLCanvasElement;
-    config: any;
-    pivot: any;
+    config: Config;
+    pivot: { x: number; y: number };
 
-  constructor(config: any, _0x3a27c4: SkinLayer & { url: string; }, _0x5c0a2e) {
+  constructor(config: Config, layerConfig: SkinLayerConfig, onLoad?: (layer: SkinLayer) => void) {
     this.level = 0;
     this.scale = 1;
     this.x = 0;
@@ -25,18 +61,18 @@ class SkinLayer {
     this.src = null;
     this.image = null;
     this.config = config;
-    Object.assign(this, _0x3a27c4);
+    Object.assign(this, layerConfig);
     this.pivot = Object.assign({
       x: 0.5,
       y: 0.5
-    }, _0x3a27c4.pivot);
-    let _0x477016 = this.url ? loadImage(this.url) : this.src ? Promise.resolve(this.src) : null;
-    if (_0x477016) {
-      _0x477016.then(src => {
+    }, layerConfig.pivot);
+    let sourcePromise: Promise<SkinImageSource> = this.url ? loadImage(this.url) : this.src ? Promise.resolve(this.src) : null;
+    if (sourcePromise) {
+      sourcePromise.then(src => {
         this.src = src;
         this.rescale(1);
-        if (_0x5c0a2e) {
-          _0x5c0a2e(this);
+        if (onLoad) {
+          onLoad(this);
         }
       });
     }
@@ -46,33 +82,33 @@ class SkinLayer {
       trackWidth,
       maxScale
     } = this.config;
-    const _0x20f488 = trackWidth * maxScale;
+    const maxPixelWidth = trackWidth * maxScale;
     const src = this.src;
-    const _0x7c46da = src.naturalWidth || src.width;
-    const _0x5794f4 = src.naturalHeight || src.height;
-    const _0x2dc538 = _0x20f488 * scale * this.scale / _0x7c46da;
-    const _0x1c07b1 = ~~(_0x7c46da * _0x2dc538);
-    const _0x306f8b = ~~(_0x5794f4 * _0x2dc538);
-    const _0x20a4ae = _0x1c07b1 / _0x7c46da;
-    const _0x145a85 = _0x306f8b / _0x5794f4;
+    const srcWidth = (src as HTMLImageElement).naturalWidth || src.width;
+    const srcHeight = (src as HTMLImageElement).naturalHeight || src.height;
+    const factor = maxPixelWidth * scale * this.scale / srcWidth;
+    const width = ~~(srcWidth * factor);
+    const height = ~~(srcHeight * factor);
+    const scaleX = width / srcWidth;
+    const scaleY = height / srcHeight;
     const canvas = document.createElement("canvas");
-    canvas.width = _0x1c07b1;
-    canvas.height = _0x306f8b;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext("2d");
-    ctx.scale(_0x20a4ae, _0x145a85);
+    ctx.scale(scaleX, scaleY);
     ctx.drawImage(src, 0, 0);
     this.image = canvas;
   }
 }
-let _0x486b34: SVGSVGElement;
+let matrixSvg: SVGSVGElement;
 export class SkinPattern {
-    url: any;
-    scale: any;
-    src: unknown;
+    url: string;
+    scale: number;
+    src: HTMLImageElement;
     ready: boolean;
-    pattern: any;
+    pattern: CanvasPattern;
 
-  constructor(config: { maxScale: any; }, view: { getContext: (arg0: string) => { (): any; new(): any; createPattern: { (arg0: HTMLCanvasElement, arg1: string): any; new(): any; }; }; }, path: any, pattern = {}, _0x2317d8: { (): void; (): void; }) {
+  constructor(config: Config, view: HTMLCanvasElement, path: string, pattern: SkinPatternConfig = {} as SkinPatternConfig, onReady?: () => void) {
     this.url = path + pattern.url;
     this.scale = pattern.scale || 1;
     this.src = null;
@@ -82,33 +118,33 @@ export class SkinPattern {
     } = config;
     loadImage(this.url).then(src => {
       this.src = src;
-      const _0x2a57f3 = ~~(src.naturalWidth || src.width);
-      const _0xd536fd = ~~(src.naturalHeight || src.height);
-      const _0x394a8d = maxScale * 100 * this.scale / _0x2a57f3;
-      if (_0x2a57f3 == 0) {
+      const srcWidth = ~~(src.naturalWidth || src.width);
+      const srcHeight = ~~(src.naturalHeight || src.height);
+      const factor = maxScale * 100 * this.scale / srcWidth;
+      if (srcWidth == 0) {
         console.log(this.url + " has no width");
       }
-      if (_0xd536fd == 0) {
+      if (srcHeight == 0) {
         console.log(this.url + " has no heigth");
       }
-      const _0x1e3321 = Math.floor(_0x2a57f3 * _0x394a8d) || 1;
-      const _0x50e221 = Math.floor(_0xd536fd * _0x394a8d) || 1;
+      const width = Math.floor(srcWidth * factor) || 1;
+      const height = Math.floor(srcHeight * factor) || 1;
       const canvas = document.createElement("canvas");
-      canvas.width = _0x1e3321;
-      canvas.height = _0x50e221;
-      canvas.getContext("2d").drawImage(src, 0, 0, _0x1e3321 + 1, _0x50e221 + 1);
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d").drawImage(src, 0, 0, width + 1, height + 1);
       this.pattern = view.getContext("2d").createPattern(canvas, "repeat");
-      const _0x3fc465 = 1 / maxScale;
-      if (!_0x486b34) {
-        _0x486b34 = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      const invScale = 1 / maxScale;
+      if (!matrixSvg) {
+        matrixSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       }
-      const _0x146217 = _0x486b34.createSVGMatrix().scale(_0x3fc465, _0x3fc465);
+      const matrix = matrixSvg.createSVGMatrix().scale(invScale, invScale);
       if (this.pattern.setTransform) {
-        this.pattern.setTransform(_0x146217);
+        this.pattern.setTransform(matrix);
       }
       this.ready = true;
-      if (_0x2317d8) {
-        _0x2317d8();
+      if (onReady) {
+        onReady();
       }
     });
   }
@@ -122,34 +158,36 @@ export class SkinAvatar {
     frontLayers: SkinLayer[];
     backLayers: SkinLayer[];
 
-  constructor(config: any, path: string, avatar: { layers: ({ src: HTMLCanvasElement; level?: undefined; } | { level: number; src: HTMLCanvasElement; })[]; }, _0x5942cc: { (): void; (): void; }) {
+  constructor(config: Config, path: string, avatar: SkinAvatarConfig, onReady?: () => void) {
     this.layers = [];
     this.scale = 1;
     this.x = 0;
     this.y = 0;
     this.ready = false;
     Object.assign(this, avatar);
-    let _0x6b881a = 0;
-    const _0x41860f = (_0x5c5381: { rescale: (arg0: number) => void; }): { rescale: (arg0: number) => void; } => {
-      _0x5c5381.rescale(this.scale);
-      if (this.layers.length === ++_0x6b881a) {
+    let loadedCount = 0;
+    const onLayerLoad = (layer: SkinLayer): void => {
+      layer.rescale(this.scale);
+      if (this.layers.length === ++loadedCount) {
         this.ready = true;
-        if (_0x5942cc) {
-          _0x5942cc();
+        if (onReady) {
+          onReady();
         }
       }
     };
-    this.layers = (this.layers || []).map(item => new SkinLayer(config, _0x577878(_0x577878({}, item), {
+    // Object.assign above copied the raw layer configs; they are replaced by SkinLayer instances here.
+    const layerConfigs: SkinLayerConfig[] = this.layers || [];
+    this.layers = layerConfigs.map(item => new SkinLayer(config, _0x577878(_0x577878({}, item), {
       url: item.url && "" + path + item.url
-    }), _0x41860f));
+    }), onLayerLoad));
     this.frontLayers = this.layers.filter(layer => layer.level >= 1).sort((a, b) => a.level - b.level);
     this.backLayers = this.layers.filter(layer => layer.level < 1).sort((a, b) => b.level - a.level);
   }
 }
 export class SkinDisplay {
-    displays: any[];
-    frontLayers: any[];
-    backLayers: any[];
+    displays: SkinAvatar[];
+    frontLayers: SkinDisplayLayer[];
+    backLayers: SkinDisplayLayer[];
     maxScale: number;
 
   constructor() {
@@ -162,22 +200,22 @@ export class SkinDisplay {
     return this.displays.every(display => display.ready);
   }
   sort() {
-    this.frontLayers = [].concat(...this.displays.map(display => display.frontLayers.map((frontLayer: any): any => ({
+    this.frontLayers = ([] as SkinDisplayLayer[]).concat(...this.displays.map(display => display.frontLayers.map((frontLayer): SkinDisplayLayer => ({
       display: display,
       layer: frontLayer
     })))).sort((a, b) => a.layer.level - b.layer.level);
-    this.backLayers = [].concat(...this.displays.map(display => display.backLayers.map((backLayer: any): any => ({
+    this.backLayers = ([] as SkinDisplayLayer[]).concat(...this.displays.map(display => display.backLayers.map((backLayer): SkinDisplayLayer => ({
       display: display,
       layer: backLayer
     })))).sort((a, b) => b.layer.level - a.layer.level);
     this.maxScale = Math.max(...this.frontLayers.map(frontLayer => frontLayer.display.scale * frontLayer.layer.scale));
   }
-  add(_0x1bcc1a: any) {
-    this.displays.push(_0x1bcc1a);
+  add(display: SkinAvatar) {
+    this.displays.push(display);
     this.sort();
   }
-  remove(_0x4625c7: any) {
-    this.displays = this.displays.filter(display => display !== _0x4625c7);
+  remove(removed: SkinAvatar) {
+    this.displays = this.displays.filter(display => display !== removed);
     this.sort();
   }
 }

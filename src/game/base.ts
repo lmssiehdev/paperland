@@ -1,16 +1,18 @@
 import { Polygon } from "../engine/polygon";
 import type { Unit } from "./units";
-import type { Segment } from "../engine/segment";
+import type { Intersection, Segment } from "../engine/segment";
+import type { Vec2 } from "../engine/vec2";
 
 export class Base {
     unit: Unit;
-    isTrack: any;
-    merges: any[];
+    /** Always unset for bases (Track sets it to true); used to tell segment owners apart. */
+    isTrack: boolean;
+    merges: unknown[];
     polygon: Polygon;
     path: Path2D;
     square: number;
 
-  constructor(unit: Unit, points: any[]) {
+  constructor(unit: Unit, points: Vec2[]) {
     this.unit = undefined;
     this.isTrack = undefined;
     this.unit = unit;
@@ -47,87 +49,88 @@ export class Base {
   remove() {
     this.polygon.remove();
   }
-  handleIntersect(_0x17a22b: any, _0x7347fa: any, segment: Segment) {
-    if (_0x7347fa === this.unit) {
-      this.handleSelfIntersect(_0x17a22b, _0x7347fa, segment);
+  /** `unit` moved along `movement` and crossed this base's outline at `intersection`. */
+  handleIntersect(intersection: Intersection, unit: Unit, movement: Segment) {
+    if (unit === this.unit) {
+      this.handleSelfIntersect(intersection, unit, movement);
     } else {
-      this.handleEnemyIntersect(_0x17a22b, _0x7347fa, segment);
+      this.handleEnemyIntersect(intersection, unit, movement);
     }
   }
-  handleSelfIntersect(_0x445601: { overlay?: any; zn?: any; point?: any; segment?: any; }, _0x56072c, segment: Segment) {
-    if (_0x445601.overlay) {
+  handleSelfIntersect(intersection: Intersection, unit: Unit, movement: Segment) {
+    if (intersection.overlay) {
       return;
     }
     this.unit.onScoreChanged();
     const {
       point: point,
-      segment: segment2
-    } = _0x445601;
-    if (_0x56072c.in === this) {
-      if (_0x445601.zn < 0) {
+      segment: segment
+    } = intersection;
+    if (unit.in === this) {
+      if (intersection.zn < 0) {
         return;
       }
-      if (point.equal(segment.end)) {
+      if (point.equal(movement.end)) {
         return;
       }
-      this.polygon.insert(segment2, point);
-      _0x56072c.track.add(point);
-      _0x56072c.in = null;
-      if (_0x56072c.schemes) {
-        _0x56072c.schemes.out();
+      this.polygon.insert(segment, point);
+      unit.track.add(point);
+      unit.in = null;
+      if (unit.schemes) {
+        unit.schemes.out();
       }
-      if (_0x56072c.achievements) {
-        _0x56072c.achievements.onOut();
+      if (unit.achievements) {
+        unit.achievements.onOut();
       }
     } else {
-      if (_0x445601.zn > 0) {
+      if (intersection.zn > 0) {
         return;
       }
-      if (point.equal(segment.start)) {
+      if (point.equal(movement.start)) {
         return;
       }
-      if (_0x56072c.in) {
+      if (unit.in) {
         return;
       }
-      this.polygon.insert(segment2, point);
-      _0x56072c.track.add(point);
-      if (_0x56072c.track.polyline.end) {
-        this.unit.game.handleReturn(_0x56072c);
+      this.polygon.insert(segment, point);
+      unit.track.add(point);
+      if (unit.track.polyline.end) {
+        this.unit.game.handleReturn(unit);
       }
-      _0x56072c.in = this;
-      _0x56072c.track.remove();
+      unit.in = this;
+      unit.track.remove();
     }
   }
-  handleEnemyIntersect(_0x1cb2ac: { zn?: any; overlay?: any; point?: any; segment?: any; }, _0x25139d, segment2: Segment) {
+  handleEnemyIntersect(intersection: Intersection, unit: Unit, movement: Segment) {
     const {
       point: point,
       segment: segment
-    } = _0x1cb2ac;
-    if (_0x25139d.in === this) {
-      if (_0x1cb2ac.zn < 0) {
+    } = intersection;
+    if (unit.in === this) {
+      if (intersection.zn < 0) {
         return;
       }
       this.polygon.insert(segment, point);
-      _0x25139d.track.add(point);
-      _0x25139d.track.intersect(_0x1cb2ac, this, false);
-      _0x25139d.in = null;
+      unit.track.add(point);
+      unit.track.intersect(intersection, this, false);
+      unit.in = null;
     } else {
-      if (_0x1cb2ac.zn > 0) {
+      if (intersection.zn > 0) {
         return;
       }
-      if (_0x1cb2ac.overlay) {
+      if (intersection.overlay) {
         return;
       }
-      if (point.equal(segment2.end)) {
+      if (point.equal(movement.end)) {
         return;
       }
-      if (_0x25139d.in) {
+      if (unit.in) {
         return;
       }
       this.polygon.insert(segment, point);
-      _0x25139d.track.add(point);
-      _0x25139d.track.intersect(_0x1cb2ac, this, true);
-      _0x25139d.in = this;
+      unit.track.add(point);
+      unit.track.intersect(intersection, this, true);
+      unit.in = this;
     }
   }
 }

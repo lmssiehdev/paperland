@@ -1,17 +1,65 @@
 import { easeOutCubic } from "../engine/math";
 import Cookies from "js-cookie";
-import type { Unit } from "./units";
+import type { Game } from "./game";
+import type { Player, Unit } from "./units";
 
-class Tip {
+declare global {
+  interface Window {
+    /** Google Analytics command queue (absent when GA isn't loaded). */
+    ga?: (...args: unknown[]) => void;
+    /** Challenge flags mirrored from the "paperio_challenges" cookie. */
+    paperio_challenges?: ChallengeFlags;
+    /** Host page skin shop, if present. */
+    shop?: { autoCheckUnlock(): void };
+  }
+}
+
+/** Cookie map of completed challenge ids ("c13", "geraldquest1", ...). */
+export type ChallengeFlags = Record<string, boolean>;
+
+/** Progress tracker created per run for an unearned achievement. */
+export interface AchievementChecker {
+  progress: number;
+  update(player: Player, dt: number, game: Game): void;
+  check(player: Player, dt: number, game: Game): boolean;
+  onKill(victim: Unit): void;
+  onOut(): void;
+}
+
+/** Static definition passed to AchievementStore. */
+export interface AchievementDefinition {
+  name: string;
+  /** Game modes the achievement can be earned in (e.g. "classic"). */
+  modes: string[];
+  getChecker: () => AchievementChecker;
+  description: string;
+  url: string;
+  onEarned?: (game: Game, achievement: Achievement) => void;
+}
+
+/** Persisted per-achievement state. */
+export interface SavedAchievement {
+  name: string;
+  best: number;
+  earned: boolean;
+}
+
+/** Shape of the JSON stored under AchievementStore.storageName. */
+interface AchievementStorage {
+  achievements?: SavedAchievement[];
+}
+
+/** "New skin unlocked!" popup queued into Game.notifications. */
+export class Tip {
     title: string;
-    description: any;
+    description: string;
     state: number;
     current: number;
     states: number[];
     image: HTMLImageElement;
     ready: boolean;
 
-  constructor(title: string, description: any, url: string) {
+  constructor(title: string, description: string, url: string) {
     this.title = title;
     this.description = description;
     this.state = 0;
@@ -33,8 +81,8 @@ class Tip {
       this.ready = true;
     }
   }
-  update(_0x4344b8: number) {
-    this.current += _0x4344b8;
+  update(dt: number) {
+    this.current += dt;
     if (this.current > this.states[this.state]) {
       this.state++;
       this.current = 0;
@@ -53,18 +101,18 @@ class Tip {
     }
   }
 }
-class Achievement {
+export class Achievement {
     name: string;
-    modes: any;
-    getChecker: any;
-    description: any;
-    url: any;
-    onEarned: any;
+    modes: string[];
+    getChecker: () => AchievementChecker;
+    description: string;
+    url: string;
+    onEarned: AchievementDefinition["onEarned"];
     best: number;
     earned: boolean;
-    checker: any;
+    checker: AchievementChecker | null;
 
-  constructor(name: string, modes: any, getChecker: any, description: any, url: any, onEarned: any) {
+  constructor(name: string, modes: string[], getChecker: () => AchievementChecker, description: string, url: string, onEarned: AchievementDefinition["onEarned"]) {
     this.name = name;
     this.modes = modes;
     this.getChecker = getChecker;
@@ -75,44 +123,44 @@ class Achievement {
     this.earned = false;
     this.checker = null;
   }
-  success(_0x282f99: { notifications: Tip[]; }) {
+  success(game: Game) {
     this.earned = true;
     if (window.ga) {
       window.ga("send", "event", "skins_unlock", this.name);
     }
     this.checker = null;
     if (this.onEarned) {
-      this.onEarned(_0x282f99, this);
+      this.onEarned(game, this);
     }
-    _0x282f99.notifications.push(new Tip("New skin unlocked!", this.description, this.url));
+    game.notifications.push(new Tip("New skin unlocked!", this.description, this.url));
   }
 }
 export class AchievementStore {
     storageName: string;
-    achievements: any;
+    achievements: Achievement[];
 
-  constructor(_0x192743: any[], storageName = "paper.io.storage") {
+  constructor(definitions: AchievementDefinition[], storageName = "paper.io.storage") {
     this.storageName = storageName;
-    this.achievements = _0x192743.map((item): { name: string; modes: any; getChecker: any; description: any; url: any; onEarned: any; } => new Achievement(item.name, item.modes, item.getChecker, item.description, item.url, item.onEarned));
+    this.achievements = definitions.map(item => new Achievement(item.name, item.modes, item.getChecker, item.description, item.url, item.onEarned));
   }
   load() {
-    const _0x5ed92b = Cookies.getJSON("paperio_challenges") || {};
-    const _0xea5cb3 = (_0x327d6e: string, _0x59e923: string) => {
-      if (_0x5ed92b[_0x327d6e]) {
-        const achievement = this.achievements.find((achievement: { name: string; }): { name: any; } => achievement.name === _0x59e923);
+    const challenges: ChallengeFlags = Cookies.getJSON("paperio_challenges") || {};
+    const loadChallenge = (challengeId: string, achievementName: string) => {
+      if (challenges[challengeId]) {
+        const achievement = this.achievements.find(achievement => achievement.name === achievementName);
         if (achievement) {
           achievement.earned = true;
         }
       }
     };
-    _0xea5cb3("c13", "reaper");
-    _0xea5cb3("c22", "capAmerica");
-    _0xea5cb3("c22", "thanos");
-    _0xea5cb3("geraldquest1", "geralt");
-    const _0x3b1c17 = Cookies.getJSON(this.storageName) || {};
-    if (_0x3b1c17.achievements) {
-      _0x3b1c17.achievements.forEach((achievement: { name: any; best: number; earned: boolean; }): { name: any; best: number; earned: boolean; } => {
-        const achievement2 = this.achievements.find((achievement2: { name: any; }): { name: any; } => achievement2.name === achievement.name);
+    loadChallenge("c13", "reaper");
+    loadChallenge("c22", "capAmerica");
+    loadChallenge("c22", "thanos");
+    loadChallenge("geraldquest1", "geralt");
+    const storage: AchievementStorage = Cookies.getJSON(this.storageName) || {};
+    if (storage.achievements) {
+      storage.achievements.forEach(achievement => {
+        const achievement2 = this.achievements.find(achievement2 => achievement2.name === achievement.name);
         if (achievement2) {
           achievement2.best = achievement.best || 0;
           achievement2.earned = achievement.earned || false;
@@ -121,33 +169,33 @@ export class AchievementStore {
     }
   }
   save() {
-    const achievements = this.achievements.map((achievement: { name: any; best: any; earned: any; }): { name: any; best: any; earned: any; } => ({
+    const achievements = this.achievements.map((achievement): SavedAchievement => ({
       name: achievement.name,
       best: achievement.best,
       earned: achievement.earned
     }));
-    const y = Cookies.getJSON(this.storageName) || {};
-    y.achievements = achievements;
-    const _0x4abe97 = {
+    const storage: AchievementStorage = Cookies.getJSON(this.storageName) || {};
+    storage.achievements = achievements;
+    const cookieOptions = {
       expires: 365
     };
-    Cookies.set(this.storageName, y, _0x4abe97);
-    const y2 = Cookies.getJSON("paperio_challenges") || {};
-    const _0x24c73d = (_0x146a69: string, _0x3ef66a: string) => {
-      const achievement = this.achievements.find((achievement: { name: string; }): { name: any; } => achievement.name === _0x3ef66a);
+    Cookies.set(this.storageName, storage, cookieOptions);
+    const challenges: ChallengeFlags = Cookies.getJSON("paperio_challenges") || {};
+    const saveChallenge = (challengeId: string, achievementName: string) => {
+      const achievement = this.achievements.find(achievement => achievement.name === achievementName);
       if (achievement && achievement.earned) {
-        y2[_0x146a69] = true;
+        challenges[challengeId] = true;
       }
     };
-    _0x24c73d("c13", "reaper");
-    _0x24c73d("c22", "capAmerica");
-    _0x24c73d("c22", "thanos");
-    _0x24c73d("geraldquest1", "geralt");
-    _0x24c73d("sanitizerquest", "sanitizer");
-    _0x24c73d("doctorquest", "doctor");
-    _0x24c73d("covidquest", "covid");
-    Cookies.set("paperio_challenges", y2, _0x4abe97);
-    window.paperio_challenges = y2;
+    saveChallenge("c13", "reaper");
+    saveChallenge("c22", "capAmerica");
+    saveChallenge("c22", "thanos");
+    saveChallenge("geraldquest1", "geralt");
+    saveChallenge("sanitizerquest", "sanitizer");
+    saveChallenge("doctorquest", "doctor");
+    saveChallenge("covidquest", "covid");
+    Cookies.set("paperio_challenges", challenges, cookieOptions);
+    window.paperio_challenges = challenges;
     if (window.shop) {
       window.shop.autoCheckUnlock();
     } else {
@@ -156,30 +204,30 @@ export class AchievementStore {
   }
 }
 export class AchievementsProfile {
-    profile: { achievements: any[]; };
-    achievements: any;
+    profile: AchievementStore;
+    achievements: Achievement[];
 
-  constructor(profile: { achievements: any[]; }, _0x4a9dcc: string) {
+  constructor(profile: AchievementStore, mode: string) {
     this.profile = profile;
     if (!this.profile) {
       return;
     }
-    this.achievements = profile.achievements.filter((achievement): { earned: any; modes: any[]; checker: any; getChecker: () => any; } => {
-      const result = !achievement.earned && achievement.modes.some((mode: string): any => mode === _0x4a9dcc);
+    this.achievements = profile.achievements.filter(achievement => {
+      const result = !achievement.earned && achievement.modes.some(achievementMode => achievementMode === mode);
       if (result) {
         achievement.checker = achievement.getChecker();
       }
       return result;
     });
   }
-  update(_0x3caeb5: any, _0x2f04e5: any, _0x4592e0: any) {
-    this.achievements = this.achievements.filter((achievement: { checker: { update: (arg0: any, arg1: any, arg2: any) => void; progress: number; check: (arg0: any, arg1: any, arg2: any) => any; }; best: number; success: (arg0: any) => void; }): { checker: { update: (arg0: any, arg1: any, arg2: any) => void; progress: number; check: (arg0: any, arg1: any, arg2: any) => any; }; best: number; success: (arg0: any) => void; } => {
-      achievement.checker.update(_0x3caeb5, _0x2f04e5, _0x4592e0);
+  update(player: Player, dt: number, game: Game) {
+    this.achievements = this.achievements.filter(achievement => {
+      achievement.checker.update(player, dt, game);
       if (achievement.checker.progress > achievement.best) {
         achievement.best = achievement.checker.progress;
       }
-      if (achievement.checker.check(_0x3caeb5, _0x2f04e5, _0x4592e0)) {
-        achievement.success(_0x4592e0);
+      if (achievement.checker.check(player, dt, game)) {
+        achievement.success(game);
         this.profile.save();
         return false;
       }
@@ -191,12 +239,12 @@ export class AchievementsProfile {
     this.profile.save();
   }
   onKill(unit: Unit) {
-    this.achievements.forEach((achievement: { checker: { onKill: (arg0: Unit) => void; }; }): { checker: { onKill: (arg0: Unit) => void; }; } => {
+    this.achievements.forEach(achievement => {
       achievement.checker.onKill(unit);
     });
   }
   onOut() {
-    this.achievements.forEach((achievement: { checker: { onOut: () => void; }; }): { checker: { onOut: () => void; }; } => {
+    this.achievements.forEach(achievement => {
       achievement.checker.onOut();
     });
   }

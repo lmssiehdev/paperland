@@ -16,64 +16,64 @@ export function renderDebugOverlay(game: Game) {
   ctx.strokeStyle = "#ffffff";
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
-  let _0x491973 = game.quality * 160;
-  const _0x4dea04 = (_0x520648 = "", _0xc64be1 = 0) => {
-    if (_0x520648) {
-      ctx.strokeText(_0x520648, 10 + _0xc64be1 * 20, _0x491973);
-      ctx.fillText(_0x520648, 10 + _0xc64be1 * 20, _0x491973);
+  let lineY = game.quality * 160;
+  const printLine = (text = "", indent = 0) => {
+    if (text) {
+      ctx.strokeText(text, 10 + indent * 20, lineY);
+      ctx.fillText(text, 10 + indent * 20, lineY);
     }
-    _0x491973 += game.quality * 20;
+    lineY += game.quality * 20;
   };
-  _0x4dea04("Update time: " + game.stats.ut.toFixed(1));
-  _0x4dea04("AI time: " + game.stats.ait.toFixed(1), 1);
-  _0x4dea04("Spawn time: " + game.stats.st.toFixed(1), 1);
-  _0x4dea04("Render time: " + game.stats.rt.toFixed(1));
-  _0x4dea04("FPS: " + Math.round(game.stats.fps));
-  _0x4dea04("Quality: " + game.quality);
-  _0x4dea04();
-  _0x4dea04("Units: " + game.units.length);
-  _0x4dea04("Level: " + game.level.toFixed(3));
-  _0x4dea04();
-  _0x4dea04("Particles: " + game.particles.length);
-  _0x4dea04();
+  printLine("Update time: " + game.stats.ut.toFixed(1));
+  printLine("AI time: " + game.stats.ait.toFixed(1), 1);
+  printLine("Spawn time: " + game.stats.st.toFixed(1), 1);
+  printLine("Render time: " + game.stats.rt.toFixed(1));
+  printLine("FPS: " + Math.round(game.stats.fps));
+  printLine("Quality: " + game.quality);
+  printLine();
+  printLine("Units: " + game.units.length);
+  printLine("Level: " + game.level.toFixed(3));
+  printLine();
+  printLine("Particles: " + game.particles.length);
+  printLine();
   if (game.recording) {
-    _0x4dea04("Recording: " + game.recording.duration().toFixed(1) + " s");
+    printLine("Recording: " + game.recording.duration().toFixed(1) + " s");
   }
   if (game.replaying) {
-    _0x4dea04("Replaying: " + game.replaying.currentlyPlaying().toFixed(1) + "/" + game.replaying.duration().toFixed(1) + " s");
+    printLine("Replaying: " + game.replaying.currentlyPlaying().toFixed(1) + "/" + game.replaying.duration().toFixed(1) + " s");
   }
   if (game.debugGraph) {
-    const _0x1d8eca = view.width / 3;
-    const _0x17818e = 100;
+    const graphWidth = view.width / 3;
+    const graphHeight = 100;
     const path = new Path2D();
     const path2 = new Path2D();
     const path3 = new Path2D();
     const path4 = new Path2D();
     path4.moveTo(0, 0);
-    let _0x3c276f = 16.67;
+    let maxFrameTime = 16.67;
     game.metrics.forEach(metric => {
-      _0x3c276f = Math.max(_0x3c276f, metric.frameTime);
+      maxFrameTime = Math.max(maxFrameTime, metric.frameTime);
     });
-    _0x3c276f *= 1.1;
-    const _0x5baa4d = _0x1d8eca / (_0xd09b08 - 1);
-    const _0x80f60e = _0x17818e / _0x3c276f;
+    maxFrameTime *= 1.1;
+    const stepX = graphWidth / (_0xd09b08 - 1);
+    const scaleY = graphHeight / maxFrameTime;
     ctx.save();
-    ctx.translate((view.width - _0x1d8eca) / 2, _0x17818e);
+    ctx.translate((view.width - graphWidth) / 2, graphHeight);
     ctx.fillStyle = "#00000033";
-    ctx.fillRect(0, -_0x17818e, _0x1d8eca, _0x17818e);
+    ctx.fillRect(0, -graphHeight, graphWidth, graphHeight);
     game.metrics.forEach((metric, index) => {
-      path.lineTo(_0x5baa4d * index, -metric.updateTime * _0x80f60e);
-      path2.lineTo(_0x5baa4d * index, -metric.renderTime * _0x80f60e);
-      path4.lineTo(_0x5baa4d * index, -(metric.updateTime + metric.renderTime) * _0x80f60e);
-      path3.lineTo(_0x5baa4d * index, -metric.frameTime * _0x80f60e);
+      path.lineTo(stepX * index, -metric.updateTime * scaleY);
+      path2.lineTo(stepX * index, -metric.renderTime * scaleY);
+      path4.lineTo(stepX * index, -(metric.updateTime + metric.renderTime) * scaleY);
+      path3.lineTo(stepX * index, -metric.frameTime * scaleY);
     });
-    path4.lineTo(_0x5baa4d * (game.metrics.length - 1), 0);
+    path4.lineTo(stepX * (game.metrics.length - 1), 0);
     ctx.lineWidth = 1;
-    const _0x531fc7 = _0x80f60e * 16.67;
+    const targetFrameY = scaleY * 16.67;
     ctx.strokeStyle = "red";
     ctx.beginPath();
-    ctx.moveTo(0, -_0x531fc7);
-    ctx.lineTo(_0x1d8eca, -_0x531fc7);
+    ctx.moveTo(0, -targetFrameY);
+    ctx.lineTo(graphWidth, -targetFrameY);
     ctx.stroke();
     ctx.fillStyle = "#ffff00a0";
     ctx.fill(path4);
@@ -96,8 +96,8 @@ export function renderDebugOverlay(game: Game) {
           ctx.strokeStyle = "#00000040";
         }
         ctx.beginPath();
-        ctx.moveTo(_0x5baa4d * index, 0);
-        ctx.lineTo(_0x5baa4d * index, -_0x17818e);
+        ctx.moveTo(stepX * index, 0);
+        ctx.lineTo(stepX * index, -graphHeight);
         ctx.stroke();
       }
     });

@@ -4,17 +4,43 @@ import { SpatialGrid } from "./engine/spatial-grid";
 import { Vec2 } from "./engine/vec2";
 import { AchievementStore } from "./game/achievements";
 import { Game } from "./game/game";
+import type { GameConfig, GameResult } from "./game/game";
 import { SchemesManager } from "./game/scoring";
 import { NamePool } from "./game/names";
 import { Controller, KeyboardModeSwitch } from "./input/controller";
 import { renderGame } from "./render/game-renderer";
 import { SkinManager } from "./skins/skin";
 import { LANG_RU } from "./ui/i18n";
+import type { Language } from "./ui/i18n";
 
-export const createApi = (config: { arenaSize: number; quadSize: number; borderPoints: number; prepareMult: number; prepareBatchCount: number; maxPreparingTime: number; baseRadius: number; baseCount: number; minScale: number; maxScale: number; observerScale: number; trackWidth: number; unitSpeed: number; spawnTimeout: number; prepareCounter: number; prepareAcceleration: number; baseHeight: number; botsCount: number; botLevel: number; startBotLevel: number; noPlayerBotLevel: number; nearPlayerBotSpawnCount: number; followKiller: boolean; selfKillDelay: number; enemyKillDelay: number; arenaColor: string; borderColor: string; backgroundTopColor: string; backgroundBottomColor: string; platesStrokeWidth: number; botAggroMin: number; botAggroMax: number; botDefMin: number; botDefMax: number; botGreedMin: number; botGreedMax: number; botSafetyMin: number; botSafetyMax: number; botAttackTrackLength: number; font: string; } & { followKiller: boolean; selfKillDelay: number; enemyKillDelay: number; }, _0x51cd14: { lng: any; }, _0x4e068e: { (config: any, view: any): SkinManager; (arg0: any, arg1: any): any; }, nameManager: NamePool, schemesManager: SchemesManager, achievementsProfile: AchievementStore) => {
-  let result = {};
+/** Builds the SkinManager for a new game (see main.ts). */
+export type SkinManagerFactory = (config: GameConfig, view: HTMLCanvasElement) => SkinManager;
+
+/** Public game API exposed as window.paperio2api and consumed by the UI. */
+export interface PaperioApi {
+  /** Current game; set by create(). */
+  game: Game;
+  /** True until the warm-up simulation has finished. */
+  preparing: boolean;
+  /** Creates a new Game rendering into `view`. */
+  create(view: HTMLCanvasElement): void;
+  /** Runs the warm-up simulation in the background, then starts the loop and calls `onReady`. */
+  prepare(onReady?: () => void): void;
+  /**
+   * Spawns the player and starts the game.
+   * @param skinName asset name of the chosen skin ("" for a random colored skin)
+   * @param best previous best score
+   * @param extraLife fraction of the arena to start with (continue after death); falsy for a normal start
+   */
+  start(name: string, skinName: string, best: number, onGameOver?: (result: GameResult) => void, extraLife?: number): void;
+  /** Installed by the UI (App); called by the host page once the preroll ad ends. */
+  startGame?: () => void;
+}
+
+export const createApi = (config: GameConfig, language: Language, createSkinManager: SkinManagerFactory, nameManager: NamePool, schemesManager: SchemesManager, achievementsProfile: AchievementStore): PaperioApi | null => {
+  let result = {} as PaperioApi;
   if (Path2D) {
-    result.create = (view: { addEventListener: (arg0: string, arg1: { (event: any): any; (event: any): void; (event: any): void; (event: any): void; (_0x5d0f61: any): void; (_0x2c9dbd: any): void; (event: any): void; (event: any): void; (event: any): void; (event: any): void; }, arg2: boolean) => void; removeEventListener: (arg0: string, arg1: { (event: any): any; (event: any): void; (event: any): void; (event: any): void; (_0x5d0f61: any): void; (_0x2c9dbd: any): void; }, arg2: boolean) => void; }): any => {
+    result.create = (view: HTMLCanvasElement): void => {
       const {
         arenaSize,
         quadSize,
@@ -25,9 +51,10 @@ export const createApi = (config: { arenaSize: number; quadSize: number; borderP
       const vec2 = new Vec2(arenaSize / 2, arenaSize / 2);
       const baseRadius = Math.min(vec2.x, vec2.y) * 0.95;
       const border = Border.circular(vec2, borderPoints, baseRadius);
-      const skinManager = _0x4e068e(config, view);
-      const game = new Game(config, view, spatialGrid, border, skinManager, null, nameManager, new Controller(view, new KeyboardModeSwitch()), _0x51cd14.lng, schemesManager, achievementsProfile, Math.random());
-      skinManager.game = game;
+      const skinManager = createSkinManager(config, view);
+      const game = new Game(config, view, spatialGrid, border, skinManager, null, nameManager, new Controller(view, new KeyboardModeSwitch()), language.lng, schemesManager, achievementsProfile, Math.random());
+      // TODO(types): SkinManager does not declare `game` (set here, never read in this build)
+      (skinManager as SkinManager & { game?: Game }).game = game;
       game.renderer = renderGame;
       result.game = game;
       game.controller.addSet([16, 18, 81, 66, 77], () => {
@@ -38,9 +65,9 @@ export const createApi = (config: { arenaSize: number; quadSize: number; borderP
       });
     };
     result.preparing = true;
-    let _0x3ad283 = 0;
-    let _0x1e248a: number;
-    const _0x3b8a97 = () => {
+    let preparedCycles = 0;
+    let prepareInterval: number;
+    const runPrepareBatch = () => {
       const {
         prepareMult
       } = config;
@@ -49,44 +76,44 @@ export const createApi = (config: { arenaSize: number; quadSize: number; borderP
       } = config;
       while (prepareBatchCount--) {
         result.game.update(1000 / 60 * prepareMult + Math.random());
-        _0x3ad283++;
+        preparedCycles++;
       }
     };
-    result.prepare = (_0x53bf70: () => void): () => void => {
+    result.prepare = (onReady?: () => void): void => {
       const {
         game: game
       } = result;
-      _0x1e248a = setInterval(() => {
+      prepareInterval = setInterval(() => {
         if (nameManager.aviable()) {
-          _0x3b8a97();
-          if (_0x3ad283 > config.prepareCounter) {
-            clearInterval(_0x1e248a);
+          runPrepareBatch();
+          if (preparedCycles > config.prepareCounter) {
+            clearInterval(prepareInterval);
             result.preparing = false;
             game.visible = true;
             if (!game.looped) {
               game.loop();
             }
-            if (_0x53bf70) {
-              _0x53bf70();
+            if (onReady) {
+              onReady();
             }
           }
         }
       }, 0);
     };
-    result.start = (name: string, skin: Skin, _0x441c23: any, _0x190f9e: any, extraLife: any) => {
+    result.start = (name: string, skinName: string, best: number, onGameOver?: (result: GameResult) => void, extraLife?: number): void => {
       const game = result.game;
       if (result.preparing) {
-        clearInterval(_0x1e248a);
+        clearInterval(prepareInterval);
         const time = now();
-        while (_0x3ad283 < config.prepareCounter) {
-          _0x3b8a97();
+        while (preparedCycles < config.prepareCounter) {
+          runPrepareBatch();
           if (now() - time > config.maxPreparingTime) {
             break;
           }
         }
       }
-      game.best = _0x441c23;
-      game.spawnPlayer(name, skin, extraLife);
+      game.best = best;
+      game.spawnPlayer(name, skinName, extraLife);
       if (extraLife) {
         game.player.addLabel({
           text: LANG_RU.lng.extraLife,
@@ -94,8 +121,8 @@ export const createApi = (config: { arenaSize: number; quadSize: number; borderP
           color: "#7fed4c"
         });
       }
-      if (_0x190f9e) {
-        game.gameOverCallback = _0x190f9e;
+      if (onGameOver) {
+        game.gameOverCallback = onGameOver;
       }
       result.preparing = false;
       game.visible = true;

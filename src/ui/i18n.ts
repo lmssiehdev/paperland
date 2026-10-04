@@ -1,3 +1,34 @@
+/** UI strings for one language. Shape of each entry in assets/languages.json. */
+export interface LanguageStrings {
+  yourScore: string;
+  bestScore: string;
+  newText: string;
+  timePlayed: string;
+  playersKilled: string;
+  playAgain: string;
+  menu: string;
+  messages: string[];
+  nosupport: string;
+  btnPlay: string;
+  placeholderText: string;
+  defaultPlayerName: string;
+  bestTxt: string;
+  killText: string;
+  btnContinue: string;
+  /** Only present in the built-in Russian fallback, not in languages.json. */
+  extraLife?: string;
+  btnSelect: string;
+}
+
+/** A selectable language: two-letter code plus its strings (merged over English). */
+export interface Language {
+  name: string;
+  lng: LanguageStrings;
+}
+
+/** assets/languages.json: language code -> (possibly partial) strings. "en" is complete. */
+export type LanguagesFile = { en: LanguageStrings } & Record<string, Partial<LanguageStrings>>;
+
 export var LANG_RU = {
   name: "ru",
   lng: {
@@ -19,19 +50,25 @@ export var LANG_RU = {
     extraLife: "ДОПОЛНИТЕЛЬНАЯ ЖИЗНЬ!",
     btnSelect: "ВЫБРАТЬ"
   }
-};
-var _0x2aa187 = Object.assign;
-export const LANGUAGES: any[] = [];
-export const setLanguages = (result: ArrayLike<unknown> | { [s: string]: unknown; }): { [s: string]: unknown; } | ArrayLike<unknown> => {
+} satisfies Language;
+var objectAssign = Object.assign;
+export const LANGUAGES: Language[] = [];
+export const setLanguages = (languages: LanguagesFile): void => {
   const {
     en
-  } = result;
-  Object.entries(result).forEach(([_0x481b18, _0x2f0d2c]) => {
+  } = languages;
+  Object.entries(languages).forEach(([code, strings]) => {
     LANGUAGES.push({
-      name: _0x481b18,
-      lng: _0x2aa187(_0x2aa187({}, en), _0x2f0d2c)
+      name: code,
+      lng: objectAssign(objectAssign({}, en), strings)
     });
   });
 };
-const _0x4d828b = (navigator.languages && navigator.languages.length && navigator.languages[0] || navigator.userLanguage || navigator.language || navigator.browserLanguage || "en").substr(0, 2).toLowerCase();
-export const getLanguage = () => LANGUAGES.find(item => item.name === _0x4d828b) || LANGUAGES.find(item => item.name === "en");
+/** Legacy IE/old-browser navigator fields that the original code still probes. */
+type LegacyNavigator = Navigator & {
+  userLanguage?: string;
+  browserLanguage?: string;
+};
+const legacyNavigator: LegacyNavigator = navigator;
+const browserLanguageCode = (legacyNavigator.languages && legacyNavigator.languages.length && legacyNavigator.languages[0] || legacyNavigator.userLanguage || legacyNavigator.language || legacyNavigator.browserLanguage || "en").substr(0, 2).toLowerCase();
+export const getLanguage = (): Language | undefined => LANGUAGES.find(item => item.name === browserLanguageCode) || LANGUAGES.find(item => item.name === "en");

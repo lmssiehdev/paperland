@@ -1,40 +1,125 @@
 import { Fragment, createContext, createElement } from "preact";
+import type { RefObject, TargetedEvent } from "preact";
 import { useContext, useEffect, useRef, useState } from "preact/hooks";
+import type { StateUpdater, Dispatch } from "preact/hooks";
+import type { Game } from "../game/game";
 import { LANGUAGES, getLanguage } from "./i18n";
+import type { Language } from "./i18n";
 
-const LanguageContext = createContext();
-const _0x313732 = ({
+/** Screens the root App can show. */
+export type Route = "menu" | "game" | "results" | "config" | "skins";
+
+/** Value of one editable game config entry (DEFAULT_CONFIG holds numbers, strings and booleans). */
+type ConfigValue = string | number | boolean;
+/** Game config viewed as a mutable string-keyed record, as the config editor treats it. */
+type EditableConfig = Record<string, ConfigValue>;
+
+/** Object passed by Game to the game-over callback (see Game's gameOverCallback call). */
+export interface GameResults {
+  build?: unknown;
+  game?: Game;
+  percent: number;
+  score: number;
+  newBest: boolean;
+  name: string;
+  top?: number;
+  best: number;
+  bestPercent: number;
+  time: number;
+  kills: number;
+  image: string;
+  reason: number;
+}
+
+/**
+ * The parts of window.paperio2api (created by createApi in src/api.ts) the UI uses.
+ * Declared locally because createApi's return type is not typed yet.
+ */
+export interface PaperioApi {
+  game?: Game;
+  preparing?: boolean;
+  create(view: HTMLCanvasElement): void;
+  prepare(onReady: () => void): void;
+  start(name: string, skin: string, bestScore: number, onGameOver: (results: GameResults) => void, extraLife?: number): void;
+  /** Installed by App; called by the page's preroll-ad script (original/index.html) once the ad ends. */
+  startGame?: () => void;
+}
+
+/** Cookie storage (the js-cookie default export); only the methods the UI calls. */
+export interface CookieStorage {
+  getJSON(name: string): unknown;
+  set(name: string, value: unknown, options?: { expires?: number }): unknown;
+}
+
+/** Persisted UI state in the "paper.io.storage" cookie. */
+interface StoredProfile {
+  nickName?: string;
+  bestScore?: number;
+  skin?: string;
+}
+
+/** One entry of assets/skins/skins.json; the UI only needs the name. */
+export interface SkinInfo {
+  name: string;
+}
+
+/** Globals provided by the hosting page (ads SDK, GTM). */
+type HostWindow = Window & {
+  ads?: {
+    showAds?: () => void;
+    hideAds?: () => void;
+  };
+  dataLayer?: Record<string, unknown>[];
+  /** Defined by the host page (original/index.html); assumed present. */
+  ShowPreroll?: () => void;
+};
+const hostWindow = window as HostWindow;
+
+type Setter<T> = Dispatch<StateUpdater<T>>;
+
+const LanguageContext = createContext<Language>(undefined);
+
+interface TipsProps {
+  messages: string[];
+}
+const Tips = ({
   messages
-}) => {
-  const [_0x2eef6d, _0x3e00f1] = useState(0);
+}: TipsProps) => {
+  const [tipIndex, setTipIndex] = useState(0);
   useEffect(() => {
-    const _0x88d3da = setInterval(() => _0x3e00f1(_0x39ba1e => (_0x39ba1e + 1) % messages.length), 3000);
-    return () => clearInterval(_0x88d3da);
+    const intervalId = setInterval(() => setTipIndex(index => (index + 1) % messages.length), 3000);
+    return () => clearInterval(intervalId);
   }, []);
   return createElement("div", {
     class: "tips"
   }, createElement("div", {
     class: "tip",
-    key: _0x2eef6d
-  }, messages[_0x2eef6d]));
+    key: tipIndex
+  }, messages[tipIndex]));
 };
-const _0x449096 = ({
+
+interface ConfigFormProps {
+  config: EditableConfig;
+  apply: (event: TargetedEvent<HTMLFormElement, SubmitEvent>) => void;
+}
+const ConfigForm = ({
   config,
   apply
-}) => {
+}: ConfigFormProps) => {
   if (!config) {
     return null;
   }
   return createElement("form", {
     class: "config",
     onSubmit: apply
-  }, Object.entries(config).map(([_0x14b1f7, _0x22ff59]) => createElement("label", {
+  }, Object.entries(config).map(([key, value]) => createElement("label", {
     style: "color: white;"
-  }, _0x14b1f7, "\xA0", createElement("input", {
+  }, key, "\xA0", createElement("input", {
     type: "text",
-    id: _0x14b1f7,
-    name: _0x14b1f7,
-    value: _0x22ff59,
+    id: key,
+    name: key,
+    // Booleans are stringified by the DOM ("true"/"false").
+    value: value as string | number,
     autocomplete: "off",
     maxlength: "10"
   }))), createElement("button", {
@@ -43,20 +128,27 @@ const _0x449096 = ({
     class: "yellow"
   }, "Применить"));
 };
-const _0x613dc8 = ({
+interface ConfigScreenProps {
+  api: PaperioApi;
+  view: RefObject<HTMLCanvasElement>;
+  setPreparing: Setter<boolean>;
+  setState: Setter<Route>;
+}
+const ConfigScreen = ({
   api,
   view,
   setPreparing,
   setState
-}) => {
-  const _0x4dd059 = api && api.game && api.game.config;
-  const _0x307f95 = (event: any) => {
+}: ConfigScreenProps) => {
+  const config: EditableConfig = api && api.game && api.game.config;
+  const applyConfig = (event: TargetedEvent<HTMLFormElement, SubmitEvent>) => {
     event.preventDefault();
-    Object.keys(_0x4dd059).forEach(item => {
-      const elementById = document.getElementById(item);
+    Object.keys(config).forEach(item => {
+      const elementById = document.getElementById(item) as HTMLInputElement | null;
       if (elementById) {
-        const _0x5c8252 = parseFloat(elementById.value);
-        _0x4dd059[item] = _0x5c8252 !== _0x5c8252 ? elementById.value : _0x5c8252;
+        const parsed = parseFloat(elementById.value);
+        // parsed !== parsed is a NaN check: keep non-numeric input as a string.
+        config[item] = parsed !== parsed ? elementById.value : parsed;
       }
     });
     api.game.stopped = true;
@@ -71,26 +163,48 @@ const _0x613dc8 = ({
     class: "logo"
   }, createElement("img", {
     src: "assets/images/logo.png"
-  })), createElement(_0x449096, {
-    config: _0x4dd059,
-    apply: _0x307f95
+  })), createElement(ConfigForm, {
+    config: config,
+    apply: applyConfig
   }));
 };
-const _0x11635f = ({
+interface LanguageFooterProps {
+  setLanguage: Setter<Language>;
+}
+const LanguageFooter = ({
   setLanguage
-}) => {
-  const _0x3ae834 = useContext(LanguageContext);
-  const _0x1df60f = LANGUAGES.map((item, index) => createElement("li", {
-    class: item === _0x3ae834 ? "active" : "",
+}: LanguageFooterProps) => {
+  const currentLanguage = useContext(LanguageContext);
+  const languageItems = LANGUAGES.map((item, index) => createElement("li", {
+    class: item === currentLanguage ? "active" : "",
     onClick: () => setLanguage(LANGUAGES[index])
   }, item.name.toUpperCase()));
   return createElement("div", {
     id: "footer"
   }, createElement("ul", {
     id: "lng"
-  }, _0x1df60f));
+  }, languageItems));
 };
-const _0x2b87a7 = ({
+interface MainMenuProps {
+  nickName: string;
+  setNickName: Setter<string>;
+  /** Unused by the menu. */
+  playable?: boolean;
+  /** Unused by the menu. */
+  preparing?: boolean;
+  start: () => void;
+  route: Setter<Route>;
+  /** Unused by the menu. */
+  provider?: unknown;
+  setLanguage: Setter<Language>;
+  api: PaperioApi | null;
+  /** Passed by App but unused by the menu. */
+  setState?: Setter<Route>;
+  /** Passed by App but unused by the menu. */
+  skins?: SkinInfo[];
+  skin: string;
+}
+const MainMenu = ({
   nickName,
   setNickName,
   playable,
@@ -101,23 +215,23 @@ const _0x2b87a7 = ({
   setLanguage,
   api,
   skin
-}) => {
+}: MainMenuProps) => {
   const {
     lng
   } = useContext(LanguageContext);
-  const _0x7e5b2d = api && api.game && api.game.config;
-  const _0x582227 = !!api;
-  const _0x3e6418 = (_0x474014: { target: { value: any; }; }): { target: { value: any; }; } => setNickName(_0x474014.target.value);
-  const _0x56e19e = _0x582227;
-  const _0xe04ee3 = (event: any) => {
+  const config = api && api.game && api.game.config;
+  const supported = !!api;
+  const onNickInput = (event: TargetedEvent<HTMLInputElement, Event>) => setNickName(event.currentTarget.value);
+  const canPlay = supported;
+  const onPlayClick = (event: TargetedEvent<HTMLButtonElement, MouseEvent>) => {
     event.preventDefault();
-    if (_0x56e19e) {
+    if (canPlay) {
       start();
     }
   };
   useEffect(() => {
-    if (window.ads && window.ads.showAds) {
-      window.ads.showAds();
+    if (hostWindow.ads && hostWindow.ads.showAds) {
+      hostWindow.ads.showAds();
     }
   }, []);
   return createElement(Fragment, null, createElement("div", {
@@ -128,7 +242,7 @@ const _0x2b87a7 = ({
     class: "logo"
   }, createElement("img", {
     src: "assets/images/logo.png"
-  })), createElement(_0x313732, {
+  })), createElement(Tips, {
     messages: lng.messages
   }), createElement("div", {
     class: "play"
@@ -140,12 +254,12 @@ const _0x2b87a7 = ({
     autocomplete: "off",
     placeholder: lng.placeholderText,
     maxlength: "12",
-    oninput: _0x3e6418
+    oninput: onNickInput
   }), createElement("button", {
     id: "play",
     name: "play",
-    class: "yellow" + (_0x56e19e ? "" : " disabled"),
-    onClick: _0xe04ee3
+    class: "yellow" + (canPlay ? "" : " disabled"),
+    onClick: onPlayClick
   }, lng.btnPlay), createElement("button", {
     id: "skins",
     name: "skins",
@@ -155,13 +269,26 @@ const _0x2b87a7 = ({
     width: "30",
     height: "30",
     src: "assets/skins/select/" + (skin || "noskin").toLowerCase().replace(/\s+/g, "") + ".png"
-  }))), !_0x582227 && createElement("p", {
+  }))), !supported && createElement("p", {
     class: "notsupported"
   }, lng.nosupport)), createElement("div", {
     id: "right_side"
   }));
 };
-const _0x5389c6 = ({
+interface GameScreenProps {
+  nickName: string;
+  bestScore: number;
+  setBestScore: Setter<number>;
+  setResults: Setter<GameResults | null>;
+  setPreparing: Setter<boolean>;
+  api: PaperioApi;
+  route: Setter<Route>;
+  skin: string;
+  /** Extra-life base size (percent); App never passes it. */
+  lastPercent?: number;
+}
+/** Renders nothing; starts a round when mounted and routes to results on game over. */
+const GameScreen = ({
   nickName,
   bestScore,
   setBestScore,
@@ -171,28 +298,28 @@ const _0x5389c6 = ({
   route,
   skin,
   lastPercent
-}) => {
-  const _LanguageContextValue = useContext(LanguageContext);
+}: GameScreenProps): null => {
+  const language = useContext(LanguageContext);
   useEffect(() => {
-    const _0x545eda = (_0x3ee818: { newBest: any; score: any; }): { newBest: any; score: any; } => {
-      if (_0x3ee818.newBest) {
-        setBestScore(_0x3ee818.score);
+    const onGameOver = (results: GameResults) => {
+      if (results.newBest) {
+        setBestScore(results.score);
       }
-      setResults(_0x3ee818);
+      setResults(results);
       route("results");
     };
-    if (window.ads && window.ads.hideAds) {
-      window.ads.hideAds();
+    if (hostWindow.ads && hostWindow.ads.hideAds) {
+      hostWindow.ads.hideAds();
     }
-    api.game.language = _LanguageContextValue.lng;
+    api.game.language = language.lng;
     let skin2 = skin;
     if (skin2 === "default" || skin2 === "No skin") {
       skin2 = "";
     }
-    api.start(nickName, skin2, bestScore, _0x545eda, lastPercent);
+    api.start(nickName, skin2, bestScore, onGameOver, lastPercent);
     const {
       dataLayer
-    } = window;
+    } = hostWindow;
     if (dataLayer) {
       dataLayer.push({
         event: "levelStart",
@@ -204,21 +331,32 @@ const _0x5389c6 = ({
   }, []);
   return null;
 };
-const _0x665b7b = ({
+interface ResultsProps {
+  bestScore: number;
+  results: GameResults;
+  /** Unused by the results screen. */
+  start?: () => void;
+  route: Setter<Route>;
+  /** Unused by the results screen. */
+  provider?: unknown;
+  /** Unused by the results screen. */
+  country?: unknown;
+}
+const Results = ({
   bestScore,
   results,
   start,
   route,
   provider,
   country = undefined
-}) => {
-  const _0xb87c1f = () => route("menu");
+}: ResultsProps) => {
+  const goToMenu = () => route("menu");
   const {
     lng
   } = useContext(LanguageContext);
   const {
     dataLayer
-  } = window;
+  } = hostWindow;
   if (dataLayer) {
     dataLayer.push({
       event: "levelCompletion",
@@ -227,8 +365,8 @@ const _0x665b7b = ({
     });
   }
   useEffect(() => {
-    if (window.ads && window.ads.showAds) {
-      window.ads.showAds();
+    if (hostWindow.ads && hostWindow.ads.showAds) {
+      hostWindow.ads.showAds();
     }
   }, []);
   return createElement(Fragment, null, createElement("div", {
@@ -244,7 +382,7 @@ const _0x665b7b = ({
   }, createElement("button", {
     class: "yellow slider-5",
     id: "menu",
-    onClick: _0xb87c1f
+    onClick: goToMenu
   }, lng.btnContinue)), createElement("div", {
     class: "resultbox"
   }, createElement("div", {
@@ -277,9 +415,12 @@ const _0x665b7b = ({
     id: "right_side"
   }));
 };
-const _0x16897a = ({
+interface SkinPreviewProps {
+  name: string;
+}
+const SkinPreview = ({
   name
-}) => {
+}: SkinPreviewProps) => {
   return createElement("div", {
     class: "skin"
   }, createElement("div", {
@@ -288,21 +429,27 @@ const _0x16897a = ({
     src: "assets/skins/select/" + name.toLowerCase().replace(/\s+/g, "") + ".png"
   })));
 };
-const _0x226e7e = ({
+interface SkinPickerProps {
+  skins: SkinInfo[];
+  skin: string;
+  menu: () => void;
+  setSkin: Setter<string>;
+}
+const SkinPicker = ({
   skins,
   skin,
   menu,
   setSkin
-}) => {
+}: SkinPickerProps) => {
   const {
     lng
   } = useContext(LanguageContext);
-  const index = skins.findIndex((skin2: { name: any; }): { name: any; } => skin2.name === skin);
-  const [_0x52fa22, _0x2309d4] = useState(index > 0 ? index : 0);
-  const _0xd186be = (_0xfc8857: number): number => {
-    if (_0xfc8857 >= 0 && _0xfc8857 < skins.length) {
-      _0x2309d4(_0xfc8857);
-      setSkin(skins[_0xfc8857].name);
+  const index = skins.findIndex(skin2 => skin2.name === skin);
+  const [selectedIndex, setSelectedIndex] = useState(index > 0 ? index : 0);
+  const selectSkin = (nextIndex: number) => {
+    if (nextIndex >= 0 && nextIndex < skins.length) {
+      setSelectedIndex(nextIndex);
+      setSkin(skins[nextIndex].name);
     }
   };
   return createElement("div", {
@@ -312,13 +459,13 @@ const _0x226e7e = ({
   }, createElement("button", {
     name: "left",
     class: "orange",
-    onClick: () => _0xd186be(_0x52fa22 - 1)
-  }, "<"), createElement(_0x16897a, {
-    name: skins[_0x52fa22].name
+    onClick: () => selectSkin(selectedIndex - 1)
+  }, "<"), createElement(SkinPreview, {
+    name: skins[selectedIndex].name
   }), createElement("button", {
     name: "right",
     class: "orange",
-    onClick: () => _0xd186be(_0x52fa22 + 1)
+    onClick: () => selectSkin(selectedIndex + 1)
   }, ">")), createElement("div", {
     class: "nav"
   }, createElement("button", {
@@ -326,13 +473,19 @@ const _0x226e7e = ({
     onClick: menu
   }, lng.btnSelect)));
 };
-const _0x33ae25 = ({
+interface SkinsScreenProps {
+  skins: SkinInfo[];
+  skin: string;
+  route: Setter<Route>;
+  setSkin: Setter<string>;
+}
+const SkinsScreen = ({
   skins,
   skin,
   route,
   setSkin
-}) => {
-  const _0x511672 = () => route("menu");
+}: SkinsScreenProps) => {
+  const goToMenu = () => route("menu");
   useEffect(() => {
     const elementById = document.getElementById("paperio-site_multisize");
     if (elementById) {
@@ -347,17 +500,28 @@ const _0x33ae25 = ({
     class: "logo"
   }, createElement("img", {
     src: "assets/images/logo.png"
-  })), createElement(_0x226e7e, {
+  })), createElement(SkinPicker, {
     skins: [{
       name: "No skin"
     }].concat(skins),
-    menu: _0x511672,
+    menu: goToMenu,
     setSkin: setSkin,
     skin: skin
   })), createElement("div", {
     id: "right_side"
   }));
 };
+export interface AppProps {
+  api: PaperioApi | null;
+  storage: CookieStorage;
+  /** Unused. */
+  ads?: unknown;
+  /** Unused. */
+  provider?: unknown;
+  skins: SkinInfo[];
+  /** Unused. */
+  mode?: string;
+}
 export const App = ({
   api,
   storage,
@@ -365,33 +529,33 @@ export const App = ({
   provider,
   skins,
   mode = "common"
-}) => {
-  const _0x2a1468 = useRef(null);
-  const [_0xae90a5, _0xe9f489] = useState(false);
-  const [_0x3c010f, _0x4213e6] = useState("menu");
-  const [_0x7671bd, _0x4023ac] = useState(true);
-  const [_0x293a25, _0x5c440b] = useState(getLanguage());
-  const [_0x50dae7, _0x536f0c] = useState(null);
-  const _0x1cb8f8 = "paper.io.storage";
-  const _0x16b845 = storage.getJSON(_0x1cb8f8) || {};
-  const [_0x38110e, _0x495989] = useState(_0x16b845.nickName || "");
-  const [_0x43a473, _0x421708] = useState(_0x16b845.bestScore || 0);
-  const [_0x4f80f0, _0x33ebdc] = useState(_0x16b845.skin || "");
-  const _0x48fc9f = {
+}: AppProps) => {
+  const viewRef = useRef<HTMLCanvasElement>(null);
+  const [playable, setPlayable] = useState(false);
+  const [route, setRoute] = useState<Route>("menu");
+  const [preparing, setPreparing] = useState(true);
+  const [language, setLanguage] = useState(getLanguage());
+  const [results, setResults] = useState<GameResults | null>(null);
+  const storageKey = "paper.io.storage";
+  const stored: StoredProfile = (storage.getJSON(storageKey) as StoredProfile) || {};
+  const [nickName, setNickName] = useState(stored.nickName || "");
+  const [bestScore, setBestScore] = useState(stored.bestScore || 0);
+  const [skin, setSkin] = useState(stored.skin || "");
+  const cookieOptions = {
     expires: 365
   };
-  if (_0x38110e !== _0x16b845.nickName || _0x43a473 !== _0x16b845.bestScore || _0x4f80f0 !== _0x16b845.skin) {
-    storage.set(_0x1cb8f8, {
-      nickName: _0x38110e,
-      bestScore: _0x43a473,
-      skin: _0x4f80f0
-    }, _0x48fc9f);
+  if (nickName !== stored.nickName || bestScore !== stored.bestScore || skin !== stored.skin) {
+    storage.set(storageKey, {
+      nickName: nickName,
+      bestScore: bestScore,
+      skin: skin
+    }, cookieOptions);
   }
   useEffect(() => {
     if (api) {
-      api.create(_0x2a1468.current);
-      api.prepare(() => _0x4023ac(false));
-      _0xe9f489(true);
+      api.create(viewRef.current);
+      api.prepare(() => setPreparing(false));
+      setPlayable(true);
     }
   }, []);
   api.startGame = () => {
@@ -402,9 +566,10 @@ export const App = ({
     if (api && api.game) {
       api.game.visible = true;
     }
-    _0x4213e6("game");
+    setRoute("game");
   };
-  const _0x28fd93 = () => {
+  /** Shows the overlay and hands off to the page's preroll ad, which calls api.startGame(). */
+  const showPreroll = () => {
     const elementById = document.getElementById("overlay");
     if (elementById) {
       elementById.style.display = "block";
@@ -413,59 +578,59 @@ export const App = ({
     if (api && api.game) {
       api.game.visible = false;
     }
-    window.ShowPreroll();
+    hostWindow.ShowPreroll();
   };
   return createElement(Fragment, null, createElement("canvas", {
-    class: _0x3c010f === "game" || _0x7671bd ? "" : "fadein",
+    class: route === "game" || preparing ? "" : "fadein",
     id: "view",
-    ref: _0x2a1468
-  }), _0x3c010f !== "game" && createElement("div", {
+    ref: viewRef
+  }), route !== "game" && createElement("div", {
     id: "ui_overlay"
   }), createElement(LanguageContext.Provider, {
-    value: _0x293a25
+    value: language
   }, createElement("div", {
     id: "ui",
-    class: _0x3c010f === "game" ? "hide" : ""
-  }, _0x3c010f === "menu" && createElement(_0x2b87a7, {
-    nickName: _0x38110e,
-    setNickName: _0x495989,
-    playable: _0xae90a5,
-    preparing: _0x7671bd,
-    start: _0x28fd93,
-    route: _0x4213e6,
+    class: route === "game" ? "hide" : ""
+  }, route === "menu" && createElement(MainMenu, {
+    nickName: nickName,
+    setNickName: setNickName,
+    playable: playable,
+    preparing: preparing,
+    start: showPreroll,
+    route: setRoute,
     provider: provider,
-    setLanguage: _0x5c440b,
+    setLanguage: setLanguage,
     api: api,
-    setState: _0x4213e6,
+    setState: setRoute,
     skins: skins,
-    skin: _0x4f80f0
-  }), _0x3c010f === "game" && createElement(_0x5389c6, {
-    nickName: _0x38110e,
-    bestScore: _0x43a473,
-    setBestScore: _0x421708,
-    setResults: _0x536f0c,
-    setPreparing: _0x4023ac,
+    skin: skin
+  }), route === "game" && createElement(GameScreen, {
+    nickName: nickName,
+    bestScore: bestScore,
+    setBestScore: setBestScore,
+    setResults: setResults,
+    setPreparing: setPreparing,
     api: api,
-    route: _0x4213e6,
-    skin: _0x4f80f0
-  }), _0x3c010f === "results" && createElement(_0x665b7b, {
-    bestScore: _0x43a473,
-    results: _0x50dae7,
-    start: _0x28fd93,
-    route: _0x4213e6,
+    route: setRoute,
+    skin: skin
+  }), route === "results" && createElement(Results, {
+    bestScore: bestScore,
+    results: results,
+    start: showPreroll,
+    route: setRoute,
     provider: provider
-  }), _0x3c010f === "config" && createElement(_0x613dc8, {
+  }), route === "config" && createElement(ConfigScreen, {
     api: api,
-    view: _0x2a1468,
-    setPreparing: _0x4023ac,
-    setState: _0x4213e6
-  }), _0x3c010f === "skins" && createElement(_0x33ae25, {
+    view: viewRef,
+    setPreparing: setPreparing,
+    setState: setRoute
+  }), route === "skins" && createElement(SkinsScreen, {
     skins: skins,
-    skin: _0x4f80f0,
-    route: _0x4213e6,
-    setSkin: _0x33ebdc
-  })), _0x3c010f !== "game" && createElement(_0x11635f, {
-    setLanguage: _0x5c440b
+    skin: skin,
+    route: setRoute,
+    setSkin: setSkin
+  })), route !== "game" && createElement(LanguageFooter, {
+    setLanguage: setLanguage
   })), createElement("div", {
     id: "overlay"
   }));

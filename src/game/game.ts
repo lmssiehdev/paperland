@@ -11,75 +11,298 @@ import { FloatingLabel } from "./floating-label";
 import { Particle, spawnDeathParticles } from "./particles";
 import { Bot, Player } from "./units";
 import type { Border } from "../engine/border";
+import type { Rng } from "../engine/math";
+import type { Bounds } from "../engine/polyline";
+import type { Intersection, Shape } from "../engine/segment";
+import type { Config } from "../config";
+import type { LanguageStrings } from "../ui/i18n";
 import type { Unit } from "./units";
+import type { DeathReason } from "./constants";
 import { SpatialGrid } from "../engine/spatial-grid";
 import { Controller } from "../input/controller";
 import { SkinManager } from "../skins/skin";
+import type { Asset, Skin } from "../skins/skin";
 import { NamePool } from "./names";
 import { SchemesManager } from "./scoring";
 import { Track } from "./track";
 
+/** Legacy / analytics globals touched by the game. */
+declare global {
+  interface Window {
+    /** Google Analytics command queue (also declared, identically, in game/achievements.ts). */
+    ga?: (...args: unknown[]) => void;
+    /** Last results set by the host page, consumed by Game.post(). */
+    paper2_results?: Paper2Results;
+    playerId?: number | string;
+  }
+  interface Navigator {
+    /** Legacy IE. */
+    userLanguage?: string;
+    /** Legacy IE. */
+    browserLanguage?: string;
+  }
+}
+
+/** Game configuration: DEFAULT_CONFIG plus the overrides applied in main.ts. */
+export type GameConfig = Config;
+
+/** Payload handed to Game.gameOverCallback when the player's round ends. */
+export interface GameResult {
+  build: number;
+  game: Game;
+  /** Fraction (0..1) of the arena owned at death. */
+  percent: number;
+  score: number;
+  newBest: boolean;
+  name: string;
+  top: number;
+  best: number;
+  bestPercent: number;
+  /** Round duration in ms. */
+  time: number;
+  kills: number;
+  /** PNG data URL of the player's territory, when a DOM is available. */
+  image: string | undefined;
+  reason: DeathReason;
+}
+
+/** Shape of window.paper2_results read by Game.post(). */
+export interface Paper2Results {
+  build?: number;
+  top?: number;
+  score: number;
+  bestPercent?: number;
+  time: number;
+  kills: number;
+  reason?: number;
+  scores?: { accumulator?: number; kills?: number; };
+}
+
+/** Recorder hooked into the update loop (not present in this build). */
+export interface GameRecording {
+  write(): void;
+  duration(): number;
+}
+
+/** Replay driver hooked into the update loop (not present in this build). */
+export interface GameReplay {
+  /** Cycle at which the replay starts. */
+  start: number;
+  skip?: boolean;
+  /** Feeds the next recorded input; false when the replay is over. */
+  read(): boolean;
+  skipping(): boolean;
+  duration(): number;
+  currentlyPlaying(): number;
+}
+
+/** A queued on-screen notification (achievement tip). */
+export interface GameNotification {
+  ready: boolean;
+  state: number;
+  update(dt: number): void;
+}
+
+/** Per-frame timing sample kept for the debug graph. */
+export interface FrameMetric {
+  updateTime: number;
+  renderTime: number;
+  frameTime: number;
+  events: GameEvents;
+}
+
+/** Event counters reset every frame. */
+export interface GameEvents {
+  returns: number;
+  kills: number;
+}
+
+export interface GameStats {
+  fps: number;
+  /** Update time. */
+  ut: number;
+  /** AI time. */
+  ait: number;
+  /** Spawn time. */
+  st: number;
+  /** Render time. */
+  rt: number;
+}
+
+export interface GameTimings {
+  updateStartTime: number;
+  updateEndTime: number;
+  aiStartTime: number;
+  aiEndTime: number;
+  spawnStartTime: number;
+  spawnEndTime: number;
+  renderStartTime: number;
+  renderEndTime: number;
+}
+
+/** Server leaderboard (used for flag shields; not present in this build). */
+export interface Leaderboard {
+  countries?: { country: string; }[];
+}
+
+/** Optional extensions of a flag-based skin manager (not present in this build). */
+interface FlagSkinManagerExtras {
+  isFlagSkinManager?: boolean;
+  shieldSkinAssets?: { get(name: string): Asset; };
+}
+
+/** Debug/autopilot hook checked on the player; never declared on Unit (always undefined in this build). */
+interface DebugMoveTo {
+  moveTo?: unknown;
+}
+
+/** Owner of a shape that a returning track passes through. */
+type ShapeOwner = Base | Track;
+
+/** A point where a returning track touches a foreign shape (see handleReturn). */
+interface TrackContact {
+  owner: ShapeOwner;
+  point: Vec2;
+  segment: Segment;
+  /** Index of the point along the track polyline. */
+  index: number;
+}
+
+/**
+ * One entry of Track.intersections[i].intersections (see Track.intersect).
+ * TODO(types): should be exported from game/track.ts once Track.intersections is typed.
+ */
+interface TrackIntersectionRecord {
+  intersection: Intersection;
+  base: ShapeOwner;
+  enter: boolean;
+}
+
+/** A foreign base cut by a returning track (see handleReturn). */
+interface BaseCut {
+  owner: Base;
+  enter: Segment;
+  startPoint: Vec2;
+  startT: number;
+  leave: Segment;
+  endPoint: Vec2;
+  endT: number;
+}
+
+/** Territory taken from another base during a capture. */
+export interface CaptureVictim {
+  base: Base;
+  poly: Polygon;
+}
+
+/** Intersections of one movement step that share the same point. */
+interface IntersectionGroup {
+  point: Vec2;
+  intersections: Intersection[];
+}
+
+/** Per-frame view data passed to the renderers (see Game.getRenderContext). */
+export interface RenderContext {
+  game: Game;
+  view: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+  viewWidth: number;
+  viewHeight: number;
+  devicePixelRatio: number;
+  /** Screen diagonal relative to the reference resolution. */
+  scaler: number;
+  /** World -> canvas scale. */
+  scale: number;
+  /** World point at the center of the view. */
+  origin: Vec2;
+  pointInView: (point: Vec2, margin?: number) => boolean;
+  boundsInView: (item: { bounds: Bounds; }, margin?: number) => boolean;
+  calcMult: (landscape: number, portrait: number) => number;
+  viewScreenWidth: number;
+  viewScreenHeight: number;
+  fontSize: number;
+  strokeWidth: number;
+  backHeight: number;
+  uiFont: string;
+  padding: number;
+  barHeight: number;
+  halfBarHeight: number;
+  barWidth: number;
+  halfBarWidth: number;
+}
+
+/** Spawn area selector for getSpawnPosition / spawnBot. */
+export type SpawnZone = "player" | "bounds" | "center" | "random";
+
+export type GameRenderer = (game: Game) => void;
+
 export class Game {
-    best: any;
-    isTest: any;
-    playerDeathCallback: any;
-    keyboard: {};
+    best: number;
+    isTest: boolean;
+    playerDeathCallback: () => void;
+    keyboard: { x: number; y: number; } | null;
     tailRecovered: boolean;
     topListChanged: boolean;
-    citiesManager: any;
-    renderer: any;
-    rng: (_0x1dfc31: any) => number;
+    /** Country -> city name lookup (flag mode only; never set in this build). */
+    citiesManager: { get(country: string): string; };
+    renderer: GameRenderer;
+    rng: Rng;
     build: number;
-    config: any;
-    language: any;
+    config: GameConfig;
+    language: LanguageStrings;
     controller: Controller;
     skinManager: SkinManager;
     nameManager: NamePool;
     achievementsProfile: AchievementStore;
     space: SpatialGrid;
-    view: any;
+    view: HTMLCanvasElement | null;
     border: Border;
-    player: Player;
-    units: any[];
+    player: Player | null;
+    units: Unit[];
     mouse: Vec2;
     direction: Vec2;
+    declare recording?: GameRecording;
+    declare replaying?: GameReplay;
     cycle: number;
     seed: number;
     botSpawnLimited: boolean;
-    fakeMouse: any;
-    labels: any[];
-    notifications: any[];
+    fakeMouse: Vec2 | null;
+    labels: FloatingLabel[];
+    notifications: GameNotification[];
     scale: number;
     square: number;
-    gameOverCallback: any;
+    gameOverCallback: ((result: GameResult) => void) | null;
     visible: boolean;
     stopped: boolean;
     debugView: boolean;
-    leaderboard: any;
+    leaderboard: Leaderboard | null;
     level: number;
     bots: number[];
     debug: boolean;
     debugGraph: boolean;
     spawnSuspend: number;
-    particles: any[];
-    metrics: any[];
-    currMetric: any;
+    particles: Particle[];
+    metrics: FrameMetric[];
+    currMetric: FrameMetric | null;
     schemesManager: SchemesManager;
     last: number;
     timeAccumulated: number;
     looped: boolean;
     quality: number;
-    fpsSequence: any[];
-    qas: { q9: boolean; q8: boolean; q7: boolean; q6: boolean; q5: boolean; };
-    stats: { fps: number; ut: number; ait: number; st: number; rt: number; };
-    timings: { updateStartTime: number; updateEndTime: number; aiStartTime: number; aiEndTime: number; spawnStartTime: number; spawnEndTime: number; renderStartTime: number; renderEndTime: number; };
-    events: { returns: number; kills: number; };
+    fpsSequence: number[];
+    /** Quality levels already reported to analytics, keyed "q5".."q9". */
+    qas: Record<string, boolean>;
+    stats: GameStats;
+    timings: GameTimings;
+    events: GameEvents;
     updateParticlesId: number;
-    startTime: any;
+    startTime: number;
+    /** Player heading quantized to 0..253 (see update). */
     angle: number;
-    origin: any;
+    /** Smoothed camera center. */
+    origin: Vec2;
 
-  constructor(config: { arenaSize: number; quadSize: number; borderPoints: number; prepareMult: number; prepareBatchCount: number; maxPreparingTime: number; baseRadius: number; baseCount: number; minScale: number; maxScale: number; observerScale: number; trackWidth: number; unitSpeed: number; spawnTimeout: number; prepareCounter: number; prepareAcceleration: number; baseHeight: number; botsCount: number; botLevel: number; startBotLevel: number; noPlayerBotLevel: number; nearPlayerBotSpawnCount: number; followKiller: boolean; selfKillDelay: number; enemyKillDelay: number; arenaColor: string; borderColor: string; backgroundTopColor: string; backgroundBottomColor: string; platesStrokeWidth: number; botAggroMin: number; botAggroMax: number; botDefMin: number; botDefMax: number; botGreedMin: number; botGreedMax: number; botSafetyMin: number; botSafetyMax: number; botAttackTrackLength: number; font: string; } & { followKiller: boolean; selfKillDelay: number; enemyKillDelay: number; }, view: any, space: SpatialGrid, border: Border, skinManager: SkinManager, gameOverCallback: null, nameManager: NamePool, controller: Controller, language: any, schemesManager: SchemesManager, achievementsProfile: AchievementStore, seed: number) {
+  constructor(config: GameConfig, view: HTMLCanvasElement | null, space: SpatialGrid, border: Border, skinManager: SkinManager, gameOverCallback: ((result: GameResult) => void) | null, nameManager: NamePool, controller: Controller, language: LanguageStrings, schemesManager: SchemesManager, achievementsProfile: AchievementStore, seed: number) {
     this.best = undefined;
     this.isTest = undefined;
     this.playerDeathCallback = undefined;
@@ -193,10 +416,10 @@ export class Game {
     }
     this.debug = player.name === "dratest";
   }
-  addUnit(player: Player) {
-    this.units.push(player);
+  addUnit(unit: Unit) {
+    this.units.push(unit);
   }
-  getSpawnPosition(_0x366515: string, baseRadius2: number) {
+  getSpawnPosition(zone: SpawnZone, baseRadius2?: number): Vec2 | undefined {
     const {
       center
     } = this.space;
@@ -207,7 +430,7 @@ export class Game {
       baseRadius
     } = this.config;
     let center2 = center;
-    if (_0x366515 === "player" && !this.player) {
+    if (zone === "player" && !this.player) {
       return;
     }
     baseRadius2 = baseRadius2 || baseRadius;
@@ -217,7 +440,7 @@ export class Game {
     var _0x27d25e = baseRadius2 + baseRadius * 2 * _0x29c8d5;
     var _0x2b6b9f = _0x27d25e * _0x27d25e;
     let y;
-    switch (_0x366515) {
+    switch (zone) {
       case "player":
         y = lerp(baseRadius * 12, baseRadius * 16, Math.random());
         center2 = this.player.position;
@@ -243,12 +466,12 @@ export class Game {
       if (unit.base.polygon.inside(point3)) {
         return;
       }
-      if (unit.base.polygon.simplify.some(function (item: any) {
+      if (unit.base.polygon.simplify.some(function (item: Vec2) {
         return point3.distance2(item) < _0x513981;
       })) {
         return;
       }
-      if (unit.track.simplyline.some(function (point: any) {
+      if (unit.track.simplyline.some(function (point: Vec2) {
         return point3.distance2(point) < _0x2b6b9f;
       })) {
         return;
@@ -256,7 +479,7 @@ export class Game {
     }
     return point3;
   }
-  spawnBot(_0x128903: string) {
+  spawnBot(zone: SpawnZone) {
     const {
       baseCount,
       baseRadius,
@@ -278,24 +501,24 @@ export class Game {
     if (!this.skinManager || !this.skinManager.available()) {
       return;
     }
-    const spawnPosition = this.getSpawnPosition(_0x128903);
+    const spawnPosition = this.getSpawnPosition(zone);
     if (!spawnPosition) {
       return;
     }
-    const _0x485540 = [0, 0, 0, 0];
-    const _0x1caadb = [[1, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0], [1, 1, 2, 2, 2, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0], [1, 1, 2, 2, 2, 2, 3, 3, 0, 0, 0, 0, 0, 0, 0], [1, 1, 1, 2, 2, 2, 2, 2, 3, 0, 0, 0, 0, 0, 0]];
+    const botCountsByType = [0, 0, 0, 0];
+    const typeRotations = [[1, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0], [1, 1, 2, 2, 2, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0], [1, 1, 2, 2, 2, 2, 3, 3, 0, 0, 0, 0, 0, 0, 0], [1, 1, 1, 2, 2, 2, 2, 2, 3, 0, 0, 0, 0, 0, 0]];
     this.units.forEach(unit => {
       if (unit !== this.player) {
-        _0x485540[unit.type]++;
+        botCountsByType[unit.type]++;
       }
     });
-    this.bots = _0x24884b({}, _0x485540);
-    const _0x546f25 = _0x1caadb[Math.round(this.level * (_0x1caadb.length - 1))];
-    let _0x50cd16 = -1;
-    while (_0x485540[_0x546f25[++_0x50cd16]] > 0) {
-      _0x485540[_0x546f25[_0x50cd16]]--;
+    this.bots = _0x24884b({}, botCountsByType);
+    const typeRotation = typeRotations[Math.round(this.level * (typeRotations.length - 1))];
+    let rotationIndex = -1;
+    while (botCountsByType[typeRotation[++rotationIndex]] > 0) {
+      botCountsByType[typeRotation[rotationIndex]]--;
     }
-    const type = _0x546f25[_0x50cd16];
+    const type = typeRotation[rotationIndex];
     const name = this.nameManager.get();
     const bot = new Bot(this, type, name, spawnPosition, circlePoints(spawnPosition, baseCount, baseRadius), undefined, this.schemesManager);
     const skin = this.skinManager.get();
@@ -303,7 +526,7 @@ export class Game {
     this.addUnit(bot);
     this.bots[type]++;
   }
-  spawnPlayer(name: string, skin: Skin, extraLife: number) {
+  spawnPlayer(name: string, skinName: string, extraLife: number) {
     const {
       baseCount,
       baseRadius,
@@ -311,74 +534,74 @@ export class Game {
       minScale,
       botsCount
     } = this.config;
-    const _0x5c9977 = () => {
+    const removeMiddleUnit = () => {
       if (this.units.length) {
         this.kill(this.units[~~(this.units.length / 2)], undefined, DEATH_REMOVED);
       }
     };
     if (this.units.length && this.units.length >= botsCount) {
-      _0x5c9977();
+      removeMiddleUnit();
     }
     let position;
-    let _0x87ab5e = 0;
+    let attempts = 0;
     var baseRadius2 = extraLife ? Math.sqrt(this.square * extraLife / Math.PI) : baseRadius;
     while (!position) {
-      if (_0x87ab5e++ > 50) {
-        _0x87ab5e = 0;
-        _0x5c9977();
+      if (attempts++ > 50) {
+        attempts = 0;
+        removeMiddleUnit();
       }
       position = this.getSpawnPosition("random", baseRadius2);
     }
     const player = new Player(this, name || this.language.defaultPlayerName, position, circlePoints(position, baseCount, baseRadius2), undefined, this.schemesManager);
-    const playerSkin = this.skinManager.getPlayerSkin(skin);
+    const playerSkin = this.skinManager.getPlayerSkin(skinName);
     player.setSkin(playerSkin);
     this.addPlayer(player);
     this.scale = maxScale - ~~(player.base.square / this.square * 20) / 20 * (maxScale - minScale);
     this.startTime = now();
   }
-  gameOver(reason: number) {
+  gameOver(reason: DeathReason) {
     const {
       player
     } = this;
     if (!player.win) {
-      let min = Infinity;
-      let _0x218cef = 0;
-      let min2 = Infinity;
-      let _0x38b4b3 = 0;
-      player.base.polygon.segments.forEach((segment: { start: { x: any; y: any; }; }): { start: { x: any; y: any; }; } => {
+      let minX = Infinity;
+      let maxX = 0;
+      let minY = Infinity;
+      let maxY = 0;
+      player.base.polygon.segments.forEach(segment => {
         const {
           x,
           y
         } = segment.start;
-        min = Math.min(min, x);
-        _0x218cef = Math.max(_0x218cef, x);
-        min2 = Math.min(min2, y);
-        _0x38b4b3 = Math.max(_0x38b4b3, y);
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
       });
-      const _0x542aa7 = _0x218cef - min;
-      const _0x1e1e9c = _0x38b4b3 - min2;
-      const _0x3cd457 = Math.max(_0x542aa7, _0x1e1e9c);
-      const vec2 = new Vec2(min + _0x542aa7 / 2, min2 + _0x1e1e9c / 2);
-      const _0x5a7d03 = 500;
-      const _0x28bf89 = _0x5a7d03 * 0.95 / _0x3cd457;
-      const _0x4be932 = _0x5a7d03 / 100;
+      const width = maxX - minX;
+      const height = maxY - minY;
+      const size = Math.max(width, height);
+      const vec2 = new Vec2(minX + width / 2, minY + height / 2);
+      const imageSize = 500;
+      const imageScale = imageSize * 0.95 / size;
+      const depth = imageSize / 100;
       let _0x149dc6;
       if (typeof document !== "undefined") {
         const canvas = document.createElement("canvas");
-        canvas.width = _0x5a7d03;
-        canvas.height = _0x5a7d03;
+        canvas.width = imageSize;
+        canvas.height = imageSize;
         const ctx = canvas.getContext("2d");
-        ctx.scale(_0x28bf89, _0x28bf89);
-        ctx.translate(_0x5a7d03 / 2 / _0x28bf89 - vec2.x, _0x5a7d03 / 2 / _0x28bf89 - vec2.y);
-        ctx.translate(0, _0x4be932 / _0x28bf89);
+        ctx.scale(imageScale, imageScale);
+        ctx.translate(imageSize / 2 / imageScale - vec2.x, imageSize / 2 / imageScale - vec2.y);
+        ctx.translate(0, depth / imageScale);
         ctx.fillStyle = player.skin.colors.back;
         ctx.fill(player.base.polygon.path);
-        ctx.translate(0, _0x4be932 * -2 / _0x28bf89);
+        ctx.translate(0, depth * -2 / imageScale);
         ctx.fillStyle = player.skin.pattern && player.skin.pattern.pattern || player.skin.colors.main;
         ctx.fill(player.base.polygon.path);
         _0x149dc6 = canvas.toDataURL("image/png");
       }
-      const _0x432ce9 = {
+      const result: GameResult = {
         build: this.build,
         game: this,
         percent: player.percent,
@@ -408,7 +631,7 @@ export class Game {
         }
         this.player = null;
         if (this.gameOverCallback) {
-          this.gameOverCallback(_0x432ce9);
+          this.gameOverCallback(result);
         }
       }, reason === DEATH_TRACK_CROSSED || reason === DEATH_EXIT_CAPTURED || reason === DEATH_SURROUNDED ? this.config.enemyKillDelay : this.config.selfKillDelay);
     }
@@ -416,26 +639,26 @@ export class Game {
   checkBaseCommits() {
     this.units.forEach(unit => {
       const polygon = unit.base.polygon;
-      polygon.segments.forEach((segment: { start: any; end: any; }): { start: any; end: any; } => {
+      polygon.segments.forEach(segment => {
         const {
           start,
           end
         } = segment;
-        const segment2 = start.segments.find((segment2: any): any => segment2 === segment);
-        const segment3 = end.segments.find((segment2: any): any => segment2 === segment);
+        const segment2 = start.segments.find(segment2 => segment2 === segment);
+        const segment3 = end.segments.find(segment2 => segment2 === segment);
         if (!segment2 || !segment3) {
           throw new Error("точки сегмента не закоммичены");
         }
       });
     });
   }
-  kill(unit: Unit, killer: Unit, reason: number) {
+  kill(unit: Unit, killer: Unit | undefined, reason: DeathReason) {
     if (unit.death) {
       return;
     }
     if (this.isTest) {
-      const _0x33e839 = ["выигрыш", "самопересечение", "убит об стену", "убит пересечением трека", "убит захватом точки выхода", "убит окружением", "удален системой", "убит откружением столицы", "убит разделением со столицей"];
-      console.log(unit.name + " убит" + (killer ? " " + killer.name : "") + " (" + _0x33e839[reason] + ")");
+      const reasonNames = ["выигрыш", "самопересечение", "убит об стену", "убит пересечением трека", "убит захватом точки выхода", "убит окружением", "удален системой", "убит откружением столицы", "убит разделением со столицей"];
+      console.log(unit.name + " убит" + (killer ? " " + killer.name : "") + " (" + reasonNames[reason] + ")");
     }
     this.events.kills++;
     unit.death = true;
@@ -487,43 +710,43 @@ export class Game {
     const point2 = vecFromAngle(unit.direction);
     let angle = Math.atan2(point2.x * point.y - point.x * point2.y, point2.dot(point));
     point2.release();
-    const _0x58c896 = TAU * dt / 1000 / (unit.smoothness || 1);
-    if (Math.abs(angle) > _0x58c896) {
-      angle = _0x58c896 * Math.sign(angle);
+    const maxTurn = TAU * dt / 1000 / (unit.smoothness || 1);
+    if (Math.abs(angle) > maxTurn) {
+      angle = maxTurn * Math.sign(angle);
     }
     unit.direction += angle;
-    const _0x3b2cd3 = vecFromAngle(unit.direction).mulScalar(unitSpeed * dt / 1000);
-    let segment = new Segment(unit.position, unit.position.clone().add(_0x3b2cd3));
-    _0x3b2cd3.release();
+    const step = vecFromAngle(unit.direction).mulScalar(unitSpeed * dt / 1000);
+    let segment = new Segment(unit.position, unit.position.clone().add(step));
+    step.release();
     let intersections = this.border.intersections(segment);
     while (intersections.length) {
-      let _0x5efed0;
+      let hit;
       const vector = segment.vector;
       if (intersections.length === 2) {
         const vector2 = intersections[0].segment.vector;
         let angle = Math.atan2(vector.x * vector2.y - vector2.x * vector.y, vector.dot(vector2));
-        _0x5efed0 = angle > 0 ? intersections[0] : intersections[1];
+        hit = angle > 0 ? intersections[0] : intersections[1];
       } else {
-        _0x5efed0 = intersections[0];
+        hit = intersections[0];
       }
       const {
         segment: segment2,
         point: point
-      } = _0x5efed0;
+      } = hit;
       const vector2 = segment2.vector;
       let angle = Math.atan2(vector.x * vector2.y - vector2.x * vector.y, vector.dot(vector2));
       if (angle < 0) {
         break;
       }
-      if (!isZero(_0x5efed0.distance)) {
+      if (!isZero(hit.distance)) {
         const segment2 = new Segment(segment.start, point);
         result.push(segment2);
       }
       segment = new Segment(point, segment.end);
       const vector3 = segment.vector;
-      const _0x25c070 = Vec2.clone(vector2).normalize().mulScalar(vector3.dot(vector2) / vector2.magnitude());
-      segment = new Segment(point, point.clone().add(_0x25c070));
-      _0x25c070.release();
+      const slide = Vec2.clone(vector2).normalize().mulScalar(vector3.dot(vector2) / vector2.magnitude());
+      segment = new Segment(point, point.clone().add(slide));
+      slide.release();
       intersections = this.border.intersections(segment);
     }
     result.push(segment);
@@ -535,17 +758,17 @@ export class Game {
     }
     if (this.controller.pressed()) {
       this.keyboard = Object.assign({}, this.controller.mouse);
-      const _0x1c56e4 = TAU * dt / 1000;
+      const maxTurn = TAU * dt / 1000;
       if (this.controller.keyboardModeSwitch.mode2) {
-        let _0x19aa5b = 0;
+        let turn = 0;
         if (this.controller.left) {
-          _0x19aa5b = -1;
+          turn = -1;
         }
         if (this.controller.right) {
-          _0x19aa5b = 1;
+          turn = 1;
         }
-        if (_0x19aa5b) {
-          this.direction.rotate(_0x19aa5b * _0x1c56e4);
+        if (turn) {
+          this.direction.rotate(turn * maxTurn);
         }
       } else {
         const vec2 = new Vec2();
@@ -563,8 +786,8 @@ export class Game {
         }
         if (vec2.magnitude()) {
           let angle = Math.atan2(this.direction.x * vec2.y - vec2.x * this.direction.y, this.direction.x * vec2.x + this.direction.y * vec2.y);
-          if (Math.abs(angle) > _0x1c56e4) {
-            angle = Math.sign(angle) * _0x1c56e4;
+          if (Math.abs(angle) > maxTurn) {
+            angle = Math.sign(angle) * maxTurn;
           }
           this.direction.rotate(angle);
         }
@@ -578,7 +801,7 @@ export class Game {
       this.direction = new Vec2(this.controller.lastMouse.x, this.controller.lastMouse.y).sub(new Vec2(this.view.clientWidth / 2, this.view.clientHeight / 2)).normalize();
     }
   }
-  prepareAndUpdate(_0x4275d6: number) {
+  prepareAndUpdate(dt: number) {
     if (this.preparing()) {
       let prepareAcceleration = this.config.prepareAcceleration;
       while (this.preparing() && prepareAcceleration > 0) {
@@ -586,19 +809,19 @@ export class Game {
         prepareAcceleration--;
       }
     } else {
-      console.log(_0x4275d6);
-      this.update(_0x4275d6);
+      console.log(dt);
+      this.update(dt);
     }
   }
   preparing() {
     return this.cycle < this.config.prepareCounter;
   }
   finishPrepare() {
-    let _0x5477e9 = this.replaying ? this.replaying.start : this.config.prepareCounter;
-    if (this.cycle < _0x5477e9) {
-      console.log("skip cycles to: " + _0x5477e9);
+    let targetCycle = this.replaying ? this.replaying.start : this.config.prepareCounter;
+    if (this.cycle < targetCycle) {
+      console.log("skip cycles to: " + targetCycle);
     }
-    while (this.cycle < _0x5477e9) {
+    while (this.cycle < targetCycle) {
       this.update();
     }
   }
@@ -606,12 +829,12 @@ export class Game {
     let player = this.player;
     if (player && player.in == player.base && !player.base.polygon.inside(player.position)) {
       {
-        if (!player.moveTo) {
+        if (!(player as Player & DebugMoveTo).moveTo) {
           return;
         }
       }
-      let _0x3dd1cb = player.base.polygon.segments.reduce((acc: { start: { distance2: (arg0: any) => number; }; }, segment: { start: { distance2: (arg0: any) => number; }; }) => acc.start.distance2(player.position) < segment.start.distance2(player.position) ? acc : segment);
-      let delta = _0x3dd1cb.start.clone().sub(player.position);
+      let nearestSegment = player.base.polygon.segments.reduce((acc, segment) => acc.start.distance2(player.position) < segment.start.distance2(player.position) ? acc : segment);
+      let delta = nearestSegment.start.clone().sub(player.position);
       let len = delta.magnitude();
       player.position = delta.mulScalar(1 + 1 / len).add(player.position);
       player.track.remove();
@@ -624,7 +847,7 @@ export class Game {
       }
     }
   }
-  update(dt: number) {
+  update(dt?: number): boolean {
     const {
       trackWidth,
       unitSpeed,
@@ -669,10 +892,10 @@ export class Game {
       unit.lastSquare = unit.base.square;
     });
     this.units.forEach(unit => {
-      const _0x50e657 = unit.base.square / this.square;
-      unit.percent = _0x50e657;
-      unit.bestPercent = Math.max(unit.bestPercent, _0x50e657);
-      unit.scale = lerp(maxScale, minScale, easeOutCubic(~~(_0x50e657 * 20) / 20));
+      const percent = unit.base.square / this.square;
+      unit.percent = percent;
+      unit.bestPercent = Math.max(unit.bestPercent, percent);
+      unit.scale = lerp(maxScale, minScale, easeOutCubic(~~(percent * 20) / 20));
       unit.vrange = Math.sqrt(2455780) / 2 / unit.scale * 0.8;
       if (unit.schemes) {
         unit.schemes.update(dt);
@@ -681,7 +904,7 @@ export class Game {
         let vec2 = new Vec2(0, -35);
         const vec22 = new Vec2(0, -10);
         const vec23 = new Vec2(0, -10);
-        unit.labels.forEach((label: { text: any; color: string; unit: Unit; time: number; fading: boolean; }): { text: any; color: string; unit: Unit; time: number; fading: boolean; } => {
+        unit.labels.forEach(label => {
           this.labels.push(new FloatingLabel(label.text, label.color, label.unit, vec2, vec22, label.time, label.fading));
           vec2 = vec2.clone().add(vec23);
         });
@@ -716,7 +939,7 @@ export class Game {
     }
     this.units.forEach(unit => {
       if (unit instanceof Bot) {
-        const _0x5594f3 = Math.min(1, Math.max(0, this.level + unit.jitter));
+        const skill = Math.min(1, Math.max(0, this.level + unit.jitter));
         let {
           botAggroMin,
           botAggroMax,
@@ -749,22 +972,22 @@ export class Game {
             botDefMax *= 2;
             break;
         }
-        unit.aggro = lerp(botAggroMin, botAggroMax, _0x5594f3);
-        unit.greed = lerp(botGreedMin, botGreedMax, _0x5594f3);
-        unit.safety = lerp(botSafetyMin, botSafetyMax, _0x5594f3);
-        unit.def = lerp(botDefMin, botDefMax, _0x5594f3);
+        unit.aggro = lerp(botAggroMin, botAggroMax, skill);
+        unit.greed = lerp(botGreedMin, botGreedMax, skill);
+        unit.safety = lerp(botSafetyMin, botSafetyMax, skill);
+        unit.def = lerp(botDefMin, botDefMax, skill);
       }
     });
     if (this.player && this.player.achievements) {
       this.player.achievements.update(this.player, dt, this);
     }
     if (player && player.track.length > this.config.botAttackTrackLength) {
-      let _0x3bbba2 = null;
+      let nearestBot: Bot | null = null;
       let min = Infinity;
       this.units.forEach(unit => {
         if (unit instanceof Bot) {
           let min2 = Infinity;
-          player.track.simplyline.forEach((point: { distance2: (arg0: any) => any; }): { distance2: (arg0: any) => any; } => {
+          player.track.simplyline.forEach(point => {
             const distSq = point.distance2(unit.position);
             if (distSq < min2) {
               min2 = distSq;
@@ -772,18 +995,18 @@ export class Game {
           });
           min2 = Math.sqrt(min2);
           if (min2 < min) {
-            _0x3bbba2 = unit;
+            nearestBot = unit;
             min = min2;
           }
         }
       });
-      if (_0x3bbba2) {
-        _0x3bbba2.fsm.change("attack");
+      if (nearestBot) {
+        nearestBot.fsm.change("attack");
       }
     }
-    const _0x709870 = player ? player.scale : observerScale;
-    const _0x39165b = _0x709870 - this.scale;
-    this.scale += _0x39165b * dt / 400;
+    const targetScale = player ? player.scale : observerScale;
+    const scaleDelta = targetScale - this.scale;
+    this.scale += scaleDelta * dt / 400;
     if (player && player.percent > 0.9999) {
       player.percent = 1;
       this.gameOver(DEATH_WIN);
@@ -798,10 +1021,10 @@ export class Game {
     this.cycle++;
     return true;
   }
-  get renderContext() {
+  get renderContext(): RenderContext | undefined {
     return this.getRenderContext();
   }
-  getRenderContext() {
+  getRenderContext(): RenderContext | undefined {
     const {
       view
     } = this;
@@ -814,20 +1037,20 @@ export class Game {
     const ctx = view.getContext("2d");
     const clientWidth = view.clientWidth;
     const clientHeight = view.clientHeight;
-    const _0x54a346 = ~~(clientWidth * this.quality);
-    const _0x41629c = ~~(clientHeight * this.quality);
-    if (view.width !== _0x54a346 || view.height !== _0x41629c) {
-      view.width = _0x54a346;
-      view.height = _0x41629c;
+    const viewWidth = ~~(clientWidth * this.quality);
+    const viewHeight = ~~(clientHeight * this.quality);
+    if (view.width !== viewWidth || view.height !== viewHeight) {
+      view.width = viewWidth;
+      view.height = viewHeight;
     }
     const {
       devicePixelRatio
     } = window;
-    const _0x2ddf06 = _0x54a346 * devicePixelRatio;
-    const _0x5c3e17 = _0x41629c * devicePixelRatio;
-    const _0x3b8c8f = Math.sqrt(_0x2ddf06 * _0x2ddf06 + _0x5c3e17 * _0x5c3e17) / Math.sqrt(2455780);
-    const _0x2b1e55 = this.scale * _0x3b8c8f / devicePixelRatio;
-    let point;
+    const viewScreenWidth = viewWidth * devicePixelRatio;
+    const viewScreenHeight = viewHeight * devicePixelRatio;
+    const scaler = Math.sqrt(viewScreenWidth * viewScreenWidth + viewScreenHeight * viewScreenHeight) / Math.sqrt(2455780);
+    const scale = this.scale * scaler / devicePixelRatio;
+    let point: Vec2;
     if (this.player) {
       point = this.player.position;
       if (this.player.killer && this.config.followKiller) {
@@ -839,81 +1062,81 @@ export class Game {
     if (this.origin && (!this.player || this.player.killer)) {
       const dist = this.origin.distance(point);
       let dist3 = dist / 30;
-      const _0x4caab5 = point.clone().sub(this.origin).normalize().mulScalar(dist3);
-      point = this.origin.add(_0x4caab5);
+      const step = point.clone().sub(this.origin).normalize().mulScalar(dist3);
+      point = this.origin.add(step);
     }
     this.origin = point.clone();
-    const _0x5010a6 = point.x - _0x54a346 / 2 / _0x2b1e55;
-    const _0x4fe2d2 = point.x + _0x54a346 / 2 / _0x2b1e55;
-    const _0x15266b = point.y - _0x41629c / 2 / _0x2b1e55;
-    const _0x29bcc8 = point.y + _0x41629c / 2 / _0x2b1e55;
-    const _0x4f0c46 = (point: Vec2, _0x568ea6 = 0) => inRange(_0x5010a6 - _0x568ea6, _0x4fe2d2 + _0x568ea6, point.x) && inRange(_0x15266b - _0x568ea6, _0x29bcc8 + _0x568ea6, point.y);
-    const _0x2a41b8 = (_0x49fb9c: { bounds: { left: number; right: number; top: number; bottom: number; }; }, _0x5af2d7 = 0) => rangeOverlap(_0x49fb9c.bounds.left - _0x5af2d7, _0x49fb9c.bounds.right + _0x5af2d7, _0x5010a6, _0x4fe2d2) > 0 && rangeOverlap(_0x49fb9c.bounds.top - _0x5af2d7, _0x49fb9c.bounds.bottom + _0x5af2d7, _0x15266b, _0x29bcc8) > 0;
-    const _0x54d13e = (_0x532992: number, _0x58c40d: number) => {
+    const left = point.x - viewWidth / 2 / scale;
+    const right = point.x + viewWidth / 2 / scale;
+    const top = point.y - viewHeight / 2 / scale;
+    const bottom = point.y + viewHeight / 2 / scale;
+    const pointInView = (point: Vec2, margin = 0) => inRange(left - margin, right + margin, point.x) && inRange(top - margin, bottom + margin, point.y);
+    const boundsInView = (item: { bounds: Bounds; }, margin = 0) => rangeOverlap(item.bounds.left - margin, item.bounds.right + margin, left, right) > 0 && rangeOverlap(item.bounds.top - margin, item.bounds.bottom + margin, top, bottom) > 0;
+    const calcMult = (landscape: number, portrait: number) => {
       const _0x3475d4 = 16 / 9;
       const _0x5e288c = 9 / 16;
-      const _0x158e1e = clamp(_0x5e288c, _0x3475d4, _0x2ddf06 / _0x5c3e17);
-      const _0x174801 = _0x532992 - _0x58c40d;
+      const _0x158e1e = clamp(_0x5e288c, _0x3475d4, viewScreenWidth / viewScreenHeight);
+      const _0x174801 = landscape - portrait;
       const _0x5bf426 = _0x5e288c - _0x3475d4;
-      const _0x531332 = -(_0x174801 * _0x3475d4 + _0x5bf426 * _0x532992);
+      const _0x531332 = -(_0x174801 * _0x3475d4 + _0x5bf426 * landscape);
       return -(_0x531332 + _0x174801 * _0x158e1e) / _0x5bf426;
     };
-    const _0x11876d = ~~(_0x54d13e(20, 30) * _0x3b8c8f);
-    const _0xf7a325 = this.config.platesStrokeWidth * _0x3b8c8f;
-    const _0x163ec9 = ~~(_0x3b8c8f * 4);
-    const _0x5052ae = _0x11876d + "px " + font;
-    const _0x2809cc = ~~(_0x3b8c8f * 16);
-    const _0x751269 = ~~(_0x11876d * 0.75);
-    const _0x593bf3 = _0x751269 * 2;
-    const _0x33d922 = ~~(_0x2ddf06 / _0x54d13e(4, 2.25));
-    const _0x35ec6f = ~~(_0x33d922 / 2);
+    const fontSize = ~~(calcMult(20, 30) * scaler);
+    const strokeWidth = this.config.platesStrokeWidth * scaler;
+    const backHeight = ~~(scaler * 4);
+    const uiFont = fontSize + "px " + font;
+    const padding = ~~(scaler * 16);
+    const halfBarHeight = ~~(fontSize * 0.75);
+    const barHeight = halfBarHeight * 2;
+    const barWidth = ~~(viewScreenWidth / calcMult(4, 2.25));
+    const halfBarWidth = ~~(barWidth / 2);
     return {
       game: this,
       view: view,
       ctx: ctx,
-      viewWidth: _0x54a346,
-      viewHeight: _0x41629c,
+      viewWidth: viewWidth,
+      viewHeight: viewHeight,
       devicePixelRatio: devicePixelRatio,
-      scaler: _0x3b8c8f,
-      scale: _0x2b1e55,
+      scaler: scaler,
+      scale: scale,
       origin: point,
-      pointInView: _0x4f0c46,
-      boundsInView: _0x2a41b8,
-      calcMult: _0x54d13e,
-      viewScreenWidth: _0x2ddf06,
-      viewScreenHeight: _0x5c3e17,
-      fontSize: _0x11876d,
-      strokeWidth: _0xf7a325,
-      backHeight: _0x163ec9,
-      uiFont: _0x5052ae,
-      padding: _0x2809cc,
-      barHeight: _0x593bf3,
-      halfBarHeight: _0x751269,
-      barWidth: _0x33d922,
-      halfBarWidth: _0x35ec6f
+      pointInView: pointInView,
+      boundsInView: boundsInView,
+      calcMult: calcMult,
+      viewScreenWidth: viewScreenWidth,
+      viewScreenHeight: viewScreenHeight,
+      fontSize: fontSize,
+      strokeWidth: strokeWidth,
+      backHeight: backHeight,
+      uiFont: uiFont,
+      padding: padding,
+      barHeight: barHeight,
+      halfBarHeight: halfBarHeight,
+      barWidth: barWidth,
+      halfBarWidth: halfBarWidth
     };
   }
-  updateMetrics(_0x54d46a: number) {
+  updateMetrics(frameTime: number) {
     const {
       stats,
       timings
     } = this;
-    const _0x646ac0 = {
+    const metric = {
       updateTime: timings.updateEndTime - timings.updateStartTime,
       renderTime: timings.renderEndTime - timings.renderStartTime,
-      frameTime: _0x54d46a,
+      frameTime: frameTime,
       events: this.events
     };
-    this.metrics.push(_0x646ac0);
+    this.metrics.push(metric);
     if (this.metrics.length > _0xd09b08) {
       this.metrics.shift();
     }
-    const _0x29318d = 0.05;
-    stats.fps = lerp(stats.fps, 1000 / _0x54d46a, _0x29318d);
-    stats.ut = lerp(stats.ut, timings.updateEndTime - timings.updateStartTime, _0x29318d);
-    stats.ait = lerp(stats.ait, timings.aiEndTime - timings.aiStartTime, _0x29318d);
-    stats.st = lerp(stats.st, timings.spawnEndTime - timings.spawnStartTime, _0x29318d);
-    stats.rt = lerp(stats.rt, timings.renderEndTime - timings.renderStartTime, _0x29318d);
+    const smoothing = 0.05;
+    stats.fps = lerp(stats.fps, 1000 / frameTime, smoothing);
+    stats.ut = lerp(stats.ut, timings.updateEndTime - timings.updateStartTime, smoothing);
+    stats.ait = lerp(stats.ait, timings.aiEndTime - timings.aiStartTime, smoothing);
+    stats.st = lerp(stats.st, timings.spawnEndTime - timings.spawnStartTime, smoothing);
+    stats.rt = lerp(stats.rt, timings.renderEndTime - timings.renderStartTime, smoothing);
     this.fpsSequence.push(stats.fps);
     const _0x2fbf93 = 25;
     const _0x48c44b = 35;
@@ -922,30 +1145,30 @@ export class Game {
     const _0x3636ac = 0.5;
     if (this.fpsSequence.length > _0x293934) {
       this.fpsSequence.sort();
-      const _0x535376 = this.fpsSequence[~~(_0x293934 / 2)];
-      if (_0x535376 < _0x2fbf93) {
+      const medianFps = this.fpsSequence[~~(_0x293934 / 2)];
+      if (medianFps < _0x2fbf93) {
         this.quality -= 0.1;
       }
-      if (_0x535376 < _0x2a54ee) {
+      if (medianFps < _0x2a54ee) {
         this.quality -= 0.1;
       }
       if (this.quality < _0x3636ac) {
         this.quality = _0x3636ac;
       }
-      if (_0x535376 > _0x48c44b) {
+      if (medianFps > _0x48c44b) {
         this.quality += 0.1;
       }
       if (this.quality > 1) {
         this.quality = 1;
       }
-      const _0x3d8841 = Math.round(this.quality * 10);
-      this.quality = _0x3d8841 / 10;
-      if (_0x3d8841 < 10) {
-        const _0x33b565 = "q" + _0x3d8841;
-        if (this.qas[_0x33b565]) {
-          this.qas[_0x33b565] = false;
+      const qualityLevel = Math.round(this.quality * 10);
+      this.quality = qualityLevel / 10;
+      if (qualityLevel < 10) {
+        const qualityKey = "q" + qualityLevel;
+        if (this.qas[qualityKey]) {
+          this.qas[qualityKey] = false;
           if (window.ga) {
-            window.ga("send", "event", "fps", _0x33b565);
+            window.ga("send", "event", "fps", qualityKey);
           }
         }
       }
@@ -956,7 +1179,7 @@ export class Game {
       kills: 0
     };
   }
-  setLeaderboard(leaderboard: any) {
+  setLeaderboard(leaderboard: Leaderboard | null) {
     if (leaderboard) {
       this.leaderboard = leaderboard;
       this.changeShields();
@@ -967,29 +1190,30 @@ export class Game {
       countries: countries
     } = this.leaderboard;
     if (countries) {
-      const _0x52f233 = countries[0] && countries[0].country;
-      const _0x129382 = countries[1] && countries[1].country;
-      const _0xc01a3 = countries[2] && countries[2].country;
+      const goldCountry = countries[0] && countries[0].country;
+      const silverCountry = countries[1] && countries[1].country;
+      const bronzeCountry = countries[2] && countries[2].country;
       this.units.forEach(unit => {
-        const asset = unit.skin.assets.find((asset: { pool: { name: string; }; }): { pool: { name: string; }; } => asset.pool.name === "shields");
-        const asset2 = unit.skin.assets.find((asset: { pool: { name: string; }; }): { pool: { name: string; }; } => asset.pool.name === "flags");
+        const asset = unit.skin.assets.find((asset: Asset) => asset.pool.name === "shields");
+        const asset2 = unit.skin.assets.find((asset: Asset) => asset.pool.name === "flags");
         if (asset && asset2) {
-          let _0x43471a = "gray";
+          let shieldName = "gray";
           switch (asset2.name) {
-            case _0x52f233:
-              _0x43471a = "gold";
+            case goldCountry:
+              shieldName = "gold";
               break;
-            case _0x129382:
-              _0x43471a = "silver";
+            case silverCountry:
+              shieldName = "silver";
               break;
-            case _0xc01a3:
-              _0x43471a = "bronze";
+            case bronzeCountry:
+              shieldName = "bronze";
               break;
           }
-          if (asset.name !== _0x43471a) {
-            unit.skin.removeAsset(asset);
+          if (asset.name !== shieldName) {
+            // TODO(types): Skin has no removeAsset (flag/shield mode only, unreachable in this build)
+            (unit.skin as Skin & { removeAsset(asset: Asset): void; }).removeAsset(asset);
             if ("shieldSkinAssets" in this.skinManager) {
-              unit.skin.addAsset(this.skinManager.shieldSkinAssets.get(_0x43471a));
+              unit.skin.addAsset((this.skinManager as SkinManager & FlagSkinManagerExtras).shieldSkinAssets.get(shieldName));
             }
           }
         }
@@ -999,13 +1223,13 @@ export class Game {
   post() {
     var paper2_results = window.paper2_results;
     var scores = paper2_results.scores;
-    function _0x5f107b() {
+    function getBrowserLanguage() {
       return (navigator.languages && navigator.languages[0] || navigator.userLanguage || navigator.language || navigator.browserLanguage || "en").substr(0, 2).toUpperCase();
     }
-    var _0x129a88 = {
+    var payload = {
       build: paper2_results.build || 0,
       player: window.playerId || 0,
-      lng: _0x5f107b(),
+      lng: getBrowserLanguage(),
       name: this.player.name,
       top: paper2_results.top || 0,
       persent: Math.round(paper2_results.score * 100),
@@ -1018,10 +1242,10 @@ export class Game {
       },
       reason: paper2_results.reason || 0
     };
-    function _0x2e5605(_0x47f4ae: string) {
+    function xorEncode(text: string) {
       var result = "";
-      for (var i = 0; i < _0x47f4ae.length; i++) {
-        var _0xa11e69 = _0x47f4ae.charCodeAt(i);
+      for (var i = 0; i < text.length; i++) {
+        var _0xa11e69 = text.charCodeAt(i);
         var _0x267820 = _0xa11e69 ^ 42;
         result = result + String.fromCharCode(_0x267820);
       }
@@ -1032,19 +1256,19 @@ export class Game {
       headers: {
         "Content-Type": "application/json"
       },
-      body: _0x2e5605(escape(JSON.stringify(_0x129a88)))
+      body: xorEncode(escape(JSON.stringify(payload)))
     });
   }
   addCity(unit: Unit) {
-    const name = unit.skin.assets.find((asset: { pool: { name: string; }; }): { pool: { name: string; }; } => asset.pool.name === "flags").name;
+    const name = unit.skin.assets.find((asset: Asset) => asset.pool.name === "flags").name;
     const city = new City(this.citiesManager.get(name), false, unit.position.clone(), unit);
-    if (this.skinManager.isFlagSkinManager) {
+    if ((this.skinManager as SkinManager & FlagSkinManagerExtras).isFlagSkinManager) {
       const citySkin = this.skinManager.getCitySkin(name);
       city.skin = citySkin;
     }
     unit.cities.push(city);
   }
-  checkSegments(_0x4d4a5b: any) {
+  checkSegments(_0x4d4a5b?: unknown) {
     let _0x136bc7 = 0;
     this.units.forEach(unit => {
       _0x136bc7 += unit.base.polygon.segments.length;
@@ -1053,175 +1277,175 @@ export class Game {
     const _0x33065f = this.space.segmentsCount();
     const count = Object.keys(_0x33065f).length;
   }
-  handleReturn(_0x5ebb6f: Unit) {
-    if (_0x5ebb6f.death) {
+  handleReturn(returningUnit: Unit) {
+    if (returningUnit.death) {
       return;
     }
     this.events.returns++;
-    const polylineCopy = _0x5ebb6f.track.polyline.clone();
+    const polylineCopy = returningUnit.track.polyline.clone();
     const {
       base: base
-    } = _0x5ebb6f;
-    const index = base.polygon.segments.findIndex((segment): { start: any; } => segment.start === polylineCopy.start);
-    const index2 = base.polygon.segments.findIndex((segment): { start: any; } => segment.start === polylineCopy.end);
-    const _0x4ffa2b = Math.min(index2, index);
-    const _0x490c91 = Math.max(index2, index);
-    if (_0x4ffa2b !== index) {
+    } = returningUnit;
+    const index = base.polygon.segments.findIndex(segment => segment.start === polylineCopy.start);
+    const index2 = base.polygon.segments.findIndex(segment => segment.start === polylineCopy.end);
+    const startIndex = Math.min(index2, index);
+    const endIndex = Math.max(index2, index);
+    if (startIndex !== index) {
       polylineCopy.reverse();
     }
-    const _0x5a7e19 = polylineCopy.points();
-    const _0x1051b1 = base.polygon.points();
-    const removed = _0x1051b1.splice(_0x4ffa2b, _0x490c91 - _0x4ffa2b + 1, ..._0x5a7e19);
+    const trackPoints = polylineCopy.points();
+    const basePoints = base.polygon.points();
+    const removed = basePoints.splice(startIndex, endIndex - startIndex + 1, ...trackPoints);
     removed.shift();
     removed.pop();
     removed.reverse();
-    removed.push(..._0x5a7e19);
+    removed.push(...trackPoints);
     const polygon = new Polygon(removed);
-    let _0x1b07c0;
+    let captured: Polygon;
     if (polygon.rawSquare() < 0) {
-      _0x1b07c0 = new Polygon(_0x1051b1.reverse());
-      base.polygon.unsplice(polylineCopy, _0x4ffa2b, _0x490c91);
+      captured = new Polygon(basePoints.reverse());
+      base.polygon.unsplice(polylineCopy, startIndex, endIndex);
     } else {
-      _0x1b07c0 = polygon;
-      base.polygon.splice(polylineCopy, _0x4ffa2b, _0x490c91);
+      captured = polygon;
+      base.polygon.splice(polylineCopy, startIndex, endIndex);
     }
-    base.square += _0x1b07c0.square();
+    base.square += captured.square();
     base.polygon.calcPath();
-    this.units.filter(unit => unit !== _0x5ebb6f).forEach(item => {
+    this.units.filter(unit => unit !== returningUnit).forEach(item => {
       if (!item.death) {
-        if (item.in === item.base && _0x1b07c0.inside(item.position)) {
-          this.kill(item, _0x5ebb6f, DEATH_SURROUNDED);
+        if (item.in === item.base && captured.inside(item.position)) {
+          this.kill(item, returningUnit, DEATH_SURROUNDED);
         }
-        if (item.track.polyline.start && _0x1b07c0.inside(item.track.polyline.start)) {
-          this.kill(item, _0x5ebb6f, DEATH_EXIT_CAPTURED);
+        if (item.track.polyline.start && captured.inside(item.track.polyline.start)) {
+          this.kill(item, returningUnit, DEATH_EXIT_CAPTURED);
         }
-        if (item.cities && item.cities[0] && _0x1b07c0.inside(item.cities[0].position)) {
-          this.kill(item, _0x5ebb6f, DEATH_CAPITAL_SURROUNDED);
+        if (item.cities && item.cities[0] && captured.inside(item.cities[0].position)) {
+          this.kill(item, returningUnit, DEATH_CAPITAL_SURROUNDED);
         }
       }
     });
-    let _0x4a8c56 = [];
-    const segments = _0x5ebb6f.track.polyline.segments;
+    let openContacts: TrackContact[] = [];
+    const segments = returningUnit.track.polyline.segments;
     const count = segments.length;
-    const _0x1e03e0: { base: any; poly: Polygon; }[] = [];
+    const victims: CaptureVictim[] = [];
     for (let i = 0; i <= count; i++) {
       const point = i === count ? segments[i - 1].end : segments[i].start;
-      const segments2 = point.segments.filter((segment: { shape: { owner: Base | Track; }; start: any; }): { shape: { owner: any; }; start: any; } => segment.shape.owner !== _0x5ebb6f.track && segment.shape.owner !== _0x5ebb6f.base && segment.start === point);
+      const segments2 = point.segments.filter(segment => segment.shape.owner !== returningUnit.track && segment.shape.owner !== returningUnit.base && segment.start === point);
       if (segments2.length) {
-        let segments22 = segments2.map((item: { shape: { owner: any; }; }): { shape: { owner: any; }; } => ({
+        let contacts = segments2.map((item): TrackContact => ({
           owner: item.shape.owner,
           point: point,
           segment: item,
           index: i
         }));
-        if (!_0x4a8c56.length) {
-          const intersection = _0x5ebb6f.track.intersections.find((intersection): { point: { equal: (arg0: any) => any; }; } => intersection.point.equal(point));
+        if (!openContacts.length) {
+          const intersection = returningUnit.track.intersections.find(intersection => intersection.point.equal(point));
           if (!intersection) {
             return false;
           }
-          _0x4a8c56 = segments22.filter((item: { owner: any; }): { owner: any; } => {
-            const intersections = intersection.intersections.filter((intersection: { base: any; }): { base: any; } => intersection.base === item.owner);
+          openContacts = contacts.filter(item => {
+            const intersections = intersection.intersections.filter((intersection: TrackIntersectionRecord) => intersection.base === item.owner);
             if (!intersections.length) {
               return false;
             }
             return intersections[intersections.length - 1].enter;
           });
         } else {
-          let _0x3deaf0 = _0x4a8c56.filter((item: { owner: any; }): { owner: any; } => segments22.some((item2: { owner: any; }): { owner: any; } => {
+          let matching = openContacts.filter(item => contacts.some(item2 => {
             return item2.owner === item.owner;
           }));
-          if (_0x3deaf0.length) {
-            const _0x12a6a7 = _0x3deaf0[0];
-            const _0x1398d6 = segments22.find((item: { owner: any; }): { owner: any; } => item.owner === _0x12a6a7.owner);
-            const _0x1a293a = (_0x125dfc: { owner?: any; enter?: any; startPoint?: any; startT?: any; leave?: any; endPoint?: any; endT?: any; }): { owner?: any; enter?: any; startPoint?: any; startT?: any; leave?: any; endPoint?: any; endT?: any; } => {
+          if (matching.length) {
+            const entryContact = matching[0];
+            const exitContact = contacts.find(item => item.owner === entryContact.owner);
+            const cutBase = (cut: BaseCut): void => {
               const {
                 owner,
                 startT,
                 endT,
                 startPoint,
                 endPoint
-              } = _0x125dfc;
+              } = cut;
               let {
                 enter,
                 leave
-              } = _0x125dfc;
+              } = cut;
               if (enter.shape !== owner.polygon) {
-                enter = owner.polygon.segments.find((segment: { start: any; }): { start: any; } => segment.start === startPoint);
+                enter = owner.polygon.segments.find(segment => segment.start === startPoint);
               }
               if (leave.shape !== owner.polygon) {
-                leave = owner.polygon.segments.find((segment: { start: any; }): { start: any; } => segment.start === endPoint);
+                leave = owner.polygon.segments.find(segment => segment.start === endPoint);
               }
               if (enter === leave) {
                 return;
               }
-              const removed = _0x5ebb6f.track.polyline.points().splice(startT, endT - startT + 1);
-              const index = owner.polygon.segments.findIndex((segment: any): any => segment === enter);
-              const index2 = owner.polygon.segments.findIndex((segment: any): any => segment === leave);
-              const _0x53cd50 = Math.min(index2, index);
-              const _0x517d46 = Math.max(index2, index);
-              if (_0x53cd50 !== index) {
+              const removed = returningUnit.track.polyline.points().splice(startT, endT - startT + 1);
+              const index = owner.polygon.segments.findIndex(segment => segment === enter);
+              const index2 = owner.polygon.segments.findIndex(segment => segment === leave);
+              const cutStart = Math.min(index2, index);
+              const cutEnd = Math.max(index2, index);
+              if (cutStart !== index) {
                 removed.reverse();
               }
               const points = owner.polygon.points();
-              const removed2 = points.splice(_0x53cd50, _0x517d46 - _0x53cd50 + 1, ...removed);
+              const removed2 = points.splice(cutStart, cutEnd - cutStart + 1, ...removed);
               removed2.shift();
               removed2.pop();
               removed2.push(...removed.slice().reverse());
               const polygon = new Polygon(removed2);
               const polygon2 = new Polygon(points);
-              let _0xae7444;
+              let lost: Polygon;
               if (owner.unit.in === owner.unit.base && polygon.inside(owner.unit.position) || owner.unit.in !== owner.unit.base && polygon.inside(owner.unit.track.polyline.start)) {
-                owner.polygon.right(removed, _0x53cd50, _0x517d46);
-                _0xae7444 = polygon2;
+                owner.polygon.right(removed, cutStart, cutEnd);
+                lost = polygon2;
               } else {
-                owner.polygon.left(removed, _0x53cd50, _0x517d46);
-                _0xae7444 = polygon;
+                owner.polygon.left(removed, cutStart, cutEnd);
+                lost = polygon;
               }
-              owner.square -= _0xae7444.square();
+              owner.square -= lost.square();
               owner.polygon.calcPath();
-              _0x1e03e0.push({
+              victims.push({
                 base: owner,
-                poly: _0xae7444
+                poly: lost
               });
               this.units.forEach(unit => {
-                if (owner.unit !== unit && unit.in === owner && _0xae7444.inside(unit.position)) {
+                if (owner.unit !== unit && unit.in === owner && lost.inside(unit.position)) {
                   unit.in = null;
                 }
               });
             };
-            if (!(_0x12a6a7.owner instanceof Base)) {
+            if (!(entryContact.owner instanceof Base)) {
               throw new Error("Это не база");
             }
-            _0x1a293a({
-              owner: _0x12a6a7.owner,
-              enter: _0x12a6a7.segment,
-              startPoint: _0x12a6a7.point,
-              startT: _0x12a6a7.index,
-              leave: _0x1398d6.segment,
-              endPoint: _0x1398d6.point,
-              endT: _0x1398d6.index
+            cutBase({
+              owner: entryContact.owner,
+              enter: entryContact.segment,
+              startPoint: entryContact.point,
+              startT: entryContact.index,
+              leave: exitContact.segment,
+              endPoint: exitContact.point,
+              endT: exitContact.index
             });
-            const intersection = _0x5ebb6f.track.intersections.find((intersection): { point: { equal: (arg0: any) => any; }; } => intersection.point.equal(point));
-            const intersections = intersection.intersections.filter((intersection: { base: any; }): { base: any; } => intersection.base === _0x12a6a7.owner);
+            const intersection = returningUnit.track.intersections.find(intersection => intersection.point.equal(point));
+            const intersections = intersection.intersections.filter((intersection: TrackIntersectionRecord) => intersection.base === entryContact.owner);
             if (intersections.length === 1 || intersections[intersections.length - 1].enter === false) {
-              segments22 = segments22.filter((item: { owner: any; }): { owner: any; } => item.owner !== _0x12a6a7.owner);
+              contacts = contacts.filter(item => item.owner !== entryContact.owner);
             }
           }
-          _0x4a8c56 = segments22;
+          openContacts = contacts;
         }
       }
     }
     this.units.forEach(unit => {
-      if (_0x5ebb6f !== unit && _0x1b07c0.inside(unit.position)) {
-        unit.in = _0x5ebb6f.base;
+      if (returningUnit !== unit && captured.inside(unit.position)) {
+        unit.in = returningUnit.base;
       }
     });
-    const _0x41364a = (_0x5ebb6f.base.square - _0x5ebb6f.lastSquare) / this.square;
-    if (_0x5ebb6f.schemes) {
-      _0x5ebb6f.schemes.comeback({
-        increment: _0x41364a,
-        rise: _0x1b07c0,
-        victims: _0x1e03e0,
+    const increment = (returningUnit.base.square - returningUnit.lastSquare) / this.square;
+    if (returningUnit.schemes) {
+      returningUnit.schemes.comeback({
+        increment: increment,
+        rise: captured,
+        victims: victims,
         game: this
       });
     }
@@ -1232,130 +1456,130 @@ export class Game {
     }
   }
   handleUnitMovements(dt: number) {
-    this.units.slice().forEach(item => {
-      if (item.death) {
+    this.units.slice().forEach(unit => {
+      if (unit.death) {
         return;
       }
-      let movement = this.getMovement(dt, item);
+      let movement = this.getMovement(dt, unit);
       {
-        if (item === this.player && !this.player.moveTo && item.in === null && Math.random() < 0.0005) {
-          item.in = item.base;
+        if (unit === this.player && !(this.player as Player & DebugMoveTo).moveTo && unit.in === null && Math.random() < 0.0005) {
+          unit.in = unit.base;
         }
       }
       while (movement.length) {
-        if (item.death) {
+        if (unit.death) {
           return;
         }
-        const _0x568c14 = movement.shift();
-        const intersections = this.space.intersections(_0x568c14);
-        const _0x1e224d: { intersections: any[]; }[] = [];
-        intersections.forEach((intersection: { point: { cell: any; }; }): { point: { cell: any; }; } => {
-          const index = _0x1e224d.findIndex(item => item.point.equal(intersection.point));
+        const step = movement.shift();
+        const intersections = this.space.intersections(step);
+        const pointGroups: IntersectionGroup[] = [];
+        intersections.forEach(intersection => {
+          const index = pointGroups.findIndex(group => group.point.equal(intersection.point));
           if (index === -1) {
-            _0x1e224d.push({
+            pointGroups.push({
               point: intersection.point,
               intersections: [intersection]
             });
           } else {
-            if (intersection.point !== _0x1e224d[index].point) {
+            if (intersection.point !== pointGroups[index].point) {
               if (intersection.point.cell) {
-                if (_0x1e224d[index].point.cell) {
+                if (pointGroups[index].point.cell) {
                   throw new Error("Бывает ли такое?");
                 } else {
-                  _0x1e224d[index].point = intersection.point;
-                  _0x1e224d[index].intersections.forEach((intersection2): { point: any; } => {
+                  pointGroups[index].point = intersection.point;
+                  pointGroups[index].intersections.forEach(intersection2 => {
                     intersection2.point = intersection.point;
                   });
                 }
               } else {
-                intersection.point = _0x1e224d[index].point;
+                intersection.point = pointGroups[index].point;
               }
             }
-            _0x1e224d[index].intersections.push(intersection);
+            pointGroups[index].intersections.push(intersection);
           }
         });
-        intersections.forEach((intersection: { distance: any; point: any; }): { distance: any; point: any; } => {
-          intersection.distance = _0x568c14.start.distance2(intersection.point);
+        intersections.forEach(intersection => {
+          intersection.distance = step.start.distance2(intersection.point);
         });
-        intersections.sort((a: { distance: number; }, b: { distance: number; }) => a.distance - b.distance);
-        const _0x5ecee4: any[][] = [];
-        let _0x3f39da: any[] = null;
-        let _0x3bea17 = -1;
-        intersections.forEach((intersection: { distance: number; }): { distance: number; } => {
-          if (!nearlyEqual(intersection.distance, _0x3bea17)) {
-            _0x3f39da = [];
-            _0x3bea17 = intersection.distance;
-            _0x5ecee4.push(_0x3f39da);
+        intersections.sort((a, b) => a.distance - b.distance);
+        const distanceGroups: Intersection[][] = [];
+        let currentGroup: Intersection[] = null;
+        let currentDistance = -1;
+        intersections.forEach(intersection => {
+          if (!nearlyEqual(intersection.distance, currentDistance)) {
+            currentGroup = [];
+            currentDistance = intersection.distance;
+            distanceGroups.push(currentGroup);
           }
-          _0x3f39da.push(intersection);
+          currentGroup.push(intersection);
         });
-        _0x5ecee4.forEach(item2 => {
-          const _0x560361: any[] = [];
-          item2.forEach((item): { segment: { shape: any; }; } => {
+        distanceGroups.forEach(group => {
+          const shapes: Shape[] = [];
+          group.forEach(intersection => {
             const {
               shape
-            } = item.segment;
-            if (shape && _0x560361.indexOf(shape) === -1) {
-              _0x560361.push(shape);
+            } = intersection.segment;
+            if (shape && shapes.indexOf(shape) === -1) {
+              shapes.push(shape);
             }
           });
-          while (_0x560361.length) {
-            const index = _0x560361.findIndex(item2 => item2.owner === item.in);
+          while (shapes.length) {
+            const index = shapes.findIndex(shape => shape.owner === unit.in);
             if (index > 0) {
-              const _0x277c6a = _0x560361[0];
-              _0x560361[0] = _0x560361[index];
-              _0x560361[index] = _0x277c6a;
+              const _0x277c6a = shapes[0];
+              shapes[0] = shapes[index];
+              shapes[index] = _0x277c6a;
             }
-            const index2 = _0x560361.findIndex(item => item.owner.isTrack);
+            const index2 = shapes.findIndex(shape => shape.owner.isTrack);
             if (index2 > 0) {
-              const _0x88019d = _0x560361[0];
-              _0x560361[0] = _0x560361[index2];
-              _0x560361[index2] = _0x88019d;
+              const _0x88019d = shapes[0];
+              shapes[0] = shapes[index2];
+              shapes[index2] = _0x88019d;
             }
-            const _0xc50a80 = _0x560361.shift();
-            const _0x549acd: any[] = [];
-            item2.forEach((item): { segment: { shape: any; }; } => {
-              if (item.segment.shape === _0xc50a80) {
-                _0x549acd.push(item);
+            const currentShape = shapes.shift();
+            const shapeIntersections: Intersection[] = [];
+            group.forEach(intersection => {
+              if (intersection.segment.shape === currentShape) {
+                shapeIntersections.push(intersection);
               }
             });
-            while (!item.death && _0x549acd.length) {
-              _0x549acd.sort((a, b) => {
-                if (item.in) {
+            while (!unit.death && shapeIntersections.length) {
+              shapeIntersections.sort((a, b) => {
+                if (unit.in) {
                   return b.zn - a.zn;
                 } else {
                   return a.zn - b.zn;
                 }
               });
-              const _0x213f86 = _0x549acd.shift();
-              if (_0x213f86.segment.shape && !_0xc50a80.owner.unit.death) {
-                _0xc50a80.owner.handleIntersect(_0x213f86, item, _0x568c14);
+              const nextIntersection = shapeIntersections.shift();
+              if (nextIntersection.segment.shape && !currentShape.owner.unit.death) {
+                currentShape.owner.handleIntersect(nextIntersection, unit, step);
               }
             }
           }
         });
-        if (item.death) {
+        if (unit.death) {
           return;
         }
         const {
           end
-        } = _0x568c14;
-        if (item.in !== item.base) {
-          item.track.add(end);
+        } = step;
+        if (unit.in !== unit.base) {
+          unit.track.add(end);
         }
-        item.position = end;
-        if (this.visible && !movement.length && item.in && item.in !== item.base) {
-          let _0x1d0ff0 = Particle.nom(item, _0x568c14, this.config.trackWidth);
-          this.particles.push(_0x1d0ff0);
+        unit.position = end;
+        if (this.visible && !movement.length && unit.in && unit.in !== unit.base) {
+          let trailParticle = Particle.nom(unit, step, this.config.trackWidth);
+          this.particles.push(trailParticle);
         }
       }
     });
   }
-  isPlayer(_0x5b5dbb: any) {
+  isPlayer(_0x5b5dbb: Unit) {
     return _0x5b5dbb === this.player;
   }
-  alert(text: string, _0x29a9fa: string) {
-    this.labels.push(new FloatingLabel(text, _0x29a9fa || "#000000", this.player));
+  alert(text: string, color?: string) {
+    this.labels.push(new FloatingLabel(text, color || "#000000", this.player));
   }
   loop() {
     let time = now();
@@ -1367,23 +1591,23 @@ export class Game {
       if (this.last == 0) {
         this.last = time;
       }
-      let _0x176147 = time - this.last;
-      if (_0x176147 < 1) {
-        _0x176147 = 1;
+      let frameTime = time - this.last;
+      if (frameTime < 1) {
+        frameTime = 1;
       }
-      this.updateMetrics(_0x176147);
-      if (_0x176147 > 10000) {
-        _0x176147 = 10000;
+      this.updateMetrics(frameTime);
+      if (frameTime > 10000) {
+        frameTime = 10000;
       }
       this.timings.updateStartTime = now();
       if (this.replaying || this.recording) {
-        if (this.cycle < this.config.prepareCounter + 120 && _0x176147 > 100) {
-          _0x176147 = 100;
+        if (this.cycle < this.config.prepareCounter + 120 && frameTime > 100) {
+          frameTime = 100;
         }
-        if (_0x176147 > TICK_MS * 0.9 && _0x176147 < TICK_MS * 1.1) {
-          _0x176147 = TICK_MS;
+        if (frameTime > TICK_MS * 0.9 && frameTime < TICK_MS * 1.1) {
+          frameTime = TICK_MS;
         }
-        this.timeAccumulated += _0x176147;
+        this.timeAccumulated += frameTime;
         if (this.preparing()) {
           this.prepareAndUpdate(TICK_MS);
           this.timeAccumulated = 0;
@@ -1403,14 +1627,14 @@ export class Game {
           }
         }
       } else if (this.visible) {
-        const _0x512f79 = TICK_MS * 2;
-        while (_0x176147 > 0) {
-          const _0x1d3150 = _0x176147 <= _0x512f79 ? _0x176147 : _0x176147 < _0x512f79 * 2 ? _0x176147 / 2 + Math.random() : _0x512f79 + Math.random();
-          this.update(_0x1d3150);
-          _0x176147 -= _0x1d3150;
+        const maxStep = TICK_MS * 2;
+        while (frameTime > 0) {
+          const stepTime = frameTime <= maxStep ? frameTime : frameTime < maxStep * 2 ? frameTime / 2 + Math.random() : maxStep + Math.random();
+          this.update(stepTime);
+          frameTime -= stepTime;
         }
       } else {
-        this.prepareAndUpdate(_0x176147);
+        this.prepareAndUpdate(frameTime);
       }
       this.timings.updateEndTime = now();
     }
@@ -1420,6 +1644,6 @@ export class Game {
     }
     this.timings.renderEndTime = now();
     this.last = time;
-    requestAnimationFrame(_0x56970d => this.loop());
+    requestAnimationFrame(timestamp => this.loop());
   }
 }

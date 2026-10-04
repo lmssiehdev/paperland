@@ -1,20 +1,47 @@
 import { BOT_STATES } from "../ai/bot-states";
+import type { BotStateName } from "../ai/bot-states";
 import { StateMachine } from "../ai/state-machine";
 import { now } from "../engine/math";
 import { Vec2 } from "../engine/vec2";
 import { Base } from "./base";
 import { Track } from "./track";
+import type { Skin } from "../skins/skin";
+import type { AchievementsProfile } from "./achievements";
+import type { City } from "./city";
 import type { Game } from "./game";
+import type { SchemeSet, SchemesManager } from "./scoring";
+
+/** Floating text queued on a unit; Game turns it into a FloatingLabel. */
+export interface UnitLabel {
+  text: string;
+  color: string;
+  /** Unit the label follows; addLabel defaults it to the receiving unit. */
+  unit?: Unit;
+  /** Lifetime in ms. */
+  time: number;
+  fading?: boolean;
+}
+
+/** Per-enemy danger sample computed in Bot.update while the bot is outside its base. */
+export interface UnitToTrackDistance {
+  unit: Unit;
+  /** Distance from `unit` to the nearest point of this bot's trail. */
+  trackDistance: number;
+  trackPoint: Vec2;
+  /** baseDistance / trackDistance: > 1 means the enemy reaches the trail before the bot gets home. */
+  danger: number;
+}
 
 export class Unit {
     killer: Unit;
-    achievements: any;
+    achievements: AchievementsProfile;
     skin: Skin;
-    death: any;
-    jitter: any;
-    smoothness: any;
-    type: any;
-    fsm: any;
+    death: boolean;
+    jitter: number;
+    smoothness: number;
+    /** Bot difficulty tier (index into Game.bots); unset for the player. */
+    type: number;
+    fsm: StateMachine<Bot, BotStateName>;
     game: Game;
     name: string;
     position: Vec2;
@@ -25,10 +52,10 @@ export class Unit {
     target: Vec2;
     respawn: boolean;
     statistics: { kills: number; };
-    log: any[];
-    bornTime: any;
-    cities: any[];
-    labels: any[];
+    log: Vec2[];
+    bornTime: number;
+    cities: City[];
+    labels: UnitLabel[];
     percent: number;
     bestPercent: number;
     scale: number;
@@ -36,13 +63,13 @@ export class Unit {
     direction: number;
     top: number;
     scores: { accumulator: number; kills: number; };
-    schemes: any;
+    schemes: SchemeSet;
     baseDistance: number;
-    baseNearestPoint: any;
-    baseNearestPointTangent: any;
-    baseNearestPointNormal: any;
+    baseNearestPoint: Vec2;
+    baseNearestPointTangent: Vec2;
+    baseNearestPointNormal: Vec2;
 
-  constructor(game: Game, name: string, position: Vec2, basePoints: any[], unusedArg: any, schemesManager) {
+  constructor(game: Game, name: string, position: Vec2, basePoints: Vec2[], unusedArg: unknown, schemesManager: SchemesManager) {
     this.killer = undefined;
     this.achievements = undefined;
     this.skin = undefined;
@@ -100,55 +127,57 @@ export class Unit {
     if (this.in !== this.base) {
       this.scores.accumulator += this.percent * 100 * dt / 1000;
     }
-    let _0x1175a6 = 0;
-    let _0x580a5a = null;
-    let _0x2dff70 = null;
+    let nearestDistance = 0;
+    let nearestPoint: Vec2 = null;
+    let tangent: Vec2 = null;
     if (this.in !== this.base) {
-      _0x1175a6 = Infinity;
-      let _0x18290a = 0;
+      nearestDistance = Infinity;
+      let nearestIndex = 0;
       const {
         simplify
       } = this.base.polygon;
       simplify.forEach((item, index) => {
         const distSq = item.distance2(this.position);
-        if (distSq < _0x1175a6) {
-          _0x1175a6 = distSq;
-          _0x580a5a = item;
-          _0x18290a = index;
+        if (distSq < nearestDistance) {
+          nearestDistance = distSq;
+          nearestPoint = item;
+          nearestIndex = index;
         }
       });
-      const point = simplify[_0x18290a > 0 ? _0x18290a - 1 : simplify.length - 1];
-      const _0x54faf7 = simplify[_0x18290a < simplify.length - 1 ? _0x18290a + 1 : 0];
-      _0x2dff70 = _0x54faf7.clone().sub(point).normalize();
+      const prev = simplify[nearestIndex > 0 ? nearestIndex - 1 : simplify.length - 1];
+      const next = simplify[nearestIndex < simplify.length - 1 ? nearestIndex + 1 : 0];
+      tangent = next.clone().sub(prev).normalize();
     }
-    _0x1175a6 = Math.sqrt(_0x1175a6);
-    this.baseDistance = _0x1175a6;
-    this.baseNearestPoint = _0x580a5a;
-    this.baseNearestPointTangent = _0x2dff70;
-    this.baseNearestPointNormal = _0x2dff70 && _0x2dff70.clone().rotate(-Math.PI / 2);
+    nearestDistance = Math.sqrt(nearestDistance);
+    this.baseDistance = nearestDistance;
+    this.baseNearestPoint = nearestPoint;
+    this.baseNearestPointTangent = tangent;
+    this.baseNearestPointNormal = tangent && tangent.clone().rotate(-Math.PI / 2);
   }
   movement() {
     return this.target && this.target.clone().sub(this.position).normalize();
   }
-  addLabel(_0x265f51) {
-    if (!_0x265f51.unit) {
-      _0x265f51.unit = this;
+  addLabel(label: UnitLabel) {
+    if (!label.unit) {
+      label.unit = this;
     }
-    this.labels.push(_0x265f51);
+    this.labels.push(label);
   }
 }
 export class Player extends Unit {
     win: boolean;
+    /** Set on the prototype by domain-lock.ts (true only on the licensed host in the original). */
+    declare moveTo: boolean;
 
   get isPlayer() {
     return true;
   }
-  constructor(game: Game, name: string, position: Vec2, basePoints: Vec2[], unusedArg: any, schemesManager: any) {
+  constructor(game: Game, name: string, position: Vec2, basePoints: Vec2[], unusedArg: unknown, schemesManager: SchemesManager) {
     super(game, name, position, basePoints, unusedArg, schemesManager);
     this.win = false;
   }
-  update(_0x46f3c4: number) {
-    super.update(_0x46f3c4);
+  update(dt: number) {
+    super.update(dt);
     if (!this.respawn) {
       this.target = new Vec2(1, 0).rotate(this.game.angle * Math.PI / 127).mulScalar(50).add(this.position);
     }
@@ -159,17 +188,17 @@ export class Bot extends Unit {
     greed: number;
     safety: number;
     def: number;
-    type: number;
-    jitter: number;
-    targets: any[];
-    smoothness: number;
+    targets: Vec2[];
     maxDanger: number;
-    unitDanger: any;
-    fsm: StateMachine;
-    unitToTrackDistances: any[];
+    unitDanger: Unit;
+    unitToTrackDistances: UnitToTrackDistance[];
     distanceDanger: number;
+    /** Area of the loop the current trail would close (set by the "capture" state). */
+    declare capSquare: number;
+    /** Debug label of the current capture maneuver (set by the "capture" state). */
+    declare aspect: string;
 
-  constructor(game: Game, type: number, name: string, position: Vec2, basePoints: Vec2[], unusedArg: any, schemesManager: any) {
+  constructor(game: Game, type: number, name: string, position: Vec2, basePoints: Vec2[], unusedArg: unknown, schemesManager: SchemesManager) {
     super(game, name, position, basePoints, unusedArg, schemesManager);
     this.aggro = 0;
     this.greed = 0;
@@ -183,47 +212,47 @@ export class Bot extends Unit {
     this.unitDanger = null;
     this.fsm = new StateMachine(BOT_STATES, "idle", this);
   }
-  update(_0x227a04: number) {
-    super.update(_0x227a04);
+  update(dt: number) {
+    super.update(dt);
     this.unitToTrackDistances = [];
-    let _0x1349bf = 0;
-    let _0x21ee3d = 0;
-    let _0x22e30a = null;
+    let maxDanger = 0;
+    let dangerDistance = 0;
+    let dangerUnit: Unit = null;
     if (this.in !== this.base) {
       const {
         player
       } = this.game;
-      this.game.units.forEach((unit: this): this => {
-        const _0x5cc7c2 = player === unit && this.position.distance(unit.position) > this.vrange;
-        if (unit !== this && !_0x5cc7c2) {
+      this.game.units.forEach((unit: Unit) => {
+        const isFarPlayer = player === unit && this.position.distance(unit.position) > this.vrange;
+        if (unit !== this && !isFarPlayer) {
           let min = Infinity;
-          let _0x48ff76 = null;
+          let nearestTrackPoint: Vec2 = null;
           this.track.simplyline.forEach(point => {
             const distSq = point.distance2(unit.position);
             if (distSq < min) {
               min = distSq;
-              _0x48ff76 = point;
+              nearestTrackPoint = point;
             }
           });
           min = Math.sqrt(min);
-          const _0x552a35 = this.baseDistance / min;
+          const danger = this.baseDistance / min;
           this.unitToTrackDistances.push({
             unit: unit,
             trackDistance: min,
-            trackPoint: _0x48ff76,
-            danger: _0x552a35
+            trackPoint: nearestTrackPoint,
+            danger: danger
           });
-          if (_0x552a35 > _0x1349bf) {
-            _0x22e30a = unit;
-            _0x21ee3d = min;
-            _0x1349bf = _0x552a35;
+          if (danger > maxDanger) {
+            dangerUnit = unit;
+            dangerDistance = min;
+            maxDanger = danger;
           }
         }
       });
     }
-    this.unitDanger = _0x22e30a;
-    this.distanceDanger = _0x21ee3d;
-    this.maxDanger = _0x1349bf;
+    this.unitDanger = dangerUnit;
+    this.distanceDanger = dangerDistance;
+    this.maxDanger = maxDanger;
     this.smoothness = 1;
     this.fsm.update();
   }

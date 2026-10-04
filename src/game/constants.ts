@@ -10,3 +10,14 @@ export const DEATH_REMOVED = 6;
 export const DEATH_CAPITAL_SURROUNDED = 7;
 export const TICK_MS = 1000 / 60;
 export const TICK_MS_X2 = 1000 / 60 * 2;
+
+/** Why a unit died (one of the DEATH_* codes above). */
+export type DeathReason =
+  | typeof DEATH_WIN
+  | typeof DEATH_SELF_INTERSECT
+  | typeof DEATH_WALL
+  | typeof DEATH_TRACK_CROSSED
+  | typeof DEATH_EXIT_CAPTURED
+  | typeof DEATH_SURROUNDED
+  | typeof DEATH_REMOVED
+  | typeof DEATH_CAPITAL_SURROUNDED;

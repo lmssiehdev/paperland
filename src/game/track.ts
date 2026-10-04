@@ -1,13 +1,32 @@
 import { Polyline } from "../engine/polyline";
 import { CELL_RADIUS_SQ, DEATH_SELF_INTERSECT, DEATH_TRACK_CROSSED, DEATH_WALL } from "./constants";
+import type { DeathReason } from "./constants";
+import type { Intersection, Segment } from "../engine/segment";
+import type { Vec2 } from "../engine/vec2";
+import type { Base } from "./base";
 import type { Unit } from "./units";
+
+/** One base-outline crossing recorded on a trail. */
+export interface TrackBaseCrossing {
+  intersection: Intersection;
+  base: Base;
+  /** True when the trail enters `base`, false when it leaves it. */
+  enter: boolean;
+}
+
+/** All base crossings recorded at the same trail point. */
+export interface TrackIntersection {
+  point: Vec2;
+  intersections: TrackBaseCrossing[];
+}
 
 export class Track {
     polyline: Polyline;
-    simplyline: any[];
+    /** Coarse copy of the trail (points at least CELL_RADIUS apart), used by the AI. */
+    simplyline: Vec2[];
     unit: Unit;
     length: number;
-    intersections: any[];
+    intersections: TrackIntersection[];
     isTrack: boolean;
 
   constructor(unit: Unit) {
@@ -18,7 +37,7 @@ export class Track {
     this.intersections = [];
     this.isTrack = true;
   }
-  add(end: { distance2?: any; x?: any; y?: any; }) {
+  add(end: Vec2) {
     if (this.polyline.add2(end)) {
       const count = this.polyline.segments.length;
       if (count > 0) {
@@ -43,21 +62,21 @@ export class Track {
       }
     }
   }
-  intersect(_0x19b8cd: { point: any; }, _0x3142da: any, _0x463f2a: any) {
-    const intersection = this.intersections.find(intersection => intersection.point.equal(_0x19b8cd.point));
+  intersect(crossing: Intersection, base: Base, enter: boolean) {
+    const intersection = this.intersections.find(intersection => intersection.point.equal(crossing.point));
     if (intersection) {
       intersection.intersections.push({
-        intersection: _0x19b8cd,
-        base: _0x3142da,
-        enter: _0x463f2a
+        intersection: crossing,
+        base: base,
+        enter: enter
       });
     } else {
       this.intersections.push({
-        point: _0x19b8cd.point,
+        point: crossing.point,
         intersections: [{
-          intersection: _0x19b8cd,
-          base: _0x3142da,
-          enter: _0x463f2a
+          intersection: crossing,
+          base: base,
+          enter: enter
         }]
       });
     }
@@ -69,13 +88,14 @@ export class Track {
     this.simplyline = [];
     this.intersections = [];
   }
-  handleIntersect(_0x1d2561: { overlay: boolean; point: any; }, unit: Unit, _0x413bce: any) {
+  /** `unit` moved along `movement` and crossed this trail at `intersection`. */
+  handleIntersect(intersection: Intersection, unit: Unit, movement: Segment) {
     let game = unit.game;
     if (unit === this.unit) {
-      if (_0x1d2561.overlay === true || _0x1d2561.point !== this.polyline.segments[this.polyline.segments.length - 1].end) {
-        this.unit.position = _0x1d2561.point;
-        const _0x75cb21 = game.border.radius - unit.position.distance(game.space.center) < 5 ? DEATH_WALL : DEATH_SELF_INTERSECT;
-        game.kill(this.unit, undefined, _0x75cb21);
+      if (intersection.overlay === true || intersection.point !== this.polyline.segments[this.polyline.segments.length - 1].end) {
+        this.unit.position = intersection.point;
+        const reason: DeathReason = game.border.radius - unit.position.distance(game.space.center) < 5 ? DEATH_WALL : DEATH_SELF_INTERSECT;
+        game.kill(this.unit, undefined, reason);
       }
     } else {
       game.kill(this.unit, unit, DEATH_TRACK_CROSSED);
