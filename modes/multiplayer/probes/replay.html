@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="assets/style.css"></head>
+<body>
+<div id="game"></div><div id="preroll"></div><div id="bottom"></div><div id="rightbanner"></div><div id="paperio-site_multisize"></div>
+<script>
+  // Stubs for the ad/analytics globals the bundle expects.
+  window.ShowAds = () => {}; window.LoadAds = () => {}; window.HideAds = () => {};
+  window.ShowPreroll = () => setTimeout(() => window.paperio2api.prerollComplete(), 0);
+  window.PrerollComplete = () => window.paperio2api.prerollComplete();
+  window.__http = [];
+  window.__records = [];
+  // Offline stand-ins for psus.paperio.site HTTP API (responses copied from the HAR).
+  function fakeApi(url, body) {
+    const req = JSON.parse(body || "null");
+    window.__http.push({ url, req });
+    if (url.endsWith("/leaderboards")) {
+      if (Array.isArray(req) && req[0] && req[0].cmd === "addrecord") { window.__records.push(...req); return [0]; }
+      return [[], null, null, [], null, null];
+    }
+    if (req && req.cmd === "ping") return { now: Date.now(), time: req.time, event: "pong" };
+    if (req && req.cmd === "cpu") return 17.6;
+    if (req && req.cmd === "socket") return { uri: "https://psus.paperio.site/game2" };
+    if (req && req.cmd === "save") { window.__save = req; return {}; }
+    return {};
+  }
+  const RealXHR = window.XMLHttpRequest;
+  window.XMLHttpRequest = function () {
+    const x = { status: 200, responseText: "", open(m, u) { this.u = u; },
+      send(b) { setTimeout(() => { this.responseText = JSON.stringify(fakeApi(this.u, b)); this.onload && this.onload(); }, 5); } };
+    return x;
+  };
+  const realFetch = window.fetch.bind(window);
+  window.fetch = (u, o) => String(u).startsWith("http") && !String(u).includes("localhost")
+    ? Promise.resolve(new Response(JSON.stringify(fakeApi(String(u), o && o.body))))
+    : realFetch(u, o);
+</script>
+<script src="/fake-io.js"></script>
+<script src="pvp-final-31225.js"></script>
+</body></html>

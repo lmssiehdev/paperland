@@ -1,0 +1,13 @@
+{
+  "initialTic": 1000,
+  "initialTicTime": 1791123416428,
+  "lastCompleteTic": 1000,
+  "name": "pvpWithBots|p-ca1iomqk2f",
+  "date": 1791123416428,
+  "seed": 0.0077794644373809785,
+  "players": [],
+  "notes": {
+    "gameMode": "pvpWithBots"
+  },
+  "msPerTic": 50
+}
