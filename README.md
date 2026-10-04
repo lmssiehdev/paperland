@@ -18,12 +18,12 @@ bun run autopilot 5 180  # 5 trials x 180 simulated seconds, straight-line vs AI
 
 ```
 src/                     readable game source (ES modules), bundled by `bun run build`
-  main.js                boot: fetch languages/skins, createApi, mount Preact App
-  api.js                 window.paperio2api (create/prepare/start)
-  config.js              DEFAULT_CONFIG, PALETTE
+  main.ts                boot: fetch languages/skins, createApi, mount Preact App
+  api.ts                 window.paperio2api (create/prepare/start/startGame)
+  config.ts              DEFAULT_CONFIG, PALETTE, Config type
   engine/                math, vec2 (pooled), segment, polyline, polygon, border, spatial-grid, color
-  game/                  game.js (Game loop/rules), units (Unit/Player/Bot), base, track,
-                         scoring, achievements, particles, names, constants, domain-lock (disabled)
+  game/                  game.ts (Game loop/rules), units (Unit/Player/Bot), base, track,
+                         scoring, achievements, particles, names, constants
   ai/                    state-machine, bot-states (BOT_STATES)
   render/                game-renderer (canvas), debug-overlay
   skins/                 skin, display (layers/patterns/avatars)
@@ -38,15 +38,16 @@ scripts/                 the pipeline + headless tools
 ## Checks
 
 ```sh
-bun run typecheck   # 0 errors, no `any`, no ts-ignore
+bun run typecheck   # strict: true, 0 errors, no `any`, no ts-ignore, no `_0x` names
 bun run golden      # deterministic sim hash; must not change on refactors
 ```
 
 `golden` seeds `Math.random`, builds a fresh `Game`, runs 4000 ticks (player joins at 1000) and
 hashes unit positions/areas/FSM states. Current hash: `11a98dae6745f942`.
-The original obfuscated game gives `0f69990241912066`; the only cause is the domain-lock patch
-(`Player.prototype.moveTo = true`, which the real site also sets). With that line removed the
-hashes match, so deobfuscation + split + TS migration + renames are behavior-identical.
+The original obfuscated game gives `0f69990241912066`. The only cause is the domain lock: on the
+real site it enables tail recovery (`moveTo`); we removed the lock and kept tail recovery always on.
+With tail recovery disabled the hashes match, so deobfuscation + split + TS migration + renames are
+behavior-identical. Ads, analytics, the score upload and the domain lock are removed from `src/`.
 
 Property renames go through `scripts/rename-props.ts` (TS language service, type-linked).
 
