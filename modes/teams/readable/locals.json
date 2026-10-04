@@ -1,0 +1,562 @@
+{
+ "$comment": "Hand-named locals/params of the shared-territory engine (Base, Polyline, Track, Segment, Polygon, Game, spawner, TeamScoreScheme). Keys are the stage2 _0x names (look them up with scripts/binding-keys.ts). Applied to stage2.js BEFORE scripts/rename-locals.ts fills in the rest.",
+ "$params": {
+  "Unit.constructor": [
+   "game",
+   "name",
+   "position"
+  ],
+  "Player.constructor": [
+   "game",
+   "name",
+   "position"
+  ],
+  "Player.update": [
+   "dt",
+   "game"
+  ],
+  "Bot.constructor": [
+   "game",
+   "name",
+   "position",
+   "type"
+  ],
+  "Bot.update": [
+   "dt"
+  ],
+  "Bot.updateSensors": [
+   "dt",
+   "game"
+  ],
+  "Unit.updateSensors": [
+   "dt",
+   "game"
+  ],
+  "Unit.update": [
+   "dt"
+  ],
+  "Team.add": [
+   "unit"
+  ],
+  "Team.remove": [
+   "unit"
+  ],
+  "Team.has": [
+   "unit"
+  ],
+  "Team.update": [
+   "dt"
+  ],
+  "Team.setSkin": [
+   "skin"
+  ],
+  "Base.constructor": [
+   "points"
+  ],
+  "Base.join": [
+   "unit"
+  ],
+  "Base.leave": [
+   "unit"
+  ],
+  "Base.hasHost": [
+   "unit"
+  ],
+  "Base.boundaryHasPoint": [
+   "point"
+  ],
+  "Base.handleIntersect": [
+   "intersection",
+   "unit",
+   "movement",
+   "game"
+  ],
+  "Base.handleIntersects": [
+   "intersections",
+   "unit",
+   "movement",
+   "game"
+  ],
+  "Base.handleSelfIntersects": [
+   "intersections",
+   "unit",
+   "movement",
+   "game"
+  ],
+  "Base.handleEnemyIntersects": [
+   "intersections",
+   "unit",
+   "movement",
+   "game"
+  ],
+  "Base.handleSelfIntersect": [
+   "intersection",
+   "unit",
+   "movement",
+   "game"
+  ],
+  "Base.handleEnemyIntersect": [
+   "intersection",
+   "unit",
+   "movement",
+   "game"
+  ],
+  "Base.checkEnemyEntry": [
+   "movement",
+   "point",
+   "znSum",
+   "baseSegments"
+  ],
+  "Base.checkEnemyLeave": [
+   "movement",
+   "point",
+   "znSum",
+   "baseSegments"
+  ],
+  "Base.checkSelfEntry": [
+   "movement",
+   "point",
+   "znSum",
+   "baseSegments"
+  ],
+  "Base.checkSelfLeave": [
+   "movement",
+   "point",
+   "znSum",
+   "baseSegments"
+  ],
+  "Polyline.constructor": [
+   "owner"
+  ],
+  "Polyline.commit": [
+   "shape"
+  ],
+  "Polyline.truncate": [
+   "count"
+  ],
+  "Polyline.insert": [
+   "segment",
+   "point"
+  ],
+  "Polyline.add": [
+   "end"
+  ],
+  "Track.constructor": [
+   "unit"
+  ],
+  "Track.updateSimplyline": [
+   "point"
+  ],
+  "Track.add": [
+   "point"
+  ],
+  "Track.inject": [
+   "intersection"
+  ],
+  "Track.handleIntersects": [
+   "intersections",
+   "unit",
+   "movement",
+   "game"
+  ],
+  "Track.handleIntersect": [
+   "intersection",
+   "unit",
+   "movement",
+   "game"
+  ],
+  "Segment.zn": [
+   "other"
+  ],
+  "Segment.intersect": [
+   "other",
+   "asRay"
+  ],
+  "Segment.has": [
+   "point"
+  ],
+  "Polygon.constructor": [
+   "points"
+  ],
+  "Polygon.fromSegments": [
+   "segments"
+  ],
+  "Polygon.insert": [
+   "segment",
+   "point"
+  ],
+  "Polygon.hasPoint": [
+   "point"
+  ],
+  "Polygon.findSegment": [
+   "point"
+  ],
+  "Polygon.left": [
+   "points",
+   "from",
+   "to"
+  ],
+  "Polygon.right": [
+   "points",
+   "from",
+   "to"
+  ],
+  "Border.intersections": [
+   "segment"
+  ],
+  "Border.radiusByAngleSlow": [
+   "angle"
+  ],
+  "Game.kill": [
+   "unit",
+   "killer",
+   "reason"
+  ],
+  "Game.getspawnPosition": [
+   "place",
+   "spawnRadius"
+  ],
+  "Game.spawnBot": [
+   "optionsArg"
+  ],
+  "Game.joinToTeam": [
+   "unit",
+   "mate",
+   "position"
+  ],
+  "Game.spawnPlayer": [
+   "name",
+   "skin",
+   "percent"
+  ],
+  "Game.genFlashParticles": [
+   "position",
+   "skin",
+   "countArg"
+  ],
+  "Game.genDestructParticles": [
+   "segments",
+   "skin",
+   "size",
+   "stepArg",
+   "levelArg"
+  ],
+  "Game.shortSegments": [
+   "segments"
+  ],
+  "Game.handleCross": [
+   "mate",
+   "by"
+  ],
+  "Game.handleReturn": [
+   "unit",
+   "points",
+   "segments"
+  ],
+  "TeamScoreScheme.scores": [
+   "unit"
+  ],
+  "TeamScoreScheme.result": [
+   "unit"
+  ],
+  "TeamScoreScheme.print": [
+   "unit",
+   "fallback"
+  ],
+  "TeamScoreScheme.assign": [
+   "unit"
+  ],
+  "TeamScoreScheme.kill": [
+   "killer",
+   "victim"
+  ],
+  "TeamScoreScheme.comeback": [
+   "unit",
+   "event"
+  ],
+  "TeamScoreScheme.decrease": [
+   "aggressor",
+   "event"
+  ],
+  "ScoreScheme.assign": [
+   "unit"
+  ],
+  "ScoreScheme.print": [
+   "unit",
+   "fallback"
+  ],
+  "ScoreScheme.result": [
+   "unit"
+  ],
+  "ScoreScheme.results": [
+   "results"
+  ],
+  "ScoreScheme.comeback": [
+   "unit",
+   "event"
+  ],
+  "ScoreScheme.decrease": [
+   "aggressor",
+   "event"
+  ],
+  "spawner.respawn": [
+   "game"
+  ],
+  "spawner.spawnBot": [
+   "game",
+   "optionsArg"
+  ],
+  "spawner.spawnPlayer": [
+   "game",
+   "options"
+  ]
+ },
+ "_0x1ec967": "hit",
+ "_0x59e57b": "hit",
+ "_0x580a8b": "hit",
+ "_0x5bb8b1": "hit",
+ "_0x5a8cb8": "hit",
+ "_0x167652": "hit",
+ "_0x10bf56": "znSum",
+ "_0x4b258d": "znSum",
+ "_0x77ef8a": "first",
+ "_0x29fadb": "first",
+ "_0x69d431": "newSegments",
+ "_0x213d26": "newSegments",
+ "_0x50ce24": "crossedMates",
+ "_0x5e40b4": "points",
+ "_0x307bce": "addPoint",
+ "_0x5e1386": "head",
+ "_0x2b11d0": "tail",
+ "_0x8e0172": "last",
+ "_0x8af420": "sum",
+ "_0x4b191b": "collectMates",
+ "_0x4daeac": "point",
+ "_0x161af6": "lastBaseContact",
+ "_0x354c3e": "index",
+ "_0x2eac14": "reason",
+ "_0x5ee4d7": "x",
+ "_0x2738ae": "segment",
+ "_0x3a224c": "head",
+ "_0x16a3fc": "tail",
+ "_0x5c84b1": "segs",
+ "_0x2c3e21": "newSegments",
+ "_0x1dc88a": "removed",
+ "_0x468073": "newSegments",
+ "_0x497c92": "hit",
+ "_0x43fa41": "sign",
+ "_0x416208": "sum",
+ "_0x5b4164": "raw",
+ "_0x1cec17": "onResize",
+ "_0x238977": "game",
+ "_0x389e9f": "ctx",
+ "_0x27bb58": "count",
+ "_0x173292": "size",
+ "_0x507e14": "distance",
+ "_0x3d84d0": "trackSpacing",
+ "_0x46a9e4": "minBaseDist",
+ "_0x4ed6bf": "minBaseDistSq",
+ "_0x93923b": "minTrackDist",
+ "_0x46154a": "minTrackDistSq",
+ "_0x20ff53": "borderRadius",
+ "_0x560dab": "offset",
+ "_0x28cdff": "options",
+ "_0x184cc0": "count",
+ "_0x1969bb": "velocity",
+ "_0x5f2419": "size",
+ "_0x1199bf": "lifetime",
+ "_0x3bd4d6": "shrink",
+ "_0x5ab2c6": "particle",
+ "_0x539874": "stepLen",
+ "_0x48eaaa": "particleLevel",
+ "_0x1d3f29": "walked",
+ "_0x2e28cb": "velocity",
+ "_0x3ce6d2": "particleSize",
+ "_0x541d0d": "lifetime",
+ "_0x2ae60b": "shrink",
+ "_0x48df95": "particle",
+ "_0xe94d2f": "maxX",
+ "_0x10f497": "maxY",
+ "_0x2f7729": "width",
+ "_0xbd22a2": "height",
+ "_0x4c4689": "extent",
+ "_0x36655e": "zoom",
+ "_0x1910e0": "image",
+ "_0x4834e6": "results",
+ "_0x5607db": "suspend",
+ "_0x4ec119": "maxLen",
+ "_0x26890d": "step",
+ "_0x395ed4": "maxTurn",
+ "_0x45ef98": "step",
+ "_0x51bb4d": "hit",
+ "_0x176a08": "slide",
+ "_0x1c052e": "unit",
+ "_0x3e64b2": "move",
+ "_0x11ec56": "stepMove",
+ "_0x18500a": "closeGroup",
+ "_0x37607d": "groups",
+ "_0x55691e": "group",
+ "_0x38db2d": "firstGroup",
+ "_0xcb98fb": "gridHits",
+ "_0x5bee06": "hits",
+ "_0x2769e8": "hit",
+ "_0x442adf": "group2",
+ "_0x7ce523": "hit2",
+ "_0x541860": "shapes",
+ "_0x4af9ef": "handleNextShape",
+ "_0x281419": "tmp",
+ "_0x48fec6": "tmp2",
+ "_0x4199c1": "shape",
+ "_0x134610": "shapeHits",
+ "_0xab4f72": "trailWidth",
+ "_0x54df56": "velocity",
+ "_0x96d3ef": "side",
+ "_0x18b58d": "ahead",
+ "_0x421f05": "accel",
+ "_0x38b444": "size",
+ "_0x20c020": "particle",
+ "_0x98410b": "maxTurn",
+ "_0xbdd903": "turn",
+ "_0x572b3b": "attacker",
+ "_0xf13ec0": "scaleDelta",
+ "_0x404e38": "end",
+ "_0x5d4b8c": "t",
+ "_0x73706c": "share",
+ "_0x2a0167": "share",
+ "_0x12f1b8": "counts",
+ "_0x7c18ff": "mate",
+ "_0x170c94": "by",
+ "_0x3dd8fa": "baseSegs",
+ "_0x2039cb": "trackPoints",
+ "_0x177669": "contacts",
+ "_0x49a538": "point",
+ "_0x2121ad": "expectLeave",
+ "_0xa91f89": "loops",
+ "_0xdd1c41": "pair",
+ "_0x1e34e3": "contact",
+ "_0x3dcf54": "loop",
+ "_0x511d65": "loop",
+ "_0x463756": "crossedMates",
+ "_0x5a2098": "next",
+ "_0x17610f": "points",
+ "_0x2fac1c": "trail",
+ "_0x162496": "first",
+ "_0x42b76e": "last",
+ "_0x29c3de": "from",
+ "_0x597077": "to",
+ "_0x50421a": "removedArc",
+ "_0x330693": "basePoints",
+ "_0x16be92": "candidate",
+ "_0x1ae61c": "rise",
+ "_0x22e1d8": "enemy",
+ "_0x3cc3ad": "increment",
+ "_0xa62f59": "game",
+ "_0x4001ff": "openVisit",
+ "_0x2168e5": "friendlyVisits",
+ "_0x1616fe": "trailSegments",
+ "_0x760a3": "visitPoint",
+ "_0x3a0625": "nextSeg",
+ "_0x1ccebe": "prevSeg",
+ "_0x3526ba": "point",
+ "_0x4e39e2": "seg",
+ "_0x20f4be": "otherBaseSegs",
+ "_0x396376": "byShape",
+ "_0x9a9ca3": "entry",
+ "_0x5a0d9d": "visit",
+ "_0x2ec8be": "visitShape",
+ "_0x491dd1": "visit",
+ "_0x39b5a3": "from",
+ "_0x2b7409": "to",
+ "_0x821567": "chord",
+ "_0x34a026": "chordReversed",
+ "_0xa17dc3": "chordFwd",
+ "_0x1ae8a7": "chordBack",
+ "_0x1ebc04": "keptPoints",
+ "_0x536106": "cutPoints",
+ "_0x265de4": "cutPoly",
+ "_0x335ba0": "keptPoly",
+ "_0x43c036": "hostsCut",
+ "_0x20b192": "hostsKept",
+ "_0x365405": "baseA",
+ "_0x1be839": "baseB",
+ "_0x217498": "lostPart",
+ "_0x4edf47": "friendly",
+ "_0x26f1cb": "shapeEntry",
+ "_0x57d17a": "entered",
+ "_0x1da0ea": "hitCount",
+ "_0x132f4b": "hits",
+ "_0x3f655a": "znSum",
+ "_0x7e7f78": "hit",
+ "_0x69b290": "enteredShape",
+ "_0x3f991c": "visitStart",
+ "_0x4c28eb": "friendly",
+ "_0x39ea2b": "friendly",
+ "_0x5e42a4": "segs",
+ "_0x5504d1": "marks",
+ "_0x5df3e6": "myIndexes",
+ "_0x5dd22d": "trail2",
+ "_0xa81977": "merged",
+ "_0x317328": "ring",
+ "_0x1abad1": "mark",
+ "_0x182416": "mergedSegments",
+ "_0x422b77": "spliceFrom",
+ "_0x4f42a5": "spliceTo",
+ "_0x30637b": "nextMark",
+ "_0x2b5225": "trailPoint",
+ "_0x16aa70": "typeCounts",
+ "_0x5b7199": "TYPE_ROTATION",
+ "_0x3e1baf": "rotation",
+ "_0x183b99": "slot",
+ "_0x36dd5a": "value",
+ "_0x3e6fd8": "config",
+ "_0x1cde0d": "player",
+ "_0x385b31": "gain",
+ "_0x375a25": "label",
+ "_0x47c9cf": "game2",
+ "_0xfc41af": "suspend",
+ "_0x1fe934": "team",
+ "_0x401462": "leader",
+ "_0x53c548": "options",
+ "_0x482c2c": "spawnRadius",
+ "_0x401bc5": "skinEntry",
+ "_0x17c65b": "drawn",
+ "_0x24d2cf": "entry",
+ "_0xc15505": "base",
+ "_0x31d2d7": "teamSkin",
+ "_0x384e7b": "count",
+ "_0x302fb2": "radius",
+ "_0x557280": "stepAngle",
+ "_0x578f75": "angle",
+ "_0x5d281c": "teams",
+ "_0x2ba508": "host",
+ "_0x52bead": "candidates",
+ "_0x3a66f6": "spawnPoint",
+ "_0x5bf1e9": "mate",
+ "_0x4ae561": "team",
+ "_0x40d2cc": "base",
+ "_0x7aad54": "simplify",
+ "_0x1c2095": "simplifyIndexes",
+ "_0x13b56d": "count",
+ "_0x56b67e": "nearest",
+ "_0x305d54": "prev",
+ "_0x276bc9": "next",
+ "_0x541cc8": "nearestIndex",
+ "_0x1d7fd3": "error",
+ "_0xa8135b": "error",
+ "_0x502d0a": "error",
+ "_0x4b9d20": "elapsed",
+ "_0x444ee1": "maxStep",
+ "_0x3690da": "step",
+ "_0x1d8a3d": "width",
+ "_0x426973": "height",
+ "_0x3c45d3": "pxWidth",
+ "_0x2f3a5a": "pxHeight",
+ "_0x230d50": "viewScale",
+ "_0x4bb0fe": "zoom",
+ "_0x30fc5d": "left",
+ "_0x51451d": "right",
+ "_0x155f35": "top",
+ "_0x53ddc1": "bottom",
+ "_0x5f4caa": "byAspect",
+ "_0x49f744": "owner"
+}
