@@ -7,10 +7,10 @@ export interface SkinDisplayLayer {
 }
 
 export class SkinDisplay {
-    displays: SkinAvatarHandle[];
-    frontLayers: SkinDisplayLayer[];
-    backLayers: SkinDisplayLayer[];
-    maxScale: number;
+  displays: SkinAvatarHandle[];
+  frontLayers: SkinDisplayLayer[];
+  backLayers: SkinDisplayLayer[];
+  maxScale: number;
 
   constructor() {
     this.displays = [];
@@ -22,14 +22,26 @@ export class SkinDisplay {
     return this.displays.every(display => display.ready);
   }
   sort() {
-    this.frontLayers = ([] as SkinDisplayLayer[]).concat(...this.displays.map(display => display.frontLayers.map((frontLayer): SkinDisplayLayer => ({
-      display: display,
-      layer: frontLayer
-    })))).sort((a, b) => a.layer.level - b.layer.level);
-    this.backLayers = ([] as SkinDisplayLayer[]).concat(...this.displays.map(display => display.backLayers.map((backLayer): SkinDisplayLayer => ({
-      display: display,
-      layer: backLayer
-    })))).sort((a, b) => b.layer.level - a.layer.level);
+    this.frontLayers = ([] as SkinDisplayLayer[])
+      .concat(
+        ...this.displays.map(display =>
+          display.frontLayers.map((frontLayer): SkinDisplayLayer => ({
+            display: display,
+            layer: frontLayer
+          }))
+        )
+      )
+      .sort((a, b) => a.layer.level - b.layer.level);
+    this.backLayers = ([] as SkinDisplayLayer[])
+      .concat(
+        ...this.displays.map(display =>
+          display.backLayers.map((backLayer): SkinDisplayLayer => ({
+            display: display,
+            layer: backLayer
+          }))
+        )
+      )
+      .sort((a, b) => b.layer.level - a.layer.level);
     this.maxScale = Math.max(...this.frontLayers.map(frontLayer => frontLayer.display.scale * frontLayer.layer.scale));
   }
   add(display: SkinAvatarHandle) {

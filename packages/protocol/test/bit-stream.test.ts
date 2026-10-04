@@ -9,7 +9,7 @@ const reread = (write: (s: BitStream) => void) => {
 
 describe("BitStream", () => {
   test("bits of every width 1..32 round-trip, unaligned", () => {
-    const values = Array.from({ length: 32 }, (_, i) => (2 ** (i + 1) - 1) - (i % 3)); // near max of each width
+    const values = Array.from({ length: 32 }, (_, i) => 2 ** (i + 1) - 1 - (i % 3)); // near max of each width
     const r = reread(s => values.forEach((v, i) => s.writeBits(v, i + 1)));
     values.forEach((v, i) => expect(r.readBits(i + 1)).toBe(v));
     expect(r.remainingBits).toBeLessThan(8);
@@ -24,7 +24,14 @@ describe("BitStream", () => {
       s.writeUint32(0xffffffff);
       s.writeUint32(0x80000001);
     });
-    expect([r.readBoolean(), r.readUint8(), r.readUint16(), r.readBoolean(), r.readUint32(), r.readUint32()]).toEqual([true, 255, 0xbeef, false, 0xffffffff, 0x80000001]);
+    expect([r.readBoolean(), r.readUint8(), r.readUint16(), r.readBoolean(), r.readUint32(), r.readUint32()]).toEqual([
+      true,
+      255,
+      0xbeef,
+      false,
+      0xffffffff,
+      0x80000001
+    ]);
   });
 
   test("float32 is bit-exact", () => {
@@ -66,11 +73,17 @@ describe("BitStream", () => {
   });
 
   test("arrays", () => {
-    const items = [{ a: 1, b: true }, { a: 300, b: false }, { a: 65535, b: true }];
-    const r = reread(s => s.writeArray(items, 5, item => {
-      s.writeUint16(item.a);
-      s.writeBoolean(item.b);
-    }));
+    const items = [
+      { a: 1, b: true },
+      { a: 300, b: false },
+      { a: 65535, b: true }
+    ];
+    const r = reread(s =>
+      s.writeArray(items, 5, item => {
+        s.writeUint16(item.a);
+        s.writeBoolean(item.b);
+      })
+    );
     expect(r.readArray(5, () => ({ a: r.readUint16(), b: r.readBoolean() }))).toEqual(items);
     expect(reread(s => s.writeArray([], 4, () => {})).readArray(4, () => 0)).toEqual([]);
   });

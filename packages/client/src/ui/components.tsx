@@ -33,9 +33,7 @@ type Setter<T> = Dispatch<StateUpdater<T>>;
 interface TipsProps {
   messages: string[];
 }
-const Tips = ({
-  messages
-}: TipsProps) => {
+const Tips = ({ messages }: TipsProps) => {
   const [tipIndex, setTipIndex] = useState(0);
   useEffect(() => {
     const intervalId = setInterval(() => setTipIndex(index => (index + 1) % messages.length), 3000);
@@ -43,19 +41,19 @@ const Tips = ({
   }, []);
   return (
     <div class="tips">
-      <div class="tip" key={tipIndex}>{messages[tipIndex]}</div>
+      <div class="tip" key={tipIndex}>
+        {messages[tipIndex]}
+      </div>
     </div>
   );
 };
 
 const LanguageFooter = () => {
-  const {
-    language: currentLanguage,
-    languages,
-    setLanguage
-  } = useI18n();
+  const { language: currentLanguage, languages, setLanguage } = useI18n();
   const languageItems = languages.map((item, index) => (
-    <li class={item === currentLanguage ? "active" : ""} onClick={() => setLanguage(languages[index])}>{item.name.toUpperCase()}</li>
+    <li class={item === currentLanguage ? "active" : ""} onClick={() => setLanguage(languages[index])}>
+      {item.name.toUpperCase()}
+    </li>
   ));
   return (
     <div id="footer">
@@ -73,19 +71,8 @@ interface MainMenuProps {
   mode: ModeId;
   setMode: Setter<ModeId>;
 }
-const MainMenu = ({
-  nickName,
-  setNickName,
-  start,
-  route,
-  api,
-  skin,
-  mode,
-  setMode
-}: MainMenuProps) => {
-  const {
-    t
-  } = useI18n();
+const MainMenu = ({ nickName, setNickName, start, route, api, skin, mode, setMode }: MainMenuProps) => {
+  const { t } = useI18n();
   const supported = !!api;
   const onNickInput = (event: TargetedEvent<HTMLInputElement, Event>) => setNickName(event.currentTarget.value);
   const onPlayClick = (event: TargetedEvent<HTMLButtonElement, MouseEvent>) => {
@@ -103,15 +90,38 @@ const MainMenu = ({
         </div>
         <Tips messages={t.messages} />
         <div class="play">
-          <input type="text" id="nick" name="nick" value={nickName} autocomplete="off" placeholder={t.placeholderText} maxlength={12} onInput={onNickInput} />
-          <button id="play" name="play" class={"yellow" + (supported ? "" : " disabled")} onClick={onPlayClick}>{t.btnPlay}</button>
+          <input
+            type="text"
+            id="nick"
+            name="nick"
+            value={nickName}
+            autocomplete="off"
+            placeholder={t.placeholderText}
+            maxlength={12}
+            onInput={onNickInput}
+          />
+          <button id="play" name="play" class={"yellow" + (supported ? "" : " disabled")} onClick={onPlayClick}>
+            {t.btnPlay}
+          </button>
           <button id="skins" name="skins" class="orange noPadding" onClick={() => route("skins")}>
-            <img width="30" height="30" src={"assets/skins/select/" + (skin || "noskin").toLowerCase().replace(/\s+/g, "") + ".png"} />
+            <img
+              width="30"
+              height="30"
+              src={"assets/skins/select/" + (skin || "noskin").toLowerCase().replace(/\s+/g, "") + ".png"}
+            />
           </button>
         </div>
         <div class="modes">
           {MODES.map(item => (
-            <button key={item.id} id={"mode-" + item.id} class={item.id === mode ? "green" : "orange"} style={{ margin: "8px 4px 0" }} onClick={() => setMode(item.id)}>{item.label}</button>
+            <button
+              key={item.id}
+              id={"mode-" + item.id}
+              class={item.id === mode ? "green" : "orange"}
+              style={{ margin: "8px 4px 0" }}
+              onClick={() => setMode(item.id)}
+            >
+              {item.label}
+            </button>
           ))}
         </div>
         {!supported && <p class="notsupported">{t.nosupport}</p>}
@@ -168,15 +178,9 @@ interface ResultsProps {
   results: GameResult;
   route: Setter<Route>;
 }
-const Results = ({
-  bestScore,
-  results,
-  route
-}: ResultsProps) => {
+const Results = ({ bestScore, results, route }: ResultsProps) => {
   const goToMenu = () => route("menu");
-  const {
-    t
-  } = useI18n();
+  const { t } = useI18n();
   return (
     <>
       <div id="left_side" />
@@ -185,15 +189,30 @@ const Results = ({
           <img src="assets/images/logo.png" />
         </div>
         <div class="nav">
-          <button class="yellow slider-5" id="menu" onClick={goToMenu}>{t.btnContinue}</button>
+          <button class="yellow slider-5" id="menu" onClick={goToMenu}>
+            {t.btnContinue}
+          </button>
         </div>
         <div class="resultbox">
           <div class="results">
             <div class="left">
-              <div class="slider-1">{t.yourScore}{":"}</div>
-              <div class="slider-2">{results.newBest && <span class="newScore">{t.newText}{" "}</span>}{t.bestScore}{":"}</div>
-              <div class="slider-3">{t.timePlayed}{":"}</div>
-              <div class="slider-4">{t.playersKilled}{":"}</div>
+              <div class="slider-1">
+                {t.yourScore}
+                {":"}
+              </div>
+              <div class="slider-2">
+                {results.newBest && <span class="newScore">{t.newText} </span>}
+                {t.bestScore}
+                {":"}
+              </div>
+              <div class="slider-3">
+                {t.timePlayed}
+                {":"}
+              </div>
+              <div class="slider-4">
+                {t.playersKilled}
+                {":"}
+              </div>
             </div>
             <div class="right">
               <div class="slider-1">{results.score.toFixed(2) + "%"}</div>
@@ -211,9 +230,7 @@ const Results = ({
 interface SkinPreviewProps {
   name: string;
 }
-const SkinPreview = ({
-  name
-}: SkinPreviewProps) => {
+const SkinPreview = ({ name }: SkinPreviewProps) => {
   return (
     <div class="skin">
       <div class="skin-view">
@@ -229,15 +246,8 @@ interface SkinPickerProps {
   menu: () => void;
   setSkin: Setter<string>;
 }
-const SkinPicker = ({
-  skins,
-  skin,
-  menu,
-  setSkin
-}: SkinPickerProps) => {
-  const {
-    t
-  } = useI18n();
+const SkinPicker = ({ skins, skin, menu, setSkin }: SkinPickerProps) => {
+  const { t } = useI18n();
   const index = skins.findIndex(skin2 => skin2.name === skin);
   const [selectedIndex, setSelectedIndex] = useState(index > 0 ? index : 0);
   const selectSkin = (nextIndex: number) => {
@@ -249,12 +259,18 @@ const SkinPicker = ({
   return (
     <div class="skinbox">
       <div class="skins-container">
-        <button name="left" class="orange" onClick={() => selectSkin(selectedIndex - 1)}>{"<"}</button>
+        <button name="left" class="orange" onClick={() => selectSkin(selectedIndex - 1)}>
+          {"<"}
+        </button>
         <SkinPreview name={skins[selectedIndex].name} />
-        <button name="right" class="orange" onClick={() => selectSkin(selectedIndex + 1)}>{">"}</button>
+        <button name="right" class="orange" onClick={() => selectSkin(selectedIndex + 1)}>
+          {">"}
+        </button>
       </div>
       <div class="nav">
-        <button class="green" onClick={menu}>{t.btnSelect}</button>
+        <button class="green" onClick={menu}>
+          {t.btnSelect}
+        </button>
       </div>
     </div>
   );
@@ -265,12 +281,7 @@ interface SkinsScreenProps {
   route: Setter<Route>;
   setSkin: Setter<string>;
 }
-const SkinsScreen = ({
-  skins,
-  skin,
-  route,
-  setSkin
-}: SkinsScreenProps) => {
+const SkinsScreen = ({ skins, skin, route, setSkin }: SkinsScreenProps) => {
   const goToMenu = () => route("menu");
   return (
     <>
@@ -290,11 +301,7 @@ export interface AppProps {
   storage: CookieStorage;
   skins: SkinInfo[];
 }
-export const App = ({
-  api,
-  storage,
-  skins
-}: AppProps) => {
+export const App = ({ api, storage, skins }: AppProps) => {
   const viewRef = useRef<HTMLCanvasElement>(null);
   const [route, setRoute] = useState<Route>("menu");
   const [preparing, setPreparing] = useState(true);
@@ -309,11 +316,15 @@ export const App = ({
     expires: 365
   };
   if (nickName !== stored.nickName || bestScore !== stored.bestScore || skin !== stored.skin) {
-    storage.set(storageKey, {
-      nickName: nickName,
-      bestScore: bestScore,
-      skin: skin
-    }, cookieOptions);
+    storage.set(
+      storageKey,
+      {
+        nickName: nickName,
+        bestScore: bestScore,
+        skin: skin
+      },
+      cookieOptions
+    );
   }
   useEffect(() => {
     if (api) {
@@ -337,8 +348,31 @@ export const App = ({
       <canvas class={route === "game" || preparing ? "" : "fadein"} id="view" ref={viewRef} />
       {route !== "game" && <div id="ui_overlay" />}
       <div id="ui" class={route === "game" ? "hide" : ""}>
-        {route === "menu" && <MainMenu nickName={nickName} setNickName={setNickName} start={startGame} route={setRoute} api={api} skin={skin} mode={mode} setMode={setMode} />}
-        {route === "game" && api && <GameScreen nickName={nickName} bestScore={bestScore} setBestScore={setBestScore} setResults={setResults} setPreparing={setPreparing} api={api} route={setRoute} skin={skin} mode={mode} />}
+        {route === "menu" && (
+          <MainMenu
+            nickName={nickName}
+            setNickName={setNickName}
+            start={startGame}
+            route={setRoute}
+            api={api}
+            skin={skin}
+            mode={mode}
+            setMode={setMode}
+          />
+        )}
+        {route === "game" && api && (
+          <GameScreen
+            nickName={nickName}
+            bestScore={bestScore}
+            setBestScore={setBestScore}
+            setResults={setResults}
+            setPreparing={setPreparing}
+            api={api}
+            route={setRoute}
+            skin={skin}
+            mode={mode}
+          />
+        )}
         {route === "results" && results && <Results bestScore={bestScore} results={results} route={setRoute} />}
         {route === "skins" && <SkinsScreen skins={skins} skin={skin} route={setRoute} setSkin={setSkin} />}
       </div>

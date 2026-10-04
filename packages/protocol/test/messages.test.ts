@@ -1,7 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { DEATH_TRACK_CROSSED } from "@paperio/core/game/constants";
 import { ProtocolError } from "../src/bit-stream";
-import { DiedMsg, InputMsg, JoinedMsg, JoinMsg, Limits, MsgType, PROTOCOL_VERSION, UpdateMsg, decodeClientMessages, decodeServerMessages, encodeMessages } from "../src/messages";
+import {
+  DiedMsg,
+  InputMsg,
+  JoinedMsg,
+  JoinMsg,
+  Limits,
+  MsgType,
+  PROTOCOL_VERSION,
+  UpdateMsg,
+  decodeClientMessages,
+  decodeServerMessages,
+  encodeMessages
+} from "../src/messages";
 
 const posStep = Limits.MaxPosition / (2 ** Limits.PositionBits - 1);
 const pctStep = 1 / (2 ** Limits.PercentBits - 1);
@@ -11,7 +23,9 @@ describe("messages", () => {
     const msg = Object.assign(new JoinMsg(), { name: "golden", skin: "Ladybug" });
     const [decoded] = decodeClientMessages(encodeMessages(msg));
     expect(decoded).toBeInstanceOf(JoinMsg);
-    expect(decoded).toEqual(Object.assign(new JoinMsg(), { protocolVersion: PROTOCOL_VERSION, name: "golden", skin: "Ladybug" }));
+    expect(decoded).toEqual(
+      Object.assign(new JoinMsg(), { protocolVersion: PROTOCOL_VERSION, name: "golden", skin: "Ladybug" })
+    );
   });
 
   test("InputMsg", () => {
@@ -29,8 +43,8 @@ describe("messages", () => {
       tick: 4_000_000_000,
       units: [
         { id: 1, x: 1000.123, y: 33.3, percent: 0.0123, home: true },
-        { id: 2, x: 0, y: 2000, percent: 1, home: false },
-      ],
+        { id: 2, x: 0, y: 2000, percent: 1, home: false }
+      ]
     });
     const [decoded] = decodeServerMessages(encodeMessages(msg));
     if (!(decoded instanceof UpdateMsg)) throw new Error("expected UpdateMsg");

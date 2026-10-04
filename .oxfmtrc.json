@@ -12,5 +12,15 @@
   "sortPackageJson": false,
   // Only code we maintain. Captured site files, the deobfuscation intermediates/pipeline, the mode
   // research (still edited on main) and prose stay byte-for-byte as they are.
-  "ignorePatterns": ["original/**", "deob/**", "modes/**", "scripts/**", "docs/**", "**/*.md", "bun.lock", "shots/**", "**/dist/**"]
+  "ignorePatterns": [
+    "original/**",
+    "deob/**",
+    "modes/**",
+    "scripts/**",
+    "docs/**",
+    "**/*.md",
+    "bun.lock",
+    "shots/**",
+    "**/dist/**"
+  ]
 }

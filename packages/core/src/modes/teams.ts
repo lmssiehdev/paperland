@@ -19,7 +19,12 @@ export interface TeamsOptions {
 }
 
 /** The original teams build: CONFIG `teamsCount: 5, teamSize: 6`, suspend 5 s (last team) to 20 s (top team). */
-const DEFAULT_OPTIONS: TeamsOptions = { teamsCount: 5, teamSize: 6, bottomTeamSuspendSpawn: 5000, topTeamSuspendSpawn: 20000 };
+const DEFAULT_OPTIONS: TeamsOptions = {
+  teamsCount: 5,
+  teamSize: 6,
+  bottomTeamSuspendSpawn: 5000,
+  topTeamSuspendSpawn: 20000
+};
 /** The original's founder base: round(2π · baseRadius · baseDensity) vertices, baseDensity 0.25. */
 const BASE_DENSITY = 0.25;
 /** Cap on the original's unbounded search for a spot behind a unit's trail start (player fallback). */
@@ -159,8 +164,11 @@ export class TeamsMode implements GameMode {
         team.area += base.area;
       });
     });
-    this.teams.slice().sort((a, b) => b.area - a.area).forEach((team, index) => {
-      team.rank = index + 1;
-    });
+    this.teams
+      .slice()
+      .sort((a, b) => b.area - a.area)
+      .forEach((team, index) => {
+        team.rank = index + 1;
+      });
   }
 }

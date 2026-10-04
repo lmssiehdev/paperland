@@ -22,7 +22,11 @@ test("headless golden in Bun is deterministic and pinned", () => {
   const second = runGoldenScenario({ skinNames, language });
   const hash = sha16(first.checkpoints.join("\n"));
   expect(sha16(second.checkpoints.join("\n"))).toBe(hash);
-  expect({ hash, units: first.units, kills: first.kills }).toEqual({ hash: BUN_GOLDEN_HASH, units: first.units, kills: first.kills });
+  expect({ hash, units: first.units, kills: first.kills }).toEqual({
+    hash: BUN_GOLDEN_HASH,
+    units: first.units,
+    kills: first.kills
+  });
 });
 
 test("headless game does not touch the real Math.random", () => {

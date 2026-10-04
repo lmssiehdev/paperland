@@ -9,13 +9,13 @@ const vecPool = Array.from<Vec2>({
 let vecPoolSize = 0;
 /** Mutable, pooled 2D vector/point; as a territory or trail vertex it also tracks its grid cell and the segments using it. */
 export class Vec2 {
-    // Both assigned by this.set() in the constructor (TS can't see through the call).
-    x!: number;
-    y!: number;
-    cell: GridCell | null;
-    segments: Segment[];
-    /** Grid that committed points register into; set by SpatialGrid's constructor. */
-    static grid: SpatialGrid | undefined;
+  // Both assigned by this.set() in the constructor (TS can't see through the call).
+  x!: number;
+  y!: number;
+  cell: GridCell | null;
+  segments: Segment[];
+  /** Grid that committed points register into; set by SpatialGrid's constructor. */
+  static grid: SpatialGrid | undefined;
 
   constructor(x?: number, y?: number) {
     this.cell = null;
@@ -68,10 +68,7 @@ export class Vec2 {
     return this;
   }
   magnitude(): number {
-    const {
-      x,
-      y
-    } = this;
+    const { x, y } = this;
     return Math.sqrt(x * x + y * y);
   }
   normalize(): this {
@@ -101,10 +98,7 @@ export class Vec2 {
     return this.x * point.x + this.y * point.y;
   }
   rotate(rotation: number): this {
-    const {
-      x,
-      y
-    } = this;
+    const { x, y } = this;
     const cos = Math.cos(rotation);
     const sin = Math.sin(rotation);
     this.x = x * cos - y * sin;

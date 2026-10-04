@@ -13,7 +13,7 @@ export const Limits = {
   PositionBits: 16,
   PercentBits: 16,
   /** UpdateMsg unit count is sent in 8 bits. */
-  MaxUnits: 255,
+  MaxUnits: 255
 } as const;
 
 /**
@@ -26,7 +26,7 @@ export enum MsgType {
   Joined = 2,
   Input = 3,
   Update = 4,
-  Died = 5,
+  Died = 5
 }
 
 interface Msg {
@@ -134,7 +134,7 @@ export class UpdateMsg implements Msg {
       x: s.readFloat(0, Limits.MaxPosition, Limits.PositionBits),
       y: s.readFloat(0, Limits.MaxPosition, Limits.PositionBits),
       percent: s.readFloat(0, 1, Limits.PercentBits),
-      home: s.readBoolean(),
+      home: s.readBoolean()
     }));
   }
 }
@@ -173,12 +173,12 @@ export type Message = ClientMessage | ServerMessage;
 
 const CLIENT_MESSAGES: Partial<Record<MsgType, new () => ClientMessage>> = {
   [MsgType.Join]: JoinMsg,
-  [MsgType.Input]: InputMsg,
+  [MsgType.Input]: InputMsg
 };
 const SERVER_MESSAGES: Partial<Record<MsgType, new () => ServerMessage>> = {
   [MsgType.Joined]: JoinedMsg,
   [MsgType.Update]: UpdateMsg,
-  [MsgType.Died]: DiedMsg,
+  [MsgType.Died]: DiedMsg
 };
 
 /** One binary frame: each message is its type byte plus its fields, padded to a whole byte. */

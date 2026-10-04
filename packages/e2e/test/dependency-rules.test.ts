@@ -10,17 +10,20 @@ const allowed: Record<string, string[]> = {
   core: ["core"],
   protocol: ["protocol", "core"],
   client: ["client", "protocol", "core"],
-  server: ["server", "protocol", "core"],
+  server: ["server", "protocol", "core"]
 };
 // Third-party packages each package may use (anything else is a leak, e.g. elysia in core).
 const external: Record<string, RegExp> = {
   core: /^$/,
   protocol: /^$/,
   client: /^(preact|preact\/hooks|preact\/jsx-runtime|js-cookie)$/,
-  server: /^(elysia|@elysiajs\/eden|bun|bun:test|node:.*)$/,
+  server: /^(elysia|@elysiajs\/eden|bun|bun:test|node:.*)$/
 };
 
-const importsOf = (source: string) => [...source.matchAll(/(?:^|\n)\s*(?:import|export)\s[^;]*?from\s+["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)/g)].map(m => m[1] ?? m[2]!);
+const importsOf = (source: string) =>
+  [
+    ...source.matchAll(/(?:^|\n)\s*(?:import|export)\s[^;]*?from\s+["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)/g)
+  ].map(m => m[1] ?? m[2]!);
 
 for (const [pkg, may] of Object.entries(allowed)) {
   test(`${pkg} imports only ${may.join(", ")}`, async () => {
@@ -31,7 +34,11 @@ for (const [pkg, may] of Object.entries(allowed)) {
         let target: string | undefined;
         if (spec.startsWith("@paperio/")) target = spec.split("/")[1];
         else if (spec.startsWith(".")) target = relative(packages, resolve(dirname(abs), spec)).split("/")[0];
-        if (target !== undefined ? !may.includes(target) : !(file.includes("/test/") && /^bun(:test)?$/.test(spec)) && !external[pkg]!.test(spec)) {
+        if (
+          target !== undefined
+            ? !may.includes(target)
+            : !(file.includes("/test/") && /^bun(:test)?$/.test(spec)) && !external[pkg]!.test(spec)
+        ) {
           violations.push(`${file}: ${spec}`);
         }
       }

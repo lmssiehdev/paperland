@@ -21,11 +21,7 @@ export const hexToRgb = (item: string): RGB => {
     b: blue
   };
 };
-export const rgbToHsv = ({
-  r,
-  g,
-  b
-}: RGB): HSV => {
+export const rgbToHsv = ({ r, g, b }: RGB): HSV => {
   let rNorm;
   let gNorm;
   let bNorm;
@@ -72,11 +68,7 @@ export const rgbToHsv = ({
     v: round2(max * 100)
   };
 };
-const rgbToHex = ({
-  r,
-  g,
-  b
-}: RGB): string => {
+const rgbToHex = ({ r, g, b }: RGB): string => {
   const toHexByte = (byte: number): string => {
     const result = byte.toString(16);
     if (result.length < 2) {
@@ -87,11 +79,7 @@ const rgbToHex = ({
   };
   return "#" + toHexByte(r) + toHexByte(g) + toHexByte(b);
 };
-const hsvToRgb = ({
-  h,
-  s,
-  v
-}: HSV): RGB => {
+const hsvToRgb = ({ h, s, v }: HSV): RGB => {
   var red;
   var green;
   var blue;
@@ -158,11 +146,7 @@ const hsvToRgb = ({
 };
 export const hsvToHex = (hsv: HSV): string => rgbToHex(hsvToRgb(hsv));
 export function hsvMulValue(hsv: HSV, factor: number): HSV {
-  let {
-    h,
-    s,
-    v
-  } = hsv;
+  let { h, s, v } = hsv;
   v *= factor;
   return {
     h: h,
@@ -171,13 +155,9 @@ export function hsvMulValue(hsv: HSV, factor: number): HSV {
   };
 }
 export function hsvLighten(hsv: HSV, amount: number): HSV {
-  let {
-    h,
-    s,
-    v
-  } = hsv;
+  let { h, s, v } = hsv;
   const headroom = 100 - v;
-  v = Math.max(v * amount, v + amount * headroom / 4);
+  v = Math.max(v * amount, v + (amount * headroom) / 4);
   return {
     h: h,
     s: s,
@@ -185,11 +165,7 @@ export function hsvLighten(hsv: HSV, amount: number): HSV {
   };
 }
 export function hsvSetValue(hsv: HSV, value: number): HSV {
-  let {
-    h,
-    s,
-    v
-  } = hsv;
+  let { h, s, v } = hsv;
   v = value;
   return {
     h: h,

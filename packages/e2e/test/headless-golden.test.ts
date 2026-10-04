@@ -10,7 +10,10 @@ import type { GoldenResult } from "../../core/test/golden-scenario";
 const assets = new URL("../../../original/assets/", import.meta.url).pathname;
 
 test("headless core in Chromium matches the browser golden", async () => {
-  const build = await Bun.build({ entrypoints: [new URL("./headless-golden.entry.ts", import.meta.url).pathname], format: "iife" });
+  const build = await Bun.build({
+    entrypoints: [new URL("./headless-golden.entry.ts", import.meta.url).pathname],
+    format: "iife"
+  });
   expect(build.success).toBe(true);
   const bundle = await build.outputs[0]!.text();
   const skinNames = ((await Bun.file(assets + "skins/skins.json").json()) as { name: string }[]).map(skin => skin.name);
@@ -21,7 +24,10 @@ test("headless core in Chromium matches the browser golden", async () => {
     const page = await browser.newPage();
     await page.goto("about:blank");
     await page.addScriptTag({ content: bundle });
-    const result = await page.evaluate(setup => (window as unknown as { runGoldenScenario(s: typeof setup): GoldenResult }).runGoldenScenario(setup), { skinNames, language });
+    const result = await page.evaluate(
+      setup => (window as unknown as { runGoldenScenario(s: typeof setup): GoldenResult }).runGoldenScenario(setup),
+      { skinNames, language }
+    );
     const hash = new Bun.CryptoHasher("sha256").update(result.checkpoints.join("\n")).digest("hex").slice(0, 16);
     expect(hash).toBe(BROWSER_GOLDEN_HASH);
   } finally {

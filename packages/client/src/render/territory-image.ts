@@ -8,10 +8,7 @@ export const renderTerritoryImage: TerritoryImager = player => {
   let minY = Infinity;
   let maxY = 0;
   player.base.polygon.segments.forEach(segment => {
-    const {
-      x,
-      y
-    } = segment.start;
+    const { x, y } = segment.start;
     minX = Math.min(minX, x);
     maxX = Math.max(maxX, x);
     minY = Math.min(minY, y);
@@ -22,7 +19,7 @@ export const renderTerritoryImage: TerritoryImager = player => {
   const size = Math.max(width, height);
   const vec2 = new Vec2(minX + width / 2, minY + height / 2);
   const imageSize = 500;
-  const imageScale = imageSize * 0.95 / size;
+  const imageScale = (imageSize * 0.95) / size;
   const depth = imageSize / 100;
   const canvas = document.createElement("canvas");
   canvas.width = imageSize;
@@ -34,8 +31,8 @@ export const renderTerritoryImage: TerritoryImager = player => {
   ctx.translate(0, depth / imageScale);
   ctx.fillStyle = player.skin.colors.back;
   ctx.fill(player.base.polygon.path);
-  ctx.translate(0, depth * -2 / imageScale);
-  ctx.fillStyle = player.skin.pattern && player.skin.pattern.pattern || player.skin.colors.main;
+  ctx.translate(0, (depth * -2) / imageScale);
+  ctx.fillStyle = (player.skin.pattern && player.skin.pattern.pattern) || player.skin.colors.main;
   ctx.fill(player.base.polygon.path);
   return canvas.toDataURL("image/png");
 };

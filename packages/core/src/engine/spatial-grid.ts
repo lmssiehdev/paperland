@@ -5,9 +5,9 @@ import type { Intersection, Segment } from "./segment";
 const CELL_MARGIN = 1;
 /** One bucket of the spatial grid: the committed points that fall inside it. */
 export class GridCell {
-    points: Vec2[];
-    x: number;
-    y: number;
+  points: Vec2[];
+  x: number;
+  y: number;
 
   constructor(x: number, y: number) {
     this.points = [];
@@ -19,9 +19,7 @@ export class GridCell {
     point.cell = this;
   }
   remove(point: Vec2): void {
-    const {
-      points
-    } = this;
+    const { points } = this;
     const index = points.indexOf(point);
     if (index !== -1) {
       points.splice(index, 1);
@@ -31,13 +29,13 @@ export class GridCell {
 }
 /** Uniform grid over the arena that buckets committed points, used to find segment intersections locally. */
 export class SpatialGrid {
-    width: number;
-    height: number;
-    center: Vec2;
-    size: number;
-    w: number;
-    h: number;
-    cells: GridCell[];
+  width: number;
+  height: number;
+  center: Vec2;
+  size: number;
+  w: number;
+  h: number;
+  cells: GridCell[];
 
   constructor(width: number, height: number, size: number) {
     this.width = width;
@@ -82,7 +80,7 @@ export class SpatialGrid {
         this.getCell(j, i).points.forEach(point => {
           // TODO(types): Segment has no `id`, so every entry lands under the key "undefined" (FINDINGS #21).
           // The cast claims a numeric id only so the original indexing type-checks; it is undefined at runtime.
-          point.segments.forEach(segment => result[(segment as Segment & { id: number }).id] = segment);
+          point.segments.forEach(segment => (result[(segment as Segment & { id: number }).id] = segment));
         });
       }
     }

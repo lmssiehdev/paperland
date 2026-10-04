@@ -9,7 +9,7 @@ export const readControllerInput: InputSource = (game, dt) => {
   }
   if (game.controller.pressed()) {
     game.keyboard = Object.assign({}, game.controller.mouse);
-    const maxTurn = TAU * dt / 1000;
+    const maxTurn = (TAU * dt) / 1000;
     if (game.controller.keyboardModeSwitch.mode2) {
       let turn = 0;
       if (game.controller.left) {
@@ -36,7 +36,10 @@ export const readControllerInput: InputSource = (game, dt) => {
         vec2.add(new Vec2(1, 0));
       }
       if (vec2.magnitude()) {
-        let angle = Math.atan2(game.direction.x * vec2.y - vec2.x * game.direction.y, game.direction.x * vec2.x + game.direction.y * vec2.y);
+        let angle = Math.atan2(
+          game.direction.x * vec2.y - vec2.x * game.direction.y,
+          game.direction.x * vec2.x + game.direction.y * vec2.y
+        );
         if (Math.abs(angle) > maxTurn) {
           angle = Math.sign(angle) * maxTurn;
         }
@@ -44,12 +47,19 @@ export const readControllerInput: InputSource = (game, dt) => {
       }
     }
   } else if (game.controller.mouse) {
-    if (!game.keyboard || game.keyboard.x !== game.controller.mouse.x && game.keyboard.y !== game.controller.mouse.y) {
+    if (
+      !game.keyboard ||
+      (game.keyboard.x !== game.controller.mouse.x && game.keyboard.y !== game.controller.mouse.y)
+    ) {
       game.keyboard = null;
       // A controller (and so mouse input) only exists for a game with a view (see api.ts).
-      game.direction = new Vec2(game.controller.mouse.x, game.controller.mouse.y).sub(new Vec2(game.view!.clientWidth / 2, game.view!.clientHeight / 2)).normalize();
+      game.direction = new Vec2(game.controller.mouse.x, game.controller.mouse.y)
+        .sub(new Vec2(game.view!.clientWidth / 2, game.view!.clientHeight / 2))
+        .normalize();
     }
   } else if (!game.keyboard && game.controller.lastMouse) {
-    game.direction = new Vec2(game.controller.lastMouse.x, game.controller.lastMouse.y).sub(new Vec2(game.view!.clientWidth / 2, game.view!.clientHeight / 2)).normalize();
+    game.direction = new Vec2(game.controller.lastMouse.x, game.controller.lastMouse.y)
+      .sub(new Vec2(game.view!.clientWidth / 2, game.view!.clientHeight / 2))
+      .normalize();
   }
 };

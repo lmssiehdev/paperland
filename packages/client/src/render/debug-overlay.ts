@@ -2,15 +2,11 @@ import { METRICS_HISTORY_LENGTH } from "@paperio/core/engine/math";
 import type { Game } from "@paperio/core/game/game";
 
 export function renderDebugOverlay(game: Game) {
-  const {
-    view
-  } = game;
+  const { view } = game;
   if (!view) {
     return;
   }
-  const {
-    font
-  } = game.config;
+  const { font } = game.config;
   // The game view is a 2d canvas.
   const ctx = view.getContext("2d")!;
   ctx.fillStyle = "#000000";
@@ -41,7 +37,9 @@ export function renderDebugOverlay(game: Game) {
     printLine("Recording: " + game.recording.duration().toFixed(1) + " s");
   }
   if (game.replaying) {
-    printLine("Replaying: " + game.replaying.currentlyPlaying().toFixed(1) + "/" + game.replaying.duration().toFixed(1) + " s");
+    printLine(
+      "Replaying: " + game.replaying.currentlyPlaying().toFixed(1) + "/" + game.replaying.duration().toFixed(1) + " s"
+    );
   }
   if (game.debugGraph) {
     const graphWidth = view.width / 3;
@@ -86,10 +84,7 @@ export function renderDebugOverlay(game: Game) {
     ctx.stroke(path3);
     ctx.lineWidth = 0.5;
     game.metrics.forEach((metric, index) => {
-      const {
-        returns,
-        kills
-      } = metric.events;
+      const { returns, kills } = metric.events;
       if (returns || kills) {
         if (kills) {
           ctx.strokeStyle = "#99000040";

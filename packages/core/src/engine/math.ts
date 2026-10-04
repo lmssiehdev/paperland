@@ -15,7 +15,8 @@ export const clamp = (min: number, max: number, value: number): number => {
   return value;
 };
 export const cross2d = (ax: number, ay: number, bx: number, by: number): number => ax * by - ay * bx;
-export const inRange = (a: number, b: number, value: number): boolean => Math.min(a, b) - EPSILON <= value && value <= Math.max(a, b) + EPSILON;
+export const inRange = (a: number, b: number, value: number): boolean =>
+  Math.min(a, b) - EPSILON <= value && value <= Math.max(a, b) + EPSILON;
 export const rangeOverlap = (a1: number, a2: number, b1: number, b2: number): number => {
   if (a1 > a2) {
     [a1, a2] = [a2, a1];
@@ -37,7 +38,7 @@ export function pointInPolygon(vertices: ArrayLike<ArrayLike<number>>, x: number
     if (pointOnSegment(x, y, xi, yi, xj, yj)) {
       return 1;
     }
-    var crosses = yi > y != yj > y && x < (xj - xi) * (y - yi) / (yj - yi) + xi;
+    var crosses = yi > y != yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
     if (crosses) {
       inside = !inside;
     }
@@ -72,7 +73,7 @@ export function createRng(seed: number): Rng {
     seed = (seed * 69069 + 1) % 2147483648;
     return seed % modulus;
   };
-  let result = (max?: number): number => max == null ? nextInt(1000000000) / 1000000000 : nextInt(max);
+  let result = (max?: number): number => (max == null ? nextInt(1000000000) / 1000000000 : nextInt(max));
   return result;
 }
 export function fmt2(value: number): string {

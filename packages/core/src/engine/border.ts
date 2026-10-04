@@ -4,9 +4,9 @@ import type { Intersection, Segment } from "./segment";
 
 /** Arena boundary: a polygon approximating a circle of `radius` around `center`. */
 export class Border {
-    polygon: Polygon;
-    radius: number;
-    center: Vec2;
+  polygon: Polygon;
+  radius: number;
+  center: Vec2;
 
   constructor(polygon: Polygon, center: Vec2, radius: number) {
     if (!(polygon instanceof Polygon)) {
@@ -21,7 +21,10 @@ export class Border {
   }
   intersections(segment: Segment): Intersection[] {
     {
-      if (segment.start.distance2(this.center) < this.radius ** 2 * 0.95 && segment.end.distance2(this.center) < this.radius ** 2 * 0.95) {
+      if (
+        segment.start.distance2(this.center) < this.radius ** 2 * 0.95 &&
+        segment.end.distance2(this.center) < this.radius ** 2 * 0.95
+      ) {
         return [];
       }
     }

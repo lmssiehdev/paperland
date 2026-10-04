@@ -11,7 +11,10 @@ export interface RoomManagerOptions {
 export class RoomManager {
   private readonly rooms = new Map<string, Room>();
 
-  constructor(private readonly data: GameData, private readonly options: RoomManagerOptions = {}) {}
+  constructor(
+    private readonly data: GameData,
+    private readonly options: RoomManagerOptions = {}
+  ) {}
 
   /** An existing room of `mode`, or a new started one. */
   find(mode: ModeId = "classic"): Room {

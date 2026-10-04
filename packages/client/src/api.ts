@@ -36,7 +36,14 @@ export interface PaperioApi {
    * @param extraLife fraction of the arena to start with (continue after death); falsy for a normal start
    * @param mode game mode; if it differs from the current game's, a fresh game is created first
    */
-  start(name: string, skinName: string, best: number, onGameOver?: (result: GameResult) => void, extraLife?: number, mode?: ModeId): void;
+  start(
+    name: string,
+    skinName: string,
+    best: number,
+    onGameOver?: (result: GameResult) => void,
+    extraLife?: number,
+    mode?: ModeId
+  ): void;
   /**
    * Strings the game shows or uses (default player name, kill labels, HUD, extra-life popup). Applied to
    * the current game and every game created later. Called by the UI's I18nProvider on a language switch.
@@ -46,7 +53,14 @@ export interface PaperioApi {
   startGame?: () => void;
 }
 
-export const createApi = (config: GameConfig, language: Language, createSkinManager: SkinManagerFactory, nameManager: NamePool, schemesManager: SchemesManager, achievementsProfile: AchievementStore): PaperioApi | null => {
+export const createApi = (
+  config: GameConfig,
+  language: Language,
+  createSkinManager: SkinManagerFactory,
+  nameManager: NamePool,
+  schemesManager: SchemesManager,
+  achievementsProfile: AchievementStore
+): PaperioApi | null => {
   if (!Path2D) {
     return null;
   }
@@ -67,18 +81,27 @@ export const createApi = (config: GameConfig, language: Language, createSkinMana
     const gameMode = createMode(mode);
     schemesManager.select(gameMode.scoreScheme);
     const gameConfig = { ...config, ...gameMode.config };
-    const {
-      arenaSize,
-      quadSize,
-      borderPoints
-    } = gameConfig;
+    const { arenaSize, quadSize, borderPoints } = gameConfig;
     const spatialGrid = new SpatialGrid(arenaSize, arenaSize, quadSize);
     Vec2.grid = spatialGrid;
     const vec2 = new Vec2(arenaSize / 2, arenaSize / 2);
     const baseRadius = Math.min(vec2.x, vec2.y) * 0.95;
     const border = Border.circular(vec2, borderPoints, baseRadius);
     const skinManager = createSkinManager(gameConfig, view);
-    const game = new Game(gameConfig, view, spatialGrid, border, skinManager, null, nameManager, new Controller(view, new KeyboardModeSwitch()), strings, schemesManager, achievementsProfile, Math.random());
+    const game = new Game(
+      gameConfig,
+      view,
+      spatialGrid,
+      border,
+      skinManager,
+      null,
+      nameManager,
+      new Controller(view, new KeyboardModeSwitch()),
+      strings,
+      schemesManager,
+      achievementsProfile,
+      Math.random()
+    );
     game.renderer = renderGame;
     game.input = readControllerInput;
     game.territoryImage = renderTerritoryImage;
@@ -98,21 +121,15 @@ export const createApi = (config: GameConfig, language: Language, createSkinMana
   let preparedCycles = 0;
   let prepareInterval: number;
   const runPrepareBatch = () => {
-    const {
-      prepareMult
-    } = config;
-    let {
-      prepareBatchCount
-    } = config;
+    const { prepareMult } = config;
+    let { prepareBatchCount } = config;
     while (prepareBatchCount--) {
-      result.game.update(1000 / 60 * prepareMult + Math.random());
+      result.game.update((1000 / 60) * prepareMult + Math.random());
       preparedCycles++;
     }
   };
   result.prepare = (onReady?: () => void): void => {
-    const {
-      game: game
-    } = result;
+    const { game: game } = result;
     prepareInterval = setInterval(() => {
       if (nameManager.available()) {
         runPrepareBatch();
@@ -130,7 +147,14 @@ export const createApi = (config: GameConfig, language: Language, createSkinMana
       }
     }, 0);
   };
-  result.start = (name: string, skinName: string, best: number, onGameOver?: (result: GameResult) => void, extraLife?: number, mode?: ModeId): void => {
+  result.start = (
+    name: string,
+    skinName: string,
+    best: number,
+    onGameOver?: (result: GameResult) => void,
+    extraLife?: number,
+    mode?: ModeId
+  ): void => {
     if (mode && mode !== result.game.mode.id) {
       clearInterval(prepareInterval);
       result.game.stop();

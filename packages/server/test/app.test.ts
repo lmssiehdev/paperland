@@ -1,6 +1,13 @@
 import { afterAll, expect, test } from "bun:test";
 import { treaty } from "@elysiajs/eden";
-import { JoinedMsg, JoinMsg, MsgType, UpdateMsg, decodeServerMessages, encodeMessages } from "@paperio/protocol/messages";
+import {
+  JoinedMsg,
+  JoinMsg,
+  MsgType,
+  UpdateMsg,
+  decodeServerMessages,
+  encodeMessages
+} from "@paperio/protocol/messages";
 import type { ServerMessage } from "@paperio/protocol/messages";
 import { createApp } from "../src/app";
 import type { App } from "../src/app";

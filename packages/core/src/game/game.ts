@@ -1,11 +1,31 @@
-import { TAU, METRICS_HISTORY_LENGTH, createRng, easeOutCubic, isZero, lerp, nearlyEqual, now, vecFromAngle } from "../engine/math";
+import {
+  TAU,
+  METRICS_HISTORY_LENGTH,
+  createRng,
+  easeOutCubic,
+  isZero,
+  lerp,
+  nearlyEqual,
+  now,
+  vecFromAngle
+} from "../engine/math";
 import { Polygon, circlePoints } from "../engine/polygon";
 import { Segment } from "../engine/segment";
 import { Vec2 } from "../engine/vec2";
 import { AchievementsProfile, AchievementStore } from "./achievements";
 import { Base } from "./base";
 import { City } from "./city";
-import { DEATH_CAPITAL_SURROUNDED, DEATH_EXIT_CAPTURED, DEATH_REMOVED, DEATH_SELF_INTERSECT, DEATH_SURROUNDED, DEATH_TRACK_CROSSED, DEATH_WIN, TICK_MS, TICK_MS_X2 } from "./constants";
+import {
+  DEATH_CAPITAL_SURROUNDED,
+  DEATH_EXIT_CAPTURED,
+  DEATH_REMOVED,
+  DEATH_SELF_INTERSECT,
+  DEATH_SURROUNDED,
+  DEATH_TRACK_CROSSED,
+  DEATH_WIN,
+  TICK_MS,
+  TICK_MS_X2
+} from "./constants";
 import { FloatingLabel } from "./floating-label";
 import { Particle, spawnDeathParticles } from "./particles";
 import { Bot, Player } from "./units";
@@ -116,13 +136,13 @@ export interface GameTimings {
 
 /** Server leaderboard (used for flag shields; not present in this build). */
 export interface Leaderboard {
-  countries?: { country: string; }[];
+  countries?: { country: string }[];
 }
 
 /** Optional extensions of a flag-based skin manager (not present in this build). */
 interface FlagSkinManagerExtras {
   isFlagSkinManager?: boolean;
-  shieldSkinAssets?: { get(name: string): Asset; };
+  shieldSkinAssets?: { get(name: string): Asset };
 }
 
 /** Owner of a shape that a returning track passes through. */
@@ -220,85 +240,110 @@ export interface TeamEvents {
 }
 
 export class Game {
-    /** Best score so far; assigned by api.start() right before spawnPlayer (read only for the player's result/HUD). */
-    best!: number;
-    isTest: boolean | undefined;
-    playerDeathCallback: (() => void) | undefined;
-    /** Mouse position when a key was last pressed; null once the mouse takes over, deleted in the constructor. */
-    keyboard?: { x: number; y: number; } | null;
-    tailRecovered: boolean;
-    topListChanged: boolean;
-    /** Country -> city name lookup (flag mode only; never set in this build). */
-    citiesManager: { get(country: string): string; } | undefined;
-    /** Assigned by api.ts. */
-    renderer: GameRenderer | undefined;
-    /** Assigned by api.ts; without one readInput() does nothing (headless). */
-    input: InputSource | undefined;
-    /** Assigned by api.ts; without one GameResult.image is undefined (headless). */
-    territoryImage: TerritoryImager | undefined;
-    /** Assigned by api.ts (requestAnimationFrame); the headless default waits one tick. */
-    requestFrame: FrameScheduler = callback => {
-      setTimeout(callback, TICK_MS);
-    };
-    /** Mode-specific rules (spawning, win condition). Set by createApi; classic by default. */
-    mode: GameMode = new ClassicMode();
-    rng: Rng;
-    build: number;
-    config: GameConfig;
-    language: LanguageStrings;
-    controller: ControllerHandle;
-    skinManager: SkinManager;
-    nameManager: NamePool;
-    achievementsProfile: AchievementStore;
-    grid: SpatialGrid;
-    view: ViewHandle | null;
-    border: Border;
-    player: Player | null;
-    units: Unit[];
-    mouse: Vec2;
-    direction: Vec2;
-    declare recording?: GameRecording;
-    declare replaying?: GameReplay;
-    cycle: number;
-    seed: number;
-    botSpawnLimited: boolean;
-    fakeMouse: Vec2 | null;
-    labels: FloatingLabel[];
-    notifications: GameNotification[];
-    scale: number;
-    arenaArea: number;
-    gameOverCallback: ((result: GameResult) => void) | null;
-    visible: boolean;
-    stopped: boolean;
-    debugView: boolean;
-    leaderboard: Leaderboard | null;
-    level: number;
-    bots: number[];
-    debug: boolean;
-    debugGraph: boolean;
-    spawnSuspend: number;
-    particles: Particle[];
-    metrics: FrameMetric[];
-    currMetric: FrameMetric | null;
-    schemesManager: SchemesManager;
-    last: number;
-    timeAccumulated: number;
-    looped: boolean;
-    quality: number;
-    fpsSequence: number[];
-    stats: GameStats;
-    timings: GameTimings;
-    events: GameEvents;
-    teamEvents: TeamEvents = { injects: 0, crosses: 0, crossLoops: 0, crossHome: 0, crossRetruncate: 0, repairedStarts: 0, droppedReturns: 0, splits: 0, merges: 0, mergesSkipped: 0, unifiedPoints: 0 };
-    updateParticlesId: ReturnType<typeof setInterval>;
-    /** Assigned by spawnPlayer; only read in gameOver, which needs a spawned player. */
-    startTime!: number;
-    /** Player heading quantized to 0..253; assigned at the start of every update(), before any reader runs. */
-    angle!: number;
-    /** Smoothed camera center; undefined until the first getRenderContext(). */
-    origin: Vec2 | undefined;
+  /** Best score so far; assigned by api.start() right before spawnPlayer (read only for the player's result/HUD). */
+  best!: number;
+  isTest: boolean | undefined;
+  playerDeathCallback: (() => void) | undefined;
+  /** Mouse position when a key was last pressed; null once the mouse takes over, deleted in the constructor. */
+  keyboard?: { x: number; y: number } | null;
+  tailRecovered: boolean;
+  topListChanged: boolean;
+  /** Country -> city name lookup (flag mode only; never set in this build). */
+  citiesManager: { get(country: string): string } | undefined;
+  /** Assigned by api.ts. */
+  renderer: GameRenderer | undefined;
+  /** Assigned by api.ts; without one readInput() does nothing (headless). */
+  input: InputSource | undefined;
+  /** Assigned by api.ts; without one GameResult.image is undefined (headless). */
+  territoryImage: TerritoryImager | undefined;
+  /** Assigned by api.ts (requestAnimationFrame); the headless default waits one tick. */
+  requestFrame: FrameScheduler = callback => {
+    setTimeout(callback, TICK_MS);
+  };
+  /** Mode-specific rules (spawning, win condition). Set by createApi; classic by default. */
+  mode: GameMode = new ClassicMode();
+  rng: Rng;
+  build: number;
+  config: GameConfig;
+  language: LanguageStrings;
+  controller: ControllerHandle;
+  skinManager: SkinManager;
+  nameManager: NamePool;
+  achievementsProfile: AchievementStore;
+  grid: SpatialGrid;
+  view: ViewHandle | null;
+  border: Border;
+  player: Player | null;
+  units: Unit[];
+  mouse: Vec2;
+  direction: Vec2;
+  declare recording?: GameRecording;
+  declare replaying?: GameReplay;
+  cycle: number;
+  seed: number;
+  botSpawnLimited: boolean;
+  fakeMouse: Vec2 | null;
+  labels: FloatingLabel[];
+  notifications: GameNotification[];
+  scale: number;
+  arenaArea: number;
+  gameOverCallback: ((result: GameResult) => void) | null;
+  visible: boolean;
+  stopped: boolean;
+  debugView: boolean;
+  leaderboard: Leaderboard | null;
+  level: number;
+  bots: number[];
+  debug: boolean;
+  debugGraph: boolean;
+  spawnSuspend: number;
+  particles: Particle[];
+  metrics: FrameMetric[];
+  currMetric: FrameMetric | null;
+  schemesManager: SchemesManager;
+  last: number;
+  timeAccumulated: number;
+  looped: boolean;
+  quality: number;
+  fpsSequence: number[];
+  stats: GameStats;
+  timings: GameTimings;
+  events: GameEvents;
+  teamEvents: TeamEvents = {
+    injects: 0,
+    crosses: 0,
+    crossLoops: 0,
+    crossHome: 0,
+    crossRetruncate: 0,
+    repairedStarts: 0,
+    droppedReturns: 0,
+    splits: 0,
+    merges: 0,
+    mergesSkipped: 0,
+    unifiedPoints: 0
+  };
+  updateParticlesId: ReturnType<typeof setInterval>;
+  /** Assigned by spawnPlayer; only read in gameOver, which needs a spawned player. */
+  startTime!: number;
+  /** Player heading quantized to 0..253; assigned at the start of every update(), before any reader runs. */
+  angle!: number;
+  /** Smoothed camera center; undefined until the first getRenderContext(). */
+  origin: Vec2 | undefined;
 
-  constructor(config: GameConfig, view: ViewHandle | null, space: SpatialGrid, border: Border, skinManager: SkinManager, gameOverCallback: ((result: GameResult) => void) | null, nameManager: NamePool, controller: ControllerHandle, language: LanguageStrings, schemesManager: SchemesManager, achievementsProfile: AchievementStore, seed: number) {
+  constructor(
+    config: GameConfig,
+    view: ViewHandle | null,
+    space: SpatialGrid,
+    border: Border,
+    skinManager: SkinManager,
+    gameOverCallback: ((result: GameResult) => void) | null,
+    nameManager: NamePool,
+    controller: ControllerHandle,
+    language: LanguageStrings,
+    schemesManager: SchemesManager,
+    achievementsProfile: AchievementStore,
+    seed: number
+  ) {
     this.isTest = undefined;
     this.playerDeathCallback = undefined;
     this.keyboard = undefined;
@@ -405,15 +450,9 @@ export class Game {
     this.units.push(unit);
   }
   getSpawnPosition(zone: SpawnZone, baseRadius2?: number, near: Unit | null = this.player): Vec2 | undefined {
-    const {
-      center
-    } = this.grid;
-    const {
-      radius
-    } = this.border;
-    const {
-      baseRadius
-    } = this.config;
+    const { center } = this.grid;
+    const { radius } = this.border;
+    const { baseRadius } = this.config;
     let center2 = center;
     if (zone === "near" && !near) {
       return;
@@ -432,7 +471,11 @@ export class Game {
         center2 = near!.position;
         break;
       case "bounds":
-        y = lerp(Math.max(0, radius - (baseRadius2 + baseRadius * 10)), Math.max(0, radius - (baseRadius2 + baseRadius * 4)), Math.random());
+        y = lerp(
+          Math.max(0, radius - (baseRadius2 + baseRadius * 10)),
+          Math.max(0, radius - (baseRadius2 + baseRadius * 4)),
+          Math.random()
+        );
         break;
       case "center":
         y = lerp(0, radius / 3, Math.random());
@@ -452,14 +495,18 @@ export class Game {
       if (unit.base.polygon.inside(point3)) {
         return;
       }
-      if (unit.base.polygon.simplifiedPoints.some(function (item: Vec2) {
-        return point3.distance2(item) < baseClearanceSq;
-      })) {
+      if (
+        unit.base.polygon.simplifiedPoints.some(function (item: Vec2) {
+          return point3.distance2(item) < baseClearanceSq;
+        })
+      ) {
         return;
       }
-      if (unit.track.simplifiedPoints.some(function (point: Vec2) {
-        return point3.distance2(point) < trackClearanceSq;
-      })) {
+      if (
+        unit.track.simplifiedPoints.some(function (point: Vec2) {
+          return point3.distance2(point) < trackClearanceSq;
+        })
+      ) {
         return;
       }
     }
@@ -467,12 +514,7 @@ export class Game {
   }
   /** Spawns one bot if there is room; returns it, or undefined when no bot was spawned. */
   spawnBot(zone: SpawnZone, { leader }: SpawnBotOptions = {}): Bot | undefined {
-    const {
-      baseCount,
-      baseRadius,
-      spawnTimeout,
-      botsCount
-    } = this.config;
+    const { baseCount, baseRadius, spawnTimeout, botsCount } = this.config;
     if (this.botSpawnLimited) {
       if (this.spawnSuspend > 0) {
         return;
@@ -493,7 +535,12 @@ export class Game {
       return;
     }
     const botCountsByType = [0, 0, 0, 0];
-    const typeRotations = [[1, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0], [1, 1, 2, 2, 2, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0], [1, 1, 2, 2, 2, 2, 3, 3, 0, 0, 0, 0, 0, 0, 0], [1, 1, 1, 2, 2, 2, 2, 2, 3, 0, 0, 0, 0, 0, 0]];
+    const typeRotations = [
+      [1, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 2, 2, 2, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 2, 2, 2, 2, 3, 3, 0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 1, 2, 2, 2, 2, 2, 3, 0, 0, 0, 0, 0, 0]
+    ];
     this.units.forEach(unit => {
       if (unit !== this.player) {
         // Every non-player unit is a Bot, and Bot always sets `type`.
@@ -508,7 +555,15 @@ export class Game {
     }
     const type = typeRotation[rotationIndex];
     const name = this.nameManager.get();
-    const bot = new Bot(this, type, name, spawnPosition, leader ? leader.base : circlePoints(spawnPosition, baseCount, baseRadius), undefined, this.schemesManager);
+    const bot = new Bot(
+      this,
+      type,
+      name,
+      spawnPosition,
+      leader ? leader.base : circlePoints(spawnPosition, baseCount, baseRadius),
+      undefined,
+      this.schemesManager
+    );
     if (leader && leader.team) {
       leader.team.add(bot);
       bot.percent = leader.percent;
@@ -520,13 +575,7 @@ export class Game {
     return bot;
   }
   spawnPlayer(name: string, skinName: string, extraLife: number) {
-    const {
-      baseCount,
-      baseRadius,
-      maxScale,
-      minScale,
-      botsCount
-    } = this.config;
+    const { baseCount, baseRadius, maxScale, minScale, botsCount } = this.config;
     const removeMiddleUnit = () => {
       if (this.units.length) {
         this.kill(this.units[~~(this.units.length / 2)], undefined, DEATH_REMOVED);
@@ -535,12 +584,19 @@ export class Game {
     // Team modes: the player spawns on a teammate standing in its base and shares that base.
     const placement = this.mode.placePlayer?.(this);
     if (placement) {
-      const player = new Player(this, name || this.language.defaultPlayerName, placement.position, placement.leader.base, undefined, this.schemesManager);
+      const player = new Player(
+        this,
+        name || this.language.defaultPlayerName,
+        placement.position,
+        placement.leader.base,
+        undefined,
+        this.schemesManager
+      );
       placement.leader.team?.add(player);
       player.percent = placement.leader.percent;
       this.addPlayer(player);
       this.mode.onPlayerSpawned(this, player);
-      this.scale = maxScale - ~~(player.base.area / this.arenaArea * 20) / 20 * (maxScale - minScale);
+      this.scale = maxScale - (~~((player.base.area / this.arenaArea) * 20) / 20) * (maxScale - minScale);
       this.startTime = now();
       return;
     }
@@ -549,7 +605,7 @@ export class Game {
     }
     let position;
     let attempts = 0;
-    var baseRadius2 = extraLife ? Math.sqrt(this.arenaArea * extraLife / Math.PI) : baseRadius;
+    var baseRadius2 = extraLife ? Math.sqrt((this.arenaArea * extraLife) / Math.PI) : baseRadius;
     while (!position) {
       if (attempts++ > 50) {
         attempts = 0;
@@ -557,12 +613,19 @@ export class Game {
       }
       position = this.getSpawnPosition("random", baseRadius2);
     }
-    const player = new Player(this, name || this.language.defaultPlayerName, position, circlePoints(position, baseCount, baseRadius2), undefined, this.schemesManager);
+    const player = new Player(
+      this,
+      name || this.language.defaultPlayerName,
+      position,
+      circlePoints(position, baseCount, baseRadius2),
+      undefined,
+      this.schemesManager
+    );
     const playerSkin = this.skinManager.getPlayerSkin(this.mode.playerSkins ? skinName : "");
     player.setSkin(playerSkin);
     this.addPlayer(player);
     this.mode.onPlayerSpawned(this, player);
-    this.scale = maxScale - ~~(player.base.area / this.arenaArea * 20) / 20 * (maxScale - minScale);
+    this.scale = maxScale - (~~((player.base.area / this.arenaArea) * 20) / 20) * (maxScale - minScale);
     this.startTime = now();
   }
   gameOver(reason: DeathReason) {
@@ -594,25 +657,27 @@ export class Game {
       if (this.playerDeathCallback) {
         this.playerDeathCallback();
       }
-      setTimeout(() => {
-        if (reason === DEATH_WIN) {
-          this.kill(player, undefined, reason);
-        }
-        this.player = null;
-        if (this.gameOverCallback) {
-          this.gameOverCallback(result);
-        }
-      }, reason === DEATH_TRACK_CROSSED || reason === DEATH_EXIT_CAPTURED || reason === DEATH_SURROUNDED ? this.config.enemyKillDelay : this.config.selfKillDelay);
+      setTimeout(
+        () => {
+          if (reason === DEATH_WIN) {
+            this.kill(player, undefined, reason);
+          }
+          this.player = null;
+          if (this.gameOverCallback) {
+            this.gameOverCallback(result);
+          }
+        },
+        reason === DEATH_TRACK_CROSSED || reason === DEATH_EXIT_CAPTURED || reason === DEATH_SURROUNDED
+          ? this.config.enemyKillDelay
+          : this.config.selfKillDelay
+      );
     }
   }
   checkBaseCommits() {
     this.units.forEach(unit => {
       const polygon = unit.base.polygon;
       polygon.segments.forEach(segment => {
-        const {
-          start,
-          end
-        } = segment;
+        const { start, end } = segment;
         const segment2 = start.segments.find(segment2 => segment2 === segment);
         const segment3 = end.segments.find(segment2 => segment2 === segment);
         if (!segment2 || !segment3) {
@@ -626,7 +691,17 @@ export class Game {
       return;
     }
     if (this.isTest) {
-      const reasonNames = ["выигрыш", "самопересечение", "убит об стену", "убит пересечением трека", "убит захватом точки выхода", "убит окружением", "удален системой", "убит откружением столицы", "убит разделением со столицей"];
+      const reasonNames = [
+        "выигрыш",
+        "самопересечение",
+        "убит об стену",
+        "убит пересечением трека",
+        "убит захватом точки выхода",
+        "убит окружением",
+        "удален системой",
+        "убит откружением столицы",
+        "убит разделением со столицей"
+      ];
       console.log(unit.name + " убит" + (killer ? " " + killer.name : "") + " (" + reasonNames[reason] + ")");
     }
     this.events.kills++;
@@ -680,24 +755,22 @@ export class Game {
     }
   }
   getMovement(dt: number, unit: Unit) {
-    const {
-      unitSpeed
-    } = this.config;
+    const { unitSpeed } = this.config;
     const result: Segment[] = [];
     const point = unit.movement();
     if (!point) {
       return result;
     }
-    point.mulScalar(unitSpeed * dt / 1000);
+    point.mulScalar((unitSpeed * dt) / 1000);
     const point2 = vecFromAngle(unit.direction);
     let angle = Math.atan2(point2.x * point.y - point.x * point2.y, point2.dot(point));
     point2.release();
-    const maxTurn = TAU * dt / 1000 / (unit.smoothness || 1);
+    const maxTurn = (TAU * dt) / 1000 / (unit.smoothness || 1);
     if (Math.abs(angle) > maxTurn) {
       angle = maxTurn * Math.sign(angle);
     }
     unit.direction += angle;
-    const step = vecFromAngle(unit.direction).mulScalar(unitSpeed * dt / 1000);
+    const step = vecFromAngle(unit.direction).mulScalar((unitSpeed * dt) / 1000);
     let segment = new Segment(unit.position, unit.position.clone().add(step));
     step.release();
     let intersections = this.border.intersections(segment);
@@ -711,10 +784,7 @@ export class Game {
       } else {
         hit = intersections[0];
       }
-      const {
-        segment: segment2,
-        point: point
-      } = hit;
+      const { segment: segment2, point: point } = hit;
       const vector2 = segment2.vector;
       let angle = Math.atan2(vector.x * vector2.y - vector2.x * vector.y, vector.dot(vector2));
       if (angle < 0) {
@@ -726,7 +796,9 @@ export class Game {
       }
       segment = new Segment(point, segment.end);
       const vector3 = segment.vector;
-      const slide = Vec2.clone(vector2).normalize().mulScalar(vector3.dot(vector2) / vector2.magnitude());
+      const slide = Vec2.clone(vector2)
+        .normalize()
+        .mulScalar(vector3.dot(vector2) / vector2.magnitude());
       segment = new Segment(point, point.clone().add(slide));
       slide.release();
       intersections = this.border.intersections(segment);
@@ -766,7 +838,9 @@ export class Game {
   recoverTail() {
     let player = this.player;
     if (player && player.insideBase == player.base && !player.base.polygon.inside(player.position)) {
-      let nearestSegment = player.base.polygon.segments.reduce((acc, segment) => acc.start.distance2(player.position) < segment.start.distance2(player.position) ? acc : segment);
+      let nearestSegment = player.base.polygon.segments.reduce((acc, segment) =>
+        acc.start.distance2(player.position) < segment.start.distance2(player.position) ? acc : segment
+      );
       let delta = nearestSegment.start.clone().sub(player.position);
       let len = delta.magnitude();
       player.position = delta.mulScalar(1 + 1 / len).add(player.position);
@@ -779,14 +853,7 @@ export class Game {
     }
   }
   update(dt?: number): boolean {
-    const {
-      trackWidth,
-      unitSpeed,
-      baseHeight,
-      maxScale,
-      minScale,
-      observerScale
-    } = this.config;
+    const { trackWidth, unitSpeed, baseHeight, maxScale, minScale, observerScale } = this.config;
     if (this.stopped) {
       return false;
     }
@@ -799,7 +866,7 @@ export class Game {
     if (!this.isTest) {
       this.readInput(dt);
     }
-    this.angle = Math.round(Math.atan2(this.direction.y, this.direction.x) / Math.PI * 127 + 254) % 254;
+    this.angle = Math.round((Math.atan2(this.direction.y, this.direction.x) / Math.PI) * 127 + 254) % 254;
     console.assert(this.angle >= 0 && this.angle < 256);
     if (this.replaying) {
       if (!this.replaying.read()) {
@@ -812,9 +879,7 @@ export class Game {
       this.recording.write();
     }
     this.recoverTail();
-    const {
-      player
-    } = this;
+    const { player } = this;
     this.timings.aiStartTime = now();
     this.units.forEach(unit => unit.update(dt));
     this.timings.aiEndTime = now();
@@ -827,7 +892,7 @@ export class Game {
       unit.percent = percent;
       unit.bestPercent = Math.max(unit.bestPercent, percent);
       unit.scale = lerp(maxScale, minScale, easeOutCubic(~~(percent * 20) / 20));
-      unit.viewRange = Math.sqrt(2455780) / 2 / unit.scale * 0.8;
+      unit.viewRange = (Math.sqrt(2455780) / 2 / unit.scale) * 0.8;
       if (unit.schemes) {
         unit.schemes.update(dt);
       }
@@ -836,13 +901,15 @@ export class Game {
         const vec22 = new Vec2(0, -10);
         const vec23 = new Vec2(0, -10);
         unit.labels.forEach(label => {
-          this.labels.push(new FloatingLabel(label.text, label.color, label.unit, vec2, vec22, label.time, label.fading));
+          this.labels.push(
+            new FloatingLabel(label.text, label.color, label.unit, vec2, vec22, label.time, label.fading)
+          );
           vec2 = vec2.clone().add(vec23);
         });
         unit.labels = [];
       }
     });
-    this.units.sort((a, b) => b.schemes && a.schemes ? b.schemes.scores() - a.schemes.scores() : 0);
+    this.units.sort((a, b) => (b.schemes && a.schemes ? b.schemes.scores() - a.schemes.scores() : 0));
     this.units.forEach((unit, index) => {
       unit.rank = index + 1;
     });
@@ -871,16 +938,8 @@ export class Game {
     this.units.forEach(unit => {
       if (unit instanceof Bot) {
         const skill = Math.min(1, Math.max(0, this.level + unit.jitter));
-        let {
-          botAggroMin,
-          botAggroMax,
-          botDefMin,
-          botDefMax,
-          botGreedMin,
-          botGreedMax,
-          botSafetyMin,
-          botSafetyMax
-        } = this.config;
+        let { botAggroMin, botAggroMax, botDefMin, botDefMax, botGreedMin, botGreedMax, botSafetyMin, botSafetyMax } =
+          this.config;
         switch (unit.type) {
           case 1:
             botAggroMin *= 1.25;
@@ -938,7 +997,7 @@ export class Game {
     }
     const targetScale = player ? player.scale : observerScale;
     const scaleDelta = targetScale - this.scale;
-    this.scale += scaleDelta * dt / 400;
+    this.scale += (scaleDelta * dt) / 400;
     if (player && this.mode.hasWon(this, player)) {
       player.percent = 1;
       this.gameOver(DEATH_WIN);
@@ -950,10 +1009,7 @@ export class Game {
     return true;
   }
   updateMetrics(frameTime: number) {
-    const {
-      stats,
-      timings
-    } = this;
+    const { stats, timings } = this;
     const metric = {
       updateTime: timings.updateEndTime - timings.updateStartTime,
       renderTime: timings.renderEndTime - timings.renderStartTime,
@@ -1010,9 +1066,7 @@ export class Game {
   }
   changeShields() {
     // Only called by setLeaderboard right after it assigns a non-null leaderboard.
-    const {
-      countries: countries
-    } = this.leaderboard!;
+    const { countries: countries } = this.leaderboard!;
     if (countries) {
       const goldCountry = countries[0] && countries[0].country;
       const silverCountry = countries[1] && countries[1].country;
@@ -1035,9 +1089,11 @@ export class Game {
           }
           if (asset.name !== shieldName) {
             // TODO(types): Skin has no removeAsset (flag/shield mode only, unreachable in this build)
-            (unit.skin as Skin & { removeAsset(asset: Asset): void; }).removeAsset(asset);
+            (unit.skin as Skin & { removeAsset(asset: Asset): void }).removeAsset(asset);
             if ("shieldSkinAssets" in this.skinManager) {
-              unit.skin.addAsset((this.skinManager as SkinManager & FlagSkinManagerExtras).shieldSkinAssets!.get(shieldName));
+              unit.skin.addAsset(
+                (this.skinManager as SkinManager & FlagSkinManagerExtras).shieldSkinAssets!.get(shieldName)
+              );
             }
           }
         }
@@ -1073,9 +1129,7 @@ export class Game {
     }
     this.events.returns++;
     const polylineCopy = trail.polyline.clone();
-    const {
-      base: base
-    } = returningUnit;
+    const { base: base } = returningUnit;
     const index = base.polygon.segments.findIndex(segment => segment.start === polylineCopy.start);
     const index2 = base.polygon.segments.findIndex(segment => segment.start === polylineCopy.end);
     if (returningUnit.team) {
@@ -1113,36 +1167,29 @@ export class Game {
     }
     base.area += captured.area();
     base.polygon.calcPath();
-    this.units.filter(unit => unit !== returningUnit && !areAllies(unit, returningUnit)).forEach(item => {
-      if (!item.death) {
-        if (item.insideBase === item.base && captured.inside(item.position)) {
-          this.kill(item, returningUnit, DEATH_SURROUNDED);
+    this.units
+      .filter(unit => unit !== returningUnit && !areAllies(unit, returningUnit))
+      .forEach(item => {
+        if (!item.death) {
+          if (item.insideBase === item.base && captured.inside(item.position)) {
+            this.kill(item, returningUnit, DEATH_SURROUNDED);
+          }
+          if (item.track.polyline.start && captured.inside(item.track.polyline.start)) {
+            this.kill(item, returningUnit, DEATH_EXIT_CAPTURED);
+          }
+          if (item.cities && item.cities[0] && captured.inside(item.cities[0].position)) {
+            this.kill(item, returningUnit, DEATH_CAPITAL_SURROUNDED);
+          }
         }
-        if (item.track.polyline.start && captured.inside(item.track.polyline.start)) {
-          this.kill(item, returningUnit, DEATH_EXIT_CAPTURED);
-        }
-        if (item.cities && item.cities[0] && captured.inside(item.cities[0].position)) {
-          this.kill(item, returningUnit, DEATH_CAPITAL_SURROUNDED);
-        }
-      }
-    });
+      });
     let openContacts: TrackContact[] = [];
     const segments = trail.polyline.segments;
     const count = segments.length;
     const victims: CaptureVictim[] = [];
     const friendlyVisits = new Map<Base, FriendlyVisit[]>();
     const cutBase = (cut: BaseCut): void => {
-      const {
-        owner,
-        startT,
-        endT,
-        startPoint,
-        endPoint
-      } = cut;
-      let {
-        enter,
-        leave
-      }: { enter: Segment | undefined; leave: Segment | undefined; } = cut;
+      const { owner, startT, endT, startPoint, endPoint } = cut;
+      let { enter, leave }: { enter: Segment | undefined; leave: Segment | undefined } = cut;
       if (enter.shape !== owner.polygon) {
         enter = owner.polygon.segments.find(segment => segment.start === startPoint);
       }
@@ -1170,7 +1217,11 @@ export class Game {
       let lost: Polygon;
       // Each host is on the side of the chord where it stands (home) or where its trail starts (outside).
       // Classic has one host, so exactly one side is non-empty.
-      const hostsCut = owner.hosts.filter(host => host.insideBase === host.base ? polygon.inside(host.position) : polygon.inside(host.track.polyline.start || host.position));
+      const hostsCut = owner.hosts.filter(host =>
+        host.insideBase === host.base
+          ? polygon.inside(host.position)
+          : polygon.inside(host.track.polyline.start || host.position)
+      );
       const hostsKept = owner.hosts.filter(host => !hostsCut.includes(host));
       if (hostsCut.length && hostsKept.length) {
         this.splitBase(owner, removed2, hostsCut, points, hostsKept);
@@ -1199,7 +1250,7 @@ export class Game {
       // Team modes walk the trail as the original teams build does (visitPoint, L5481-5688): entry into and
       // exit from other bases are re-tested with crossing signs at every trail point, so a trail that leaves
       // my base straight into an adjacent base (no recorded entry) still cuts it.
-      let open: { owner: Base; entryPoint: Vec2; entryIndex: number; } | null = null;
+      let open: { owner: Base; entryPoint: Vec2; entryIndex: number } | null = null;
       for (let i = 0; i <= count; i++) {
         const nextSegment = segments[i];
         const prevSegment = segments[i - 1];
@@ -1219,19 +1270,32 @@ export class Game {
             continue;
           }
           if (open) {
-            const visit: { owner: Base; entryPoint: Vec2; entryIndex: number; } = open;
+            const visit: { owner: Base; entryPoint: Vec2; entryIndex: number } = open;
             const ownerSegments = byOwner.get(visit.owner);
             if (ownerSegments && !(visit.owner.znSum(segment, ownerSegments) < 0)) {
               open = null;
               if (areAllies(visit.owner.unit, returningUnit)) {
                 const visits = friendlyVisits.get(visit.owner) ?? [];
-                visits.push({ entryPoint: visit.entryPoint, entryIndex: visit.entryIndex, leavePoint: point, leaveIndex: i });
+                visits.push({
+                  entryPoint: visit.entryPoint,
+                  entryIndex: visit.entryIndex,
+                  leavePoint: point,
+                  leaveIndex: i
+                });
                 friendlyVisits.set(visit.owner, visits);
               } else {
                 const enter = visit.owner.polygon.segments.find(segment2 => segment2.start === visit.entryPoint);
                 const leave = visit.owner.polygon.segments.find(segment2 => segment2.start === point);
                 if (enter && leave) {
-                  cutBase({ owner: visit.owner, enter, startPoint: visit.entryPoint, startT: visit.entryIndex, leave, endPoint: point, endT: i });
+                  cutBase({
+                    owner: visit.owner,
+                    enter,
+                    startPoint: visit.entryPoint,
+                    startT: visit.entryIndex,
+                    leave,
+                    endPoint: point,
+                    endT: i
+                  });
                 }
               }
             }
@@ -1250,7 +1314,13 @@ export class Game {
       const point = i === count ? segments[i - 1].end : segments[i].start;
       // Segments held by a point are committed, so their shape is set.
       // In team modes a trail vertex can be shared with a teammate's trail; only bases are contacts.
-      const segments2 = point.segments.filter(segment => segment.shape!.owner !== returningUnit.track && segment.shape!.owner !== returningUnit.base && segment.start === point && (!returningUnit.team || segment.shape!.owner instanceof Base));
+      const segments2 = point.segments.filter(
+        segment =>
+          segment.shape!.owner !== returningUnit.track &&
+          segment.shape!.owner !== returningUnit.base &&
+          segment.start === point &&
+          (!returningUnit.team || segment.shape!.owner instanceof Base)
+      );
       if (segments2.length) {
         let contacts = segments2.map((item): TrackContact => ({
           owner: item.shape!.owner,
@@ -1264,16 +1334,20 @@ export class Game {
             return false;
           }
           openContacts = contacts.filter(item => {
-            const intersections = intersection.intersections.filter((intersection: TrackBaseCrossing) => intersection.base === item.owner);
+            const intersections = intersection.intersections.filter(
+              (intersection: TrackBaseCrossing) => intersection.base === item.owner
+            );
             if (!intersections.length) {
               return false;
             }
             return intersections[intersections.length - 1].enter;
           });
         } else {
-          let matching = openContacts.filter(item => contacts.some(item2 => {
-            return item2.owner === item.owner;
-          }));
+          let matching = openContacts.filter(item =>
+            contacts.some(item2 => {
+              return item2.owner === item.owner;
+            })
+          );
           if (matching.length) {
             const entryContact = matching[0];
             // `matching` only keeps open contacts whose owner also appears in `contacts`.
@@ -1304,7 +1378,11 @@ export class Game {
             }
             const intersection = trail.intersections.find(intersection => intersection.point.equal(point));
             // The original assumed a crossing is always recorded here and threw otherwise.
-            const intersections = intersection ? intersection.intersections.filter((intersection: TrackBaseCrossing) => intersection.base === entryContact.owner) : [];
+            const intersections = intersection
+              ? intersection.intersections.filter(
+                  (intersection: TrackBaseCrossing) => intersection.base === entryContact.owner
+                )
+              : [];
             if (intersections.length === 1 || intersections.at(-1)?.enter === false) {
               contacts = contacts.filter(item => item.owner !== entryContact.owner);
             }
@@ -1379,10 +1457,18 @@ export class Game {
     const skip = () => {
       this.teamEvents.mergesSkipped++;
     };
-    interface Mark { point: Vec2; ownerIndex: number; trackIndex: number; entry: boolean; }
+    interface Mark {
+      point: Vec2;
+      ownerIndex: number;
+      trackIndex: number;
+      entry: boolean;
+    }
     const marks: Mark[] = [];
     const myIndexes: number[] = [];
-    const ownerIndexes = visits.map(visit => [owner.polygon.findSegment(visit.entryPoint), owner.polygon.findSegment(visit.leavePoint)]);
+    const ownerIndexes = visits.map(visit => [
+      owner.polygon.findSegment(visit.entryPoint),
+      owner.polygon.findSegment(visit.leavePoint)
+    ]);
     for (let i = 0; i < visits.length; i++) {
       const visit = visits[i];
       const [entryOwnerIndex, leaveOwnerIndex] = ownerIndexes[i];
@@ -1484,7 +1570,12 @@ export class Game {
     // Accept only an outline that contains both old outlines (so it is their union, no overlap left behind).
     const newArea = base.polygon.area();
     const contains = (polygon: Polygon) => polygon.segments.every(segment => base.polygon.inside(segment.start));
-    if (newArea + 1e-6 < Math.max(oldArea, owner.area) || newArea > oldArea + owner.area + 1 || !contains(owner.polygon) || !removed.every(segment => base.polygon.inside(segment.start))) {
+    if (
+      newArea + 1e-6 < Math.max(oldArea, owner.area) ||
+      newArea > oldArea + owner.area + 1 ||
+      !contains(owner.polygon) ||
+      !removed.every(segment => base.polygon.inside(segment.start))
+    ) {
       base.polygon.segments.splice(spliceFrom, mergedSegments.length, ...removed);
       return skip();
     }
@@ -1526,7 +1617,7 @@ export class Game {
     const { base } = mate;
     const { polyline } = mate.track;
     const points = polyline.points();
-    const contacts: { point: Vec2; index: number; segments: Segment[]; }[] = [];
+    const contacts: { point: Vec2; index: number; segments: Segment[] }[] = [];
     points.forEach((point, index) => {
       const baseSegments = point.segments.filter(segment => segment.shape === base.polygon);
       if (baseSegments.length) {
@@ -1569,7 +1660,10 @@ export class Game {
       sub.start = points[from];
       sub.end = points[to];
       const loopPoints = points.slice(from, to + 1);
-      return { polyline: sub, intersections: mate.track.intersections.filter(intersection => loopPoints.includes(intersection.point)) };
+      return {
+        polyline: sub,
+        intersections: mate.track.intersections.filter(intersection => loopPoints.includes(intersection.point))
+      };
     });
     // Truncate BEFORE replaying (as the original): a nested handleCross on this mate (reached through the
     // replayed captures) then only sees the trail beyond the outline, not the loops being captured.
@@ -1690,9 +1784,7 @@ export class Game {
         distanceGroups.forEach(group => {
           const shapes: Shape[] = [];
           group.forEach(intersection => {
-            const {
-              shape
-            } = intersection.segment;
+            const { shape } = intersection.segment;
             if (shape && shapes.indexOf(shape) === -1) {
               shapes.push(shape);
             }
@@ -1736,9 +1828,7 @@ export class Game {
         if (unit.death) {
           return;
         }
-        const {
-          end
-        } = step;
+        const { end } = step;
         if (unit.insideBase !== unit.base) {
           unit.track.add(end);
         }
@@ -1804,7 +1894,12 @@ export class Game {
       } else if (this.visible) {
         const maxStep = TICK_MS * 2;
         while (frameTime > 0) {
-          const stepTime = frameTime <= maxStep ? frameTime : frameTime < maxStep * 2 ? frameTime / 2 + Math.random() : maxStep + Math.random();
+          const stepTime =
+            frameTime <= maxStep
+              ? frameTime
+              : frameTime < maxStep * 2
+                ? frameTime / 2 + Math.random()
+                : maxStep + Math.random();
           this.update(stepTime);
           frameTime -= stepTime;
         }

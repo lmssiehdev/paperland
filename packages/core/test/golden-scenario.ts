@@ -11,7 +11,13 @@ export const BROWSER_GOLDEN_HASH = "11a98dae6745f942";
 
 export const mulberry32 = (seed: number) => {
   let s = seed;
-  return () => { s |= 0; s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  return () => {
+    s |= 0;
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 };
 
 export interface GoldenResult {
@@ -21,13 +27,27 @@ export interface GoldenResult {
 }
 
 /** Runs the scenario with Math.random seeded (restored afterwards). Hash `checkpoints.join("\n")` with sha256. */
-export function runGoldenScenario(setup: Pick<HeadlessGameOptions, "skinNames" | "language">, ticks = 4000): GoldenResult {
+export function runGoldenScenario(
+  setup: Pick<HeadlessGameOptions, "skinNames" | "language">,
+  ticks = 4000
+): GoldenResult {
   const realRandom = Math.random;
   Math.random = mulberry32(12345);
   try {
     const game = createHeadlessGame(setup);
     game.debugView = true;
-    const snap = () => game.units.map((u: Unit) => [u.position.x.toFixed(6), u.position.y.toFixed(6), u.percent.toFixed(8), u.fsm?.state ?? "p", u.base.polygon.segments.length].join(",")).join(";") + `|kills:${game.events.kills}|cycle:${game.cycle}`;
+    const snap = () =>
+      game.units
+        .map((u: Unit) =>
+          [
+            u.position.x.toFixed(6),
+            u.position.y.toFixed(6),
+            u.percent.toFixed(8),
+            u.fsm?.state ?? "p",
+            u.base.polygon.segments.length
+          ].join(",")
+        )
+        .join(";") + `|kills:${game.events.kills}|cycle:${game.cycle}`;
     const checkpoints: string[] = [];
     for (let i = 0; i < ticks; i++) {
       if (i === 1000) game.spawnPlayer("golden", "", 0);

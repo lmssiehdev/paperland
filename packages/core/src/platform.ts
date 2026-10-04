@@ -19,7 +19,11 @@ export interface Platform {
 }
 
 // Assertion, not annotation: in the client PathHandle is widened to Path2D (see handles.ts).
-const headlessPath = { moveTo(_x: number, _y: number) {}, lineTo(_x: number, _y: number) {}, closePath() {} } as PathHandle;
+const headlessPath = {
+  moveTo(_x: number, _y: number) {},
+  lineTo(_x: number, _y: number) {},
+  closePath() {}
+} as PathHandle;
 const memoryStorage = new Map<string, object>();
 
 export const platform: Platform = {
@@ -29,8 +33,8 @@ export const platform: Platform = {
     getJSON: <T>(key: string) => memoryStorage.get(key) as T | undefined,
     set: (key, value) => {
       memoryStorage.set(key, value);
-    },
-  },
+    }
+  }
 };
 
 export const setPlatform = (overrides: Partial<Platform>): void => {

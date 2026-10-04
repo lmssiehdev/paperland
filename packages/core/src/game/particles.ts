@@ -16,19 +16,30 @@ type HomingParticle = Omit<Particle, "velocity" | "acceleration"> & {
 };
 
 export class Particle {
-    target: Unit | null;
-    color: ParticleColor;
-    position: Vec2;
-    velocity: Vec2;
-    acceleration: Vec2 | null;
-    rotate: number;
-    scale: number;
-    vscale: number;
-    rotation: number;
-    time: number;
-    fn: ((particle: Particle) => void) | undefined;
+  target: Unit | null;
+  color: ParticleColor;
+  position: Vec2;
+  velocity: Vec2;
+  acceleration: Vec2 | null;
+  rotate: number;
+  scale: number;
+  vscale: number;
+  rotation: number;
+  time: number;
+  fn: ((particle: Particle) => void) | undefined;
 
-  constructor(target: Unit | null, color: ParticleColor, position: Vec2, velocity: Vec2, acceleration: Vec2 | null, rotate: number, scale: number, vscale: number, time: number, fn?: (particle: Particle) => void) {
+  constructor(
+    target: Unit | null,
+    color: ParticleColor,
+    position: Vec2,
+    velocity: Vec2,
+    acceleration: Vec2 | null,
+    rotate: number,
+    scale: number,
+    vscale: number,
+    time: number,
+    fn?: (particle: Particle) => void
+  ) {
     this.target = target;
     this.color = color;
     this.position = position;
@@ -63,20 +74,40 @@ export class Particle {
   static nom(unit: Unit, segment: Segment, trackWidth: number) {
     const sign = Math.sign(Math.random() - 0.5);
     const trackWidthPx = unit.skin.container.maxScale * trackWidth;
-    const {
-      unitSpeed,
-      baseHeight
-    } = unit.game.config;
-    const velocity = segment.vector.clone().normalize().rotate(sign * Math.random() * (Math.PI / 30)).mulScalar(unitSpeed * (1 + Math.random()));
-    const sideOffset = segment.vector.clone().rotate(Math.PI / 2).normalize().mulScalar(sign * Math.random() * trackWidthPx / 2);
-    const forwardOffset = segment.vector.clone().normalize().mulScalar(trackWidthPx / 2);
-    const acceleration = segment.vector.clone().normalize().mulScalar(unitSpeed * -6).rotate(sign * Math.random() * (Math.PI / 10));
+    const { unitSpeed, baseHeight } = unit.game.config;
+    const velocity = segment.vector
+      .clone()
+      .normalize()
+      .rotate(sign * Math.random() * (Math.PI / 30))
+      .mulScalar(unitSpeed * (1 + Math.random()));
+    const sideOffset = segment.vector
+      .clone()
+      .rotate(Math.PI / 2)
+      .normalize()
+      .mulScalar((sign * Math.random() * trackWidthPx) / 2);
+    const forwardOffset = segment.vector
+      .clone()
+      .normalize()
+      .mulScalar(trackWidthPx / 2);
+    const acceleration = segment.vector
+      .clone()
+      .normalize()
+      .mulScalar(unitSpeed * -6)
+      .rotate(sign * Math.random() * (Math.PI / 10));
     // Game.handleUnitMovements only calls nom() while unit.insideBase is set.
-    const {
-      particles
-    } = unit.insideBase!.unit.skin.colors;
+    const { particles } = unit.insideBase!.unit.skin.colors;
     const scale = 0.75 + Math.random() * 0.5;
-    const particle = new Particle(null, particles[~~(Math.random() * particles.length)], segment.start.clone().add(sideOffset).add(forwardOffset).add(new Vec2(0, -baseHeight)), velocity, acceleration, Math.PI + Math.random() * Math.PI, scale, scale * -2, 300);
+    const particle = new Particle(
+      null,
+      particles[~~(Math.random() * particles.length)],
+      segment.start.clone().add(sideOffset).add(forwardOffset).add(new Vec2(0, -baseHeight)),
+      velocity,
+      acceleration,
+      Math.PI + Math.random() * Math.PI,
+      scale,
+      scale * -2,
+      300
+    );
     return particle;
   }
 }
@@ -95,30 +126,45 @@ export function spawnDeathParticles(unit: Unit, collector: Unit | null, segments
       distanceSinceLast += segment.vector.magnitude();
       if (distanceSinceLast > 5) {
         distanceSinceLast = 0;
-        const velocity = segment.vector.clone().normalize().rotate(Math.sign(Math.random() - 0.5) * Math.PI / 2).mulScalar(25 + Math.random() * 100);
+        const velocity = segment.vector
+          .clone()
+          .normalize()
+          .rotate((Math.sign(Math.random() - 0.5) * Math.PI) / 2)
+          .mulScalar(25 + Math.random() * 100);
         if (Math.random() > 0.25) {
           velocity.mulScalar(0.1);
         }
         const scale = (transferScore ? 3 : 1) * (1 + Math.random() * 0.5);
         const time = 500 + Math.random() * 500;
         const vscale = -scale * 0.7 * (1000 / time);
-        const particle = new Particle(null, unit.skin.colors.particles[~~(Math.random() * unit.skin.colors.particles.length)], segment.start.clone(), velocity, null, Math.PI * 2 * (1 + Math.random()) * Math.sign(Math.random() - 0.5 || 1), scale, vscale, time, (particle: Particle) => {
-          if (collector) {
-            const homing: HomingParticle = particle as unknown as HomingParticle;
-            homing.target = collector;
-            homing.time = 1;
-            homing.velocity = particle.velocity.magnitude();
-            homing.acceleration = (1.5 + Math.random() * 0.5) * game.config.unitSpeed;
-            homing.fn = () => {
-              if (transferScore) {
-                // The manager's current scheme always exists (bug: its accumulator is never initialized, see FINDINGS #7).
-                collector.schemes.getScheme()!.accumulator += scorePerParticle;
-              }
-            };
-            homing.vscale = 0;
-            homing.scale = 1;
+        const particle = new Particle(
+          null,
+          unit.skin.colors.particles[~~(Math.random() * unit.skin.colors.particles.length)],
+          segment.start.clone(),
+          velocity,
+          null,
+          Math.PI * 2 * (1 + Math.random()) * Math.sign(Math.random() - 0.5 || 1),
+          scale,
+          vscale,
+          time,
+          (particle: Particle) => {
+            if (collector) {
+              const homing: HomingParticle = particle as unknown as HomingParticle;
+              homing.target = collector;
+              homing.time = 1;
+              homing.velocity = particle.velocity.magnitude();
+              homing.acceleration = (1.5 + Math.random() * 0.5) * game.config.unitSpeed;
+              homing.fn = () => {
+                if (transferScore) {
+                  // The manager's current scheme always exists (bug: its accumulator is never initialized, see FINDINGS #7).
+                  collector.schemes.getScheme()!.accumulator += scorePerParticle;
+                }
+              };
+              homing.vscale = 0;
+              homing.scale = 1;
+            }
           }
-        });
+        );
         game.particles.push(particle);
         particleCount++;
       }

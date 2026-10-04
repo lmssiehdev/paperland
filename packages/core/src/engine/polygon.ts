@@ -34,22 +34,20 @@ const rayCrossingSign = (point: Vec2, point2: Vec2, point3: Vec2) => {
 };
 /** Closed ring of segments (a unit's territory), with a simplified outline, bounds and Path2D. */
 export class Polygon {
-    segments: Segment[];
-    /** Outline vertices thinned to roughly CELL_RADIUS spacing; used for bounds. */
-    simplifiedPoints: Vec2[];
-    owner: Base | null;
-    /** Assigned by this.updateBounds() in the constructor (TS can't see through the call). */
-    bounds!: Bounds;
-    /** Assigned by calcPath(), which Base and Game call right after building every polygon that gets drawn. */
-    path!: PathHandle;
+  segments: Segment[];
+  /** Outline vertices thinned to roughly CELL_RADIUS spacing; used for bounds. */
+  simplifiedPoints: Vec2[];
+  owner: Base | null;
+  /** Assigned by this.updateBounds() in the constructor (TS can't see through the call). */
+  bounds!: Bounds;
+  /** Assigned by calcPath(), which Base and Game call right after building every polygon that gets drawn. */
+  path!: PathHandle;
 
   constructor(points: Vec2[]) {
     this.segments = [];
     this.simplifiedPoints = [];
     this.owner = null;
-    const {
-      length
-    } = points;
+    const { length } = points;
     for (let i = 0; i < length;) {
       this.segments.push(new Segment(points[i++], points[i < length ? i : 0]));
     }
@@ -137,15 +135,10 @@ export class Polygon {
     return result;
   }
   inside(point3: Vec2): boolean {
-    const {
-      length
-    } = this.segments;
+    const { length } = this.segments;
     let crossingSign = 1;
     for (let i = 0; i < length; i++) {
-      const {
-        start,
-        end
-      } = this.segments[i];
+      const { start, end } = this.segments[i];
       const crossing = rayCrossingSign(start, end, point3);
       if (crossing === 0) {
         return true;
@@ -155,15 +148,16 @@ export class Polygon {
     return crossingSign !== 1;
   }
   insideNew(point: Vec2): boolean {
-    return !!pointInPolygon(this.segments.map(segment => [segment.start.x, segment.start.y]), point.x, point.y);
+    return !!pointInPolygon(
+      this.segments.map(segment => [segment.start.x, segment.start.y]),
+      point.x,
+      point.y
+    );
   }
   signedArea(): number {
     let sum = 0;
     this.segments.forEach(segment => {
-      const {
-        start,
-        end
-      } = segment;
+      const { start, end } = segment;
       sum += (start.x + end.x) * (end.y - start.y);
     });
     return sum / 2;
@@ -179,20 +173,12 @@ export class Polygon {
   }
   calcPath(): void {
     const path = platform.createPath();
-    const {
-      segments
-    } = this;
-    const {
-      length
-    } = segments;
-    const {
-      start
-    } = segments[0];
+    const { segments } = this;
+    const { length } = segments;
+    const { start } = segments[0];
     path.moveTo(start.x, start.y);
     for (let i = 1; i < length; i++) {
-      const {
-        start: start
-      } = segments[i];
+      const { start: start } = segments[i];
       path.lineTo(start.x, start.y);
     }
     path.closePath();
@@ -203,9 +189,7 @@ export class Polygon {
     this.simplifiedPoints = [];
     let count = 0;
     this.segments.forEach(segment => {
-      const {
-        start
-      } = segment;
+      const { start } = segment;
       if (count < 2) {
         this.simplifiedPoints.push(start);
         count++;
@@ -227,10 +211,7 @@ export class Polygon {
     let min2 = Infinity;
     let max2 = -Infinity;
     this.simplifiedPoints.forEach(item => {
-      const {
-        x,
-        y
-      } = item;
+      const { x, y } = item;
       min = Math.min(min, x);
       max = Math.max(max, x);
       min2 = Math.min(min2, y);

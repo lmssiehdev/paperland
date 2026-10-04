@@ -16,15 +16,8 @@ const createSquarePath = () => {
 const SQUARE_PATH = createSquarePath();
 
 export function drawParticle(ctx: CanvasRenderingContext2D, particle: Particle) {
-  const {
-    x,
-    y
-  } = particle.position;
-  const {
-    rotation,
-    color,
-    scale
-  } = particle;
+  const { x, y } = particle.position;
+  const { rotation, color, scale } = particle;
   let transform = ctx.getTransform();
   ctx.translate(x, y);
   ctx.rotate(rotation);
@@ -40,17 +33,21 @@ export function drawParticle(ctx: CanvasRenderingContext2D, particle: Particle) 
   }
   ctx.setTransform(transform);
 }
-export function drawLabel(ctx: CanvasRenderingContext2D, label: FloatingLabel, font: string, scale: number, uiScale: number) {
+export function drawLabel(
+  ctx: CanvasRenderingContext2D,
+  label: FloatingLabel,
+  font: string,
+  scale: number,
+  uiScale: number
+) {
   const easeOutQuint = (t: number): number => 1 + --t * t * t * t * t;
   let alphaHex = Math.floor(easeOutQuint(label.time / label.duration) * 255).toString(16);
   if (alphaHex.length < 2) {
     alphaHex = "0" + alphaHex;
   }
   const point = label.unit ? label.unit.position.clone().add(label.position) : label.position;
-  const {
-    devicePixelRatio
-  } = window;
-  const fontSize = uiScale * 30 / devicePixelRatio;
+  const { devicePixelRatio } = window;
+  const fontSize = (uiScale * 30) / devicePixelRatio;
   ctx.save();
   ctx.fillStyle = "" + label.color + (label.fading ? alphaHex : "");
   ctx.font = "bold " + fontSize + "px " + font;

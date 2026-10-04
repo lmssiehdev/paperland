@@ -8,19 +8,19 @@ import { platform } from "../platform";
 import type { Team } from "./team";
 
 export class Base {
-    /**
-     * Units that own this territory. Classic: exactly the unit that built it. Team modes: every teammate
-     * sharing it (they join an existing base instead of building one). Empty only once the base is removed.
-     */
-    hosts: Unit[];
-    /** Always unset for bases (Track sets it to true); used to tell segment owners apart. */
-    isTrack: undefined;
-    merges: unknown[];
-    polygon: Polygon;
-    /** Only set by calcPath(), which nothing calls (the drawn path is polygon.path). */
-    path: PathHandle | undefined;
-    /** Assigned by calcArea() in the constructor. */
-    area!: number;
+  /**
+   * Units that own this territory. Classic: exactly the unit that built it. Team modes: every teammate
+   * sharing it (they join an existing base instead of building one). Empty only once the base is removed.
+   */
+  hosts: Unit[];
+  /** Always unset for bases (Track sets it to true); used to tell segment owners apart. */
+  isTrack: undefined;
+  merges: unknown[];
+  polygon: Polygon;
+  /** Only set by calcPath(), which nothing calls (the drawn path is polygon.path). */
+  path: PathHandle | undefined;
+  /** Assigned by calcArea() in the constructor. */
+  area!: number;
 
   constructor(unit: Unit, points: Vec2[]) {
     this.isTrack = undefined;
@@ -56,20 +56,12 @@ export class Base {
   }
   calcPath() {
     this.path = platform.createPath();
-    const {
-      segments
-    } = this.polygon;
-    const {
-      length
-    } = segments;
-    const {
-      start
-    } = segments[0];
+    const { segments } = this.polygon;
+    const { length } = segments;
+    const { start } = segments[0];
     this.path.moveTo(start.x, start.y);
     for (let i = 1; i < length; i++) {
-      const {
-        start: start
-      } = segments[i];
+      const { start: start } = segments[i];
       this.path.lineTo(start.x, start.y);
     }
     this.path.closePath();
@@ -127,7 +119,12 @@ export class Base {
       return false;
     }
     if (znSum === -1 && missed) {
-      const ahead = point.clone().add(movement.vector.clone().normalize().mulScalar(EPSILON * 20));
+      const ahead = point.clone().add(
+        movement.vector
+          .clone()
+          .normalize()
+          .mulScalar(EPSILON * 20)
+      );
       if (missed.contains(ahead)) {
         return false;
       }
@@ -139,10 +136,7 @@ export class Base {
       return;
     }
     unit.onScoreChanged();
-    const {
-      point: point,
-      segment: segment
-    } = intersection;
+    const { point: point, segment: segment } = intersection;
     if (unit.insideBase === this) {
       if (intersection.zn < 0) {
         return;
@@ -193,10 +187,7 @@ export class Base {
     }
   }
   handleEnemyIntersect(intersection: Intersection, unit: Unit, movement: Segment) {
-    const {
-      point: point,
-      segment: segment
-    } = intersection;
+    const { point: point, segment: segment } = intersection;
     if (unit.insideBase === this) {
       if (intersection.zn < 0) {
         return;

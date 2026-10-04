@@ -3,15 +3,15 @@ import type { Skin } from "../skins/skin";
 import type { Unit, UnitLabel } from "./units";
 
 export class City {
-    name: string;
-    capital: boolean;
-    position: Vec2;
-    unit: Unit;
-    labels: UnitLabel[];
-    country: string;
-    scores: number;
-    /** Flag-mode city skin (Game.addCity); SkinManager.getCitySkin may return undefined. */
-    skin: Skin | null | undefined;
+  name: string;
+  capital: boolean;
+  position: Vec2;
+  unit: Unit;
+  labels: UnitLabel[];
+  country: string;
+  scores: number;
+  /** Flag-mode city skin (Game.addCity); SkinManager.getCitySkin may return undefined. */
+  skin: Skin | null | undefined;
 
   constructor(name: string, capital: boolean, position: Vec2, unit: Unit) {
     this.name = name;

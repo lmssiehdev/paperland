@@ -35,7 +35,11 @@ export class Room {
     this.id = options.id;
     this.mode = options.mode ?? "classic";
     this.tickRate = options.tickRate ?? 20;
-    this.game = createHeadlessGame({ skinNames: options.data.skinNames, language: options.data.language, mode: this.mode });
+    this.game = createHeadlessGame({
+      skinNames: options.data.skinNames,
+      language: options.data.language,
+      mode: this.mode
+    });
     if (options.warmUp ?? true) {
       this.game.finishPrepare();
     }
@@ -85,7 +89,7 @@ export class Room {
       x: unit.position.x,
       y: unit.position.y,
       percent: unit.percent,
-      home: unit.insideBase === unit.base,
+      home: unit.insideBase === unit.base
     }));
     return msg;
   }

@@ -28,13 +28,13 @@ export interface ReturnTrail {
 }
 
 export class Track {
-    polyline: Polyline;
-    /** Coarse copy of the trail (points at least CELL_RADIUS apart), used by the AI. */
-    simplifiedPoints: Vec2[];
-    unit: Unit;
-    length: number;
-    intersections: TrackIntersection[];
-    isTrack: boolean;
+  polyline: Polyline;
+  /** Coarse copy of the trail (points at least CELL_RADIUS apart), used by the AI. */
+  simplifiedPoints: Vec2[];
+  unit: Unit;
+  length: number;
+  intersections: TrackIntersection[];
+  isTrack: boolean;
 
   constructor(unit: Unit) {
     this.polyline = new Polyline(this);
@@ -51,12 +51,8 @@ export class Track {
         const segment = this.polyline.segments[count - 1];
         this.length += segment.start.distance(segment.end);
       }
-      const {
-        simplifiedPoints
-      } = this;
-      const {
-        length
-      } = simplifiedPoints;
+      const { simplifiedPoints } = this;
+      const { length } = simplifiedPoints;
       if (length > 2) {
         const point = simplifiedPoints[length - 2];
         if (end.distance2(point) < CELL_RADIUS_SQ) {
@@ -80,11 +76,13 @@ export class Track {
     } else {
       this.intersections.push({
         point: crossing.point,
-        intersections: [{
-          intersection: crossing,
-          base: base,
-          enter: enter
-        }]
+        intersections: [
+          {
+            intersection: crossing,
+            base: base,
+            enter: enter
+          }
+        ]
       });
     }
   }
@@ -99,7 +97,12 @@ export class Track {
       const collect = (point: Vec2) => {
         point.segments.forEach(segment => {
           const owner = segment.shape?.owner;
-          if (owner instanceof Track && owner.unit !== this.unit && base.hasHost(owner.unit) && !result.includes(owner.unit)) {
+          if (
+            owner instanceof Track &&
+            owner.unit !== this.unit &&
+            base.hasHost(owner.unit) &&
+            !result.includes(owner.unit)
+          ) {
             result.push(owner.unit);
           }
         });
@@ -111,7 +114,10 @@ export class Track {
   /** Cuts the trail back so it starts at its last point that lies on my base outline (team modes). */
   truncateToBase() {
     const { polygon } = this.unit.base;
-    const lastBaseContact = this.polyline.segments.reduce((acc, segment, index) => segment.start.segments.some(segment2 => segment2.shape === polygon) ? index : acc, -1);
+    const lastBaseContact = this.polyline.segments.reduce(
+      (acc, segment, index) => (segment.start.segments.some(segment2 => segment2.shape === polygon) ? index : acc),
+      -1
+    );
     if (lastBaseContact <= 0) {
       return;
     }
@@ -144,9 +150,13 @@ export class Track {
   handleIntersect(intersection: Intersection, unit: Unit, movement: Segment) {
     let game = unit.game;
     if (unit === this.unit) {
-      if (intersection.overlay === true || intersection.point !== this.polyline.segments[this.polyline.segments.length - 1].end) {
+      if (
+        intersection.overlay === true ||
+        intersection.point !== this.polyline.segments[this.polyline.segments.length - 1].end
+      ) {
         this.unit.position = intersection.point;
-        const reason: DeathReason = game.border.radius - unit.position.distance(game.grid.center) < 5 ? DEATH_WALL : DEATH_SELF_INTERSECT;
+        const reason: DeathReason =
+          game.border.radius - unit.position.distance(game.grid.center) < 5 ? DEATH_WALL : DEATH_SELF_INTERSECT;
         game.kill(this.unit, undefined, reason);
       }
     } else if (!areAllies(unit, this.unit)) {

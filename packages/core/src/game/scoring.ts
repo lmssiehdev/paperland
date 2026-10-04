@@ -25,15 +25,18 @@ export interface ComebackInfo {
 export type ScoreSchemeClass = new (unit: Unit) => ScoreScheme;
 
 export class SchemesManager {
-    Schemes: ScoreSchemeClass[];
-    current: number;
+  Schemes: ScoreSchemeClass[];
+  current: number;
 
   constructor(...Schemes: ScoreSchemeClass[]) {
     this.Schemes = Schemes;
     this.current = 0;
   }
   getSchemes(unit: Unit) {
-    return new SchemeSet(this.Schemes.map(Scheme => new Scheme(unit)), this);
+    return new SchemeSet(
+      this.Schemes.map(Scheme => new Scheme(unit)),
+      this
+    );
   }
   /** Makes `Scheme` (one of the registered classes) the current scheme. */
   select(Scheme: ScoreSchemeClass) {
@@ -48,8 +51,8 @@ export class SchemesManager {
 }
 /** One instance of every registered scheme for a unit; delegates to the manager's current scheme. */
 export class SchemeSet {
-    schemes: ScoreScheme[];
-    manager: SchemesManager;
+  schemes: ScoreScheme[];
+  manager: SchemesManager;
 
   constructor(schemes: ScoreScheme[], manager: SchemesManager) {
     this.schemes = schemes;
@@ -86,10 +89,10 @@ export class SchemeSet {
 }
 /** Base score scheme: hooks receive `silent` = true when the scheme is not the active one. */
 export class ScoreScheme {
-    unit: Unit;
-    name: string;
-    /** Score bucket fed by death particles (spawnDeathParticles); never initialized by the classic scheme. */
-    declare accumulator: number;
+  unit: Unit;
+  name: string;
+  /** Score bucket fed by death particles (spawnDeathParticles); never initialized by the classic scheme. */
+  declare accumulator: number;
 
   constructor(unit: Unit, name: string) {
     this.unit = unit;
@@ -137,12 +140,7 @@ export class ClassicScoreScheme extends ScoreScheme {
       });
     }
   }
-  comeback({
-    increment,
-    rise,
-    victims,
-    game
-  }: ComebackInfo, silent: boolean) {
+  comeback({ increment, rise, victims, game }: ComebackInfo, silent: boolean) {
     if (!silent && increment * 100 >= 0.01 && this.unit.isPlayer) {
       this.unit.addLabel({
         text: "+" + (increment * 100).toFixed(2) + "%",

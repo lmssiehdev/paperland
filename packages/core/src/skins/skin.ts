@@ -35,15 +35,15 @@ interface RegisteredAsset {
 }
 
 export class Skin {
-    config: unknown;
-    /** Set by Unit.setSkin, which every caller of SkinManager.get runs on the new skin. */
-    user!: Unit;
-    /** Set by SkinManager.get right after construction. */
-    name!: string;
-    assets: Asset[];
-    colors: SkinColors;
-    pattern: SkinPatternHandle | null;
-    container: SkinDisplay;
+  config: unknown;
+  /** Set by Unit.setSkin, which every caller of SkinManager.get runs on the new skin. */
+  user!: Unit;
+  /** Set by SkinManager.get right after construction. */
+  name!: string;
+  assets: Asset[];
+  colors: SkinColors;
+  pattern: SkinPatternHandle | null;
+  container: SkinDisplay;
 
   constructor() {
     this.config = undefined;
@@ -72,12 +72,12 @@ export class Skin {
   }
 }
 export class Asset {
-    /** Set by the subclass constructors (ColorAsset, ImageAsset); Asset itself is never instantiated. */
-    pool!: AssetPool;
-    loadingStarted: boolean;
-    name: string;
-    content: AssetContent;
-    ready: boolean;
+  /** Set by the subclass constructors (ColorAsset, ImageAsset); Asset itself is never instantiated. */
+  pool!: AssetPool;
+  loadingStarted: boolean;
+  name: string;
+  content: AssetContent;
+  ready: boolean;
 
   constructor(name: string) {
     this.loadingStarted = false;
@@ -88,8 +88,8 @@ export class Asset {
   load() {}
 }
 export class ColorAsset extends Asset {
-    declare pool: ColoredPool;
-    source: SkinColors;
+  declare pool: ColoredPool;
+  source: SkinColors;
 
   constructor(pool: ColoredPool, item: string, source: SkinColors) {
     super(item);
@@ -98,10 +98,10 @@ export class ColorAsset extends Asset {
   }
 }
 export class AssetPool {
-    /** Set by every subclass constructor right after super(). */
-    config!: Config;
-    name: string;
-    assets: Asset[];
+  /** Set by every subclass constructor right after super(). */
+  config!: Config;
+  name: string;
+  assets: Asset[];
 
   constructor(name: string) {
     this.name = name;
@@ -121,7 +121,7 @@ export class AssetPool {
 export type ColorAvatarFactory = (config: Config, colors: SkinColors) => SkinAvatarHandle;
 
 export class ColoredPool extends AssetPool {
-    colorAvatar: ColorAvatarFactory | undefined;
+  colorAvatar: ColorAvatarFactory | undefined;
 
   constructor(config: Config, colorAvatar?: ColorAvatarFactory) {
     super("colors");
@@ -130,48 +130,58 @@ export class ColoredPool extends AssetPool {
     this.add(PALETTE);
   }
   add(hexColors: string[]) {
-    const {
-      config
-    } = this;
-    this.assets.push(...(hexColors || []).map((item): ColorAsset => {
-      const rgb = hexToRgb(item);
-      const hsv = rgbToHsv(rgb);
-      const darkerHsv = hsvMulValue(hsv, 0.75);
-      const darker = hsvToHex(darkerHsv);
-      const darkestHsv = hsvMulValue(hsv, 0.5);
-      const darkest = hsvToHex(darkestHsv);
-      const lighterHsv = hsvLighten(hsv, 1.5);
-      const lighter = hsvToHex(lighterHsv);
-      const lightestHsv = hsvLighten(hsv, 2);
-      const lightest = hsvToHex(lightestHsv);
-      const source: SkinColors = {
-        main: item,
-        back: darker,
-        nick: darkest,
-        plate: hsv.v > 50 ? darkest : lightest,
-        particles: [hsvToHex(hsvSetValue(hsv, 100)), hsvToHex(hsvSetValue(hsv, 90)), hsvToHex(hsvSetValue(hsv, 80)), hsvToHex(hsvSetValue(hsv, 70)), hsvToHex(hsvSetValue(hsv, 60)), hsvToHex(hsvSetValue(hsv, 50)), hsvToHex(hsvSetValue(hsv, 40)), hsvToHex(hsvSetValue(hsv, 30)), hsvToHex(hsvSetValue(hsv, 20))]
-      };
-      const colorAsset = new ColorAsset(this, item, source);
-      colorAsset.content.colors = source;
-      if (config && this.colorAvatar) {
-        colorAsset.content.display = this.colorAvatar(config, source);
-      }
-      colorAsset.ready = true;
-      colorAsset.name = item;
-      return colorAsset;
-    }));
+    const { config } = this;
+    this.assets.push(
+      ...(hexColors || []).map((item): ColorAsset => {
+        const rgb = hexToRgb(item);
+        const hsv = rgbToHsv(rgb);
+        const darkerHsv = hsvMulValue(hsv, 0.75);
+        const darker = hsvToHex(darkerHsv);
+        const darkestHsv = hsvMulValue(hsv, 0.5);
+        const darkest = hsvToHex(darkestHsv);
+        const lighterHsv = hsvLighten(hsv, 1.5);
+        const lighter = hsvToHex(lighterHsv);
+        const lightestHsv = hsvLighten(hsv, 2);
+        const lightest = hsvToHex(lightestHsv);
+        const source: SkinColors = {
+          main: item,
+          back: darker,
+          nick: darkest,
+          plate: hsv.v > 50 ? darkest : lightest,
+          particles: [
+            hsvToHex(hsvSetValue(hsv, 100)),
+            hsvToHex(hsvSetValue(hsv, 90)),
+            hsvToHex(hsvSetValue(hsv, 80)),
+            hsvToHex(hsvSetValue(hsv, 70)),
+            hsvToHex(hsvSetValue(hsv, 60)),
+            hsvToHex(hsvSetValue(hsv, 50)),
+            hsvToHex(hsvSetValue(hsv, 40)),
+            hsvToHex(hsvSetValue(hsv, 30)),
+            hsvToHex(hsvSetValue(hsv, 20))
+          ]
+        };
+        const colorAsset = new ColorAsset(this, item, source);
+        colorAsset.content.colors = source;
+        if (config && this.colorAvatar) {
+          colorAsset.content.display = this.colorAvatar(config, source);
+        }
+        colorAsset.ready = true;
+        colorAsset.name = item;
+        return colorAsset;
+      })
+    );
   }
   loadAsset(asset: Asset) {
     return asset;
   }
 }
 class SkinManagerBase {
-    usedBy: Record<string, Skin[]>;
-    assets: Record<string, RegisteredAsset>;
-    unusedAssets: Record<string, RegisteredAsset>;
-    rng: Rng;
-    /** Assigned externally by api.ts after the Game is created. */
-    declare game?: Game;
+  usedBy: Record<string, Skin[]>;
+  assets: Record<string, RegisteredAsset>;
+  unusedAssets: Record<string, RegisteredAsset>;
+  rng: Rng;
+  /** Assigned externally by api.ts after the Game is created. */
+  declare game?: Game;
 
   constructor(seed: number) {
     this.usedBy = {};

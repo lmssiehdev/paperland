@@ -40,11 +40,7 @@ export function createHeadlessGame(options: HeadlessGameOptions): Game {
   const schemesManager = new SchemesManager(ClassicScoreScheme, TeamScoreScheme);
   schemesManager.select(gameMode.scoreScheme);
   const gameConfig = { ...config, ...gameMode.config };
-  const {
-    arenaSize,
-    quadSize,
-    borderPoints
-  } = gameConfig;
+  const { arenaSize, quadSize, borderPoints } = gameConfig;
   const spatialGrid = new SpatialGrid(arenaSize, arenaSize, quadSize);
   Vec2.grid = spatialGrid;
   const center = new Vec2(arenaSize / 2, arenaSize / 2);
@@ -63,7 +59,20 @@ export function createHeadlessGame(options: HeadlessGameOptions): Game {
   const achievements = new AchievementStore([]);
   // No local input device: readInput() is a no-op without game.input.
   const noController = {};
-  const game = new Game(gameConfig, null, spatialGrid, border, skinManager, null, nameManager, noController, options.language, schemesManager, achievements, options.seed ?? Math.random());
+  const game = new Game(
+    gameConfig,
+    null,
+    spatialGrid,
+    border,
+    skinManager,
+    null,
+    nameManager,
+    noController,
+    options.language,
+    schemesManager,
+    achievements,
+    options.seed ?? Math.random()
+  );
   game.mode = gameMode;
   return game;
 }

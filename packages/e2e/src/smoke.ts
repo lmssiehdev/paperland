@@ -11,12 +11,12 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 
 // Block anything that isn't our local mirror.
-await page.route("**/*", (r) => (new URL(r.request().url()).hostname === "localhost" ? r.continue() : r.abort()));
+await page.route("**/*", r => (new URL(r.request().url()).hostname === "localhost" ? r.continue() : r.abort()));
 
 const errors: string[] = [];
 const logs: string[] = [];
-page.on("pageerror", (e) => errors.push(e.message));
-page.on("console", (m) => logs.push(`[${m.type()}] ${m.text()}`));
+page.on("pageerror", e => errors.push(e.message));
+page.on("console", m => logs.push(`[${m.type()}] ${m.text()}`));
 
 await page.goto(url);
 await page.waitForFunction(() => (window as any).paperio2api, null, { timeout: 15000 });
@@ -25,7 +25,7 @@ await page.waitForSelector("#play");
 const menu = await page.evaluate(() => ({
   nick: !!document.getElementById("nick"),
   play: document.getElementById("play")?.textContent ?? null,
-  modeButtons: [...document.querySelectorAll(".modes button")].map(b => b.id),
+  modeButtons: [...document.querySelectorAll(".modes button")].map(b => b.id)
 }));
 await page.screenshot({ path: `${SHOTS}/${label}-menu.png` });
 
@@ -37,7 +37,11 @@ await clickLanguage("RU");
 const switched = { menu: await playText(), game: await gameStrings() };
 await clickLanguage("EN");
 const switchedBack = { menu: await playText(), game: await gameStrings() };
-const languageOk = switched.menu === "ИГРАТЬ" && switched.game === "ИГРАТЬ" && switchedBack.menu === menu.play && switchedBack.game === menu.play;
+const languageOk =
+  switched.menu === "ИГРАТЬ" &&
+  switched.game === "ИГРАТЬ" &&
+  switchedBack.menu === menu.play &&
+  switchedBack.game === menu.play;
 
 await page.click("#play");
 await page.waitForFunction(() => !!(window as any).paperio2api.game.player, null, { timeout: 10000 });
@@ -45,11 +49,19 @@ await page.waitForTimeout(4000);
 await page.screenshot({ path: `${SHOTS}/${label}-ingame.png` });
 
 // Unit positions by name, 1 s apart, while the real rAF loop runs.
-const positions = () => page.evaluate(() => Object.fromEntries((window as any).paperio2api.game.units.map((u: any) => [u.name, [u.position.x, u.position.y]])) as Record<string, [number, number]>);
+const positions = () =>
+  page.evaluate(
+    () =>
+      Object.fromEntries(
+        (window as any).paperio2api.game.units.map((u: any) => [u.name, [u.position.x, u.position.y]])
+      ) as Record<string, [number, number]>
+  );
 const before = await positions();
 await page.waitForTimeout(1000);
 const after = await positions();
-const unitsMoved = Object.keys(after).filter(name => before[name] && Math.hypot(after[name]![0] - before[name]![0], after[name]![1] - before[name]![1]) > 1).length;
+const unitsMoved = Object.keys(after).filter(
+  name => before[name] && Math.hypot(after[name]![0] - before[name]![0], after[name]![1] - before[name]![1]) > 1
+).length;
 const hasPlayer = await page.evaluate(() => !!(window as any).paperio2api.game.player);
 // Extra-life popup: a continue-style start must label the player in the current language (was always Russian).
 const extraLife = await page.evaluate(() => {
@@ -60,6 +72,24 @@ const extraLife = await page.evaluate(() => {
 
 const menuOk = menu.nick && !!menu.play && menu.modeButtons.includes("mode-classic");
 const extraLifeOk = extraLife === "EXTRA LIFE!";
-console.log(JSON.stringify({ label, apiKeys, menu, switched, switchedBack, extraLife, hasPlayer, units: Object.keys(after).length, unitsMoved, errors, logs: logs.slice(0, 15) }, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      label,
+      apiKeys,
+      menu,
+      switched,
+      switchedBack,
+      extraLife,
+      hasPlayer,
+      units: Object.keys(after).length,
+      unitsMoved,
+      errors,
+      logs: logs.slice(0, 15)
+    },
+    null,
+    2
+  )
+);
 await browser.close();
 if (errors.length || !menuOk || !languageOk || !extraLifeOk || !unitsMoved || !hasPlayer) process.exit(1);

@@ -41,14 +41,14 @@ interface AchievementStorage {
 
 /** "New skin unlocked!" popup queued into Game.notifications. */
 export class Tip {
-    title: string;
-    description: string;
-    state: number;
-    current: number;
-    states: number[];
-    /** Set once the icon at `url` has loaded. */
-    image: ImageHandle | null;
-    ready: boolean;
+  title: string;
+  description: string;
+  state: number;
+  current: number;
+  states: number[];
+  /** Set once the icon at `url` has loaded. */
+  image: ImageHandle | null;
+  ready: boolean;
 
   constructor(title: string, description: string, url: string) {
     this.title = title;
@@ -89,17 +89,24 @@ export class Tip {
   }
 }
 export class Achievement {
-    name: string;
-    modes: string[];
-    getChecker: () => AchievementChecker;
-    description: string;
-    url: string;
-    onEarned: AchievementDefinition["onEarned"];
-    best: number;
-    earned: boolean;
-    checker: AchievementChecker | null;
+  name: string;
+  modes: string[];
+  getChecker: () => AchievementChecker;
+  description: string;
+  url: string;
+  onEarned: AchievementDefinition["onEarned"];
+  best: number;
+  earned: boolean;
+  checker: AchievementChecker | null;
 
-  constructor(name: string, modes: string[], getChecker: () => AchievementChecker, description: string, url: string, onEarned: AchievementDefinition["onEarned"]) {
+  constructor(
+    name: string,
+    modes: string[],
+    getChecker: () => AchievementChecker,
+    description: string,
+    url: string,
+    onEarned: AchievementDefinition["onEarned"]
+  ) {
     this.name = name;
     this.modes = modes;
     this.getChecker = getChecker;
@@ -120,12 +127,14 @@ export class Achievement {
   }
 }
 export class AchievementStore {
-    storageName: string;
-    achievements: Achievement[];
+  storageName: string;
+  achievements: Achievement[];
 
   constructor(definitions: AchievementDefinition[], storageName = "paper.io.storage") {
     this.storageName = storageName;
-    this.achievements = definitions.map(item => new Achievement(item.name, item.modes, item.getChecker, item.description, item.url, item.onEarned));
+    this.achievements = definitions.map(
+      item => new Achievement(item.name, item.modes, item.getChecker, item.description, item.url, item.onEarned)
+    );
   }
   load() {
     const challenges: ChallengeFlags = platform.storage.getJSON("paperio_challenges") || {};
@@ -182,13 +191,13 @@ export class AchievementStore {
   }
 }
 export class AchievementsProfile {
-    profile: AchievementStore;
-    /**
-     * Assigned in the constructor (it returns early only for a missing store, which Game.addPlayer never passes).
-     * Every entry has a non-null checker: the constructor sets it, and success() clears it only right before
-     * update() drops that entry.
-     */
-    achievements!: Achievement[];
+  profile: AchievementStore;
+  /**
+   * Assigned in the constructor (it returns early only for a missing store, which Game.addPlayer never passes).
+   * Every entry has a non-null checker: the constructor sets it, and success() clears it only right before
+   * update() drops that entry.
+   */
+  achievements!: Achievement[];
 
   constructor(profile: AchievementStore, mode: string) {
     this.profile = profile;

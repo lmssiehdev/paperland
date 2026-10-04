@@ -16,13 +16,13 @@ const JS_PATHS: Record<string, string> = {
   original: "original/app2.js",
   deob: "deob/stage2/deobfuscated.js",
   game: "deob/game.js",
-  src: "packages/client/dist/app2.js",
+  src: "packages/client/dist/app2.js"
 };
 
 // mode prefix -> { dir, js file name in page, deobfuscated build }
 const MODES: Record<string, { dir: string; deob: string }> = {
   "/teams/": { dir: "modes/teams/original", deob: "modes/teams/deob/deobfuscated.js" },
-  "/battleroyale/": { dir: "modes/battleroyale/original", deob: "modes/battleroyale/deob/pass3/deobfuscated.js" },
+  "/battleroyale/": { dir: "modes/battleroyale/original", deob: "modes/battleroyale/deob/pass3/deobfuscated.js" }
 };
 
 const AD_STUBS =
@@ -45,12 +45,13 @@ export async function siteFetch(req: Request): Promise<Response> {
     return new Response("ok");
   }
 
-  const prefix = Object.keys(MODES).find((p) => pathname === p.slice(0, -1) || pathname.startsWith(p));
+  const prefix = Object.keys(MODES).find(p => pathname === p.slice(0, -1) || pathname.startsWith(p));
   if (prefix) {
     const mode = MODES[prefix]!;
     const rel = pathname.slice(prefix.length) || "index.html";
     if (rel === "index.html") return html(cleanHtml(await file(`${mode.dir}/index.html`).text()));
-    if (rel === "app.js" && MODE_JS === "deob") return new Response(file(mode.deob), { headers: { "content-type": "text/javascript" } });
+    if (rel === "app.js" && MODE_JS === "deob")
+      return new Response(file(mode.deob), { headers: { "content-type": "text/javascript" } });
     const modeFile = file(`${mode.dir}/${rel}`);
     if (await modeFile.exists()) return new Response(modeFile);
     // shared root assets (icons etc.)

@@ -60,22 +60,36 @@ Promise.all([languagesRequest, skinsRequest]).then(([languagesFile, skinsList]) 
   const schemesManager = new SchemesManager(ClassicScoreScheme, TeamScoreScheme);
   const achievementStore = new AchievementStore([]);
   achievementStore.load();
-  const api = createApi(CONFIG, initialLanguage, createSkinManager, new NamePool(BOT_NAMES, Math.random()), schemesManager, achievementStore);
+  const api = createApi(
+    CONFIG,
+    initialLanguage,
+    createSkinManager,
+    new NamePool(BOT_NAMES, Math.random()),
+    schemesManager,
+    achievementStore
+  );
   window.paperio2api = api;
   const root = document.getElementById("game");
   if (!root) {
     throw new Error("index.html has no #game element");
   }
-  render(createElement(I18nProvider, {
-    languages: languages,
-    initial: initialLanguage,
-    // The game keeps plain strings (core never sees the UI context): forward every switch.
-    onChange: language => api?.setLanguage(language.lng)
-  }, createElement(App, {
-    api: api,
-    storage: Cookies,
-    skins: skinsList
-  })), root);
+  render(
+    createElement(
+      I18nProvider,
+      {
+        languages: languages,
+        initial: initialLanguage,
+        // The game keeps plain strings (core never sees the UI context): forward every switch.
+        onChange: language => api?.setLanguage(language.lng)
+      },
+      createElement(App, {
+        api: api,
+        storage: Cookies,
+        skins: skinsList
+      })
+    ),
+    root
+  );
 });
 window.__paperio = {
   Game,

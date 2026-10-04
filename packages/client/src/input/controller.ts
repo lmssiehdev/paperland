@@ -17,7 +17,7 @@ export interface KeyChord {
 }
 
 export class KeyboardModeSwitch {
-    mode2: boolean;
+  mode2: boolean;
 
   constructor() {
     this.mode2 = false;
@@ -28,20 +28,20 @@ export class KeyboardModeSwitch {
   switch() {}
 }
 export class Controller {
-    up: boolean;
-    down: boolean;
-    left: boolean;
-    right: boolean;
-    modifiers: { shift: boolean; ctrl: boolean; alt: boolean; meta: boolean; };
-    /** Null while the pointer is outside the view (or before it first moves in). */
-    mouse: PointerPosition | null;
-    lastMouse: PointerPosition | null;
-    buttons: { left: boolean; middle: boolean; right: boolean; };
-    codes: KeyBinding[];
-    sets: KeyChord[];
-    keyboardModeSwitch: KeyboardModeSwitch;
-    pressedButtons: number[];
-    dispose: () => void;
+  up: boolean;
+  down: boolean;
+  left: boolean;
+  right: boolean;
+  modifiers: { shift: boolean; ctrl: boolean; alt: boolean; meta: boolean };
+  /** Null while the pointer is outside the view (or before it first moves in). */
+  mouse: PointerPosition | null;
+  lastMouse: PointerPosition | null;
+  buttons: { left: boolean; middle: boolean; right: boolean };
+  codes: KeyBinding[];
+  sets: KeyChord[];
+  keyboardModeSwitch: KeyboardModeSwitch;
+  pressedButtons: number[];
+  dispose: () => void;
 
   constructor(view: HTMLElement, keyboardModeSwitch: KeyboardModeSwitch) {
     this.up = false;
@@ -91,9 +91,7 @@ export class Controller {
     };
     const onMouseEnter = (event: MouseEvent) => {
       onMouseMove(event);
-      const {
-        buttons
-      } = event;
+      const { buttons } = event;
       this.buttons = {
         left: !!(buttons & 1),
         middle: !!(buttons & 4),
@@ -143,15 +141,15 @@ export class Controller {
   onKeyChange(event: KeyboardEvent, isDown: boolean) {
     if (event.target === document.body) {
       let handled = true;
-      const {
-        keyCode
-      } = event;
+      const { keyCode } = event;
       const index = this.pressedButtons.indexOf(keyCode);
       if (isDown) {
         if (index < 0) {
           this.pressedButtons.push(keyCode);
         }
-        const set = this.sets.find(set => set.codes.every(code => this.pressedButtons.find(pressedButton => pressedButton === code)));
+        const set = this.sets.find(set =>
+          set.codes.every(code => this.pressedButtons.find(pressedButton => pressedButton === code))
+        );
         if (set) {
           set.handler();
         }

@@ -15,12 +15,12 @@ export interface Bounds {
 
 /** Open chain of segments (a unit's trail), with bounds and a Path2D built incrementally. */
 export class Polyline {
-    owner: Track | null;
-    start: Vec2 | null;
-    end: Vec2 | null;
-    segments: Segment[];
-    bounds: Bounds;
-    path: PathHandle;
+  owner: Track | null;
+  start: Vec2 | null;
+  end: Vec2 | null;
+  segments: Segment[];
+  bounds: Bounds;
+  path: PathHandle;
 
   constructor(owner?: Track) {
     this.owner = owner || null;
@@ -57,10 +57,7 @@ export class Polyline {
     return polyline;
   }
   updateBounds(point: Vec2): void {
-    const {
-      x,
-      y
-    } = point;
+    const { x, y } = point;
     this.bounds.left = Math.min(this.bounds.left, x);
     this.bounds.right = Math.max(this.bounds.right, x);
     this.bounds.top = Math.min(this.bounds.top, y);
@@ -71,10 +68,7 @@ export class Polyline {
     if (last && last.equal(end)) {
       return false;
     }
-    const {
-      x,
-      y
-    } = end;
+    const { x, y } = end;
     if (this.end) {
       this.segments.push(new Segment(this.end, end).commit(this));
       this.end = end;

@@ -16,11 +16,11 @@ export interface FsmState<P, N extends string, C extends object = object> {
 export type FsmStates<P, N extends string> = { [K in N]: FsmState<P, N> };
 
 export class StateMachine<P, N extends string> {
-    states: FsmStates<P, N>;
-    /** Current state name; "" before the first `change`. */
-    state: N | "";
-    payload: P;
-    context: object;
+  states: FsmStates<P, N>;
+  /** Current state name; "" before the first `change`. */
+  state: N | "";
+  payload: P;
+  context: object;
 
   constructor(states: FsmStates<P, N>, state: N, payload: P) {
     this.states = states;
@@ -37,7 +37,7 @@ export class StateMachine<P, N extends string> {
     const next = this.states[state];
     if (next) {
       this.state = state;
-      this.context = next.enter && next.enter(this.payload, this.context) || this.context;
+      this.context = (next.enter && next.enter(this.payload, this.context)) || this.context;
       this.update();
     }
   }

@@ -18,7 +18,7 @@ export interface RenderContext {
   /** World point at the center of the view. */
   origin: Vec2;
   pointInView: (point: Vec2, margin?: number) => boolean;
-  boundsInView: (item: { bounds: Bounds; }, margin?: number) => boolean;
+  boundsInView: (item: { bounds: Bounds }, margin?: number) => boolean;
   calcMult: (landscape: number, portrait: number) => number;
   viewScreenWidth: number;
   viewScreenHeight: number;
@@ -35,15 +35,11 @@ export interface RenderContext {
 
 /** Sizes the canvas and computes this frame's view data; moves the smoothed camera (game.origin). Moved from Game.getRenderContext. */
 export function getRenderContext(game: Game): RenderContext | undefined {
-  const {
-    view
-  } = game;
+  const { view } = game;
   if (!view) {
     return;
   }
-  const {
-    font
-  } = game.config;
+  const { font } = game.config;
   // The game canvas is only ever used with a 2D context.
   const ctx = view.getContext("2d")!;
   const clientWidth = view.clientWidth;
@@ -54,13 +50,12 @@ export function getRenderContext(game: Game): RenderContext | undefined {
     view.width = viewWidth;
     view.height = viewHeight;
   }
-  const {
-    devicePixelRatio
-  } = window;
+  const { devicePixelRatio } = window;
   const viewScreenWidth = viewWidth * devicePixelRatio;
   const viewScreenHeight = viewHeight * devicePixelRatio;
-  const scaler = Math.sqrt(viewScreenWidth * viewScreenWidth + viewScreenHeight * viewScreenHeight) / Math.sqrt(2455780);
-  const scale = game.scale * scaler / devicePixelRatio;
+  const scaler =
+    Math.sqrt(viewScreenWidth * viewScreenWidth + viewScreenHeight * viewScreenHeight) / Math.sqrt(2455780);
+  const scale = (game.scale * scaler) / devicePixelRatio;
   let point: Vec2;
   if (game.player) {
     point = game.player.position;
@@ -81,8 +76,11 @@ export function getRenderContext(game: Game): RenderContext | undefined {
   const right = point.x + viewWidth / 2 / scale;
   const top = point.y - viewHeight / 2 / scale;
   const bottom = point.y + viewHeight / 2 / scale;
-  const pointInView = (point: Vec2, margin = 0) => inRange(left - margin, right + margin, point.x) && inRange(top - margin, bottom + margin, point.y);
-  const boundsInView = (item: { bounds: Bounds; }, margin = 0) => rangeOverlap(item.bounds.left - margin, item.bounds.right + margin, left, right) > 0 && rangeOverlap(item.bounds.top - margin, item.bounds.bottom + margin, top, bottom) > 0;
+  const pointInView = (point: Vec2, margin = 0) =>
+    inRange(left - margin, right + margin, point.x) && inRange(top - margin, bottom + margin, point.y);
+  const boundsInView = (item: { bounds: Bounds }, margin = 0) =>
+    rangeOverlap(item.bounds.left - margin, item.bounds.right + margin, left, right) > 0 &&
+    rangeOverlap(item.bounds.top - margin, item.bounds.bottom + margin, top, bottom) > 0;
   const calcMult = (landscape: number, portrait: number) => {
     const landscapeAspect = 16 / 9;
     const portraitAspect = 9 / 16;

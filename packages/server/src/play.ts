@@ -8,7 +8,7 @@ import type { RoomManager } from "./rooms";
 export const CloseCode = {
   Protocol: 4000,
   Version: 4001,
-  UnknownRoom: 4004,
+  UnknownRoom: 4004
 } as const;
 
 /** The only way to send on /play: binary frames of server messages (so a client message cannot be sent by mistake). */
@@ -65,5 +65,5 @@ export const play = (rooms: RoomManager) =>
             break;
         }
       }
-    },
+    }
   });

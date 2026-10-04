@@ -16,9 +16,7 @@ export type LanguagesFile = { en: LanguageStrings } & Record<string, Partial<Lan
 
 /** The selectable languages, in file order, each merged over English. Built once at startup (main.ts). */
 export const buildLanguages = (languages: LanguagesFile): Language[] => {
-  const {
-    en
-  } = languages;
+  const { en } = languages;
   return Object.entries(languages).map(([code, strings]) => ({
     name: code,
     lng: Object.assign({}, en, strings)
@@ -33,14 +31,22 @@ type LegacyNavigator = Navigator & {
 /** Two-letter code of the browser's language. */
 export const browserLanguageCode = (): string => {
   const legacyNavigator: LegacyNavigator = navigator;
-  return (legacyNavigator.languages && legacyNavigator.languages.length && legacyNavigator.languages[0] || legacyNavigator.userLanguage || legacyNavigator.language || legacyNavigator.browserLanguage || "en").substr(0, 2).toLowerCase();
+  return (
+    (legacyNavigator.languages && legacyNavigator.languages.length && legacyNavigator.languages[0]) ||
+    legacyNavigator.userLanguage ||
+    legacyNavigator.language ||
+    legacyNavigator.browserLanguage ||
+    "en"
+  )
+    .substr(0, 2)
+    .toLowerCase();
 };
 
 /** The language with `code` (default: the browser's), else English. */
 export const pickLanguage = (languages: Language[], code = browserLanguageCode()): Language => {
   const language = languages.find(item => item.name === code) || languages.find(item => item.name === "en");
   if (!language) {
-    throw new Error("languages.json has no \"en\" entry");
+    throw new Error('languages.json has no "en" entry');
   }
   return language;
 };
@@ -65,12 +71,7 @@ export interface I18nProviderProps {
 }
 
 /** Holds the current UI language for everything below it. */
-export const I18nProvider = ({
-  languages,
-  initial,
-  onChange,
-  children
-}: I18nProviderProps) => {
+export const I18nProvider = ({ languages, initial, onChange, children }: I18nProviderProps) => {
   const [language, setCurrent] = useState(initial);
   const setLanguage = (next: Language) => {
     setCurrent(next);
@@ -78,7 +79,11 @@ export const I18nProvider = ({
       onChange(next);
     }
   };
-  return <I18nContext.Provider value={{ t: language.lng, language, setLanguage, languages }}>{children}</I18nContext.Provider>;
+  return (
+    <I18nContext.Provider value={{ t: language.lng, language, setLanguage, languages }}>
+      {children}
+    </I18nContext.Provider>
+  );
 };
 
 /** Current language and switcher; use under I18nProvider. */

@@ -35,19 +35,19 @@ export interface SkinPatternConfig {
 
 var assign = Object.assign;
 export class SkinLayer {
-    level: number;
-    scale: number;
-    x: number;
-    y: number;
-    direction: string;
-    rotation: number;
-    url: string;
-    /** Null until loaded, unless the layer config supplied `src` directly. */
-    src: SkinImageSource | null;
-    /** Rescaled copy of `src`; null until the source has loaded. */
-    image: HTMLCanvasElement | null;
-    config: Config;
-    pivot: { x: number; y: number };
+  level: number;
+  scale: number;
+  x: number;
+  y: number;
+  direction: string;
+  rotation: number;
+  url: string;
+  /** Null until loaded, unless the layer config supplied `src` directly. */
+  src: SkinImageSource | null;
+  /** Rescaled copy of `src`; null until the source has loaded. */
+  image: HTMLCanvasElement | null;
+  config: Config;
+  pivot: { x: number; y: number };
 
   constructor(config: Config, layerConfig: SkinLayerConfig, onLoad?: (layer: SkinLayer) => void) {
     this.level = 0;
@@ -61,11 +61,18 @@ export class SkinLayer {
     this.image = null;
     this.config = config;
     Object.assign(this, layerConfig);
-    this.pivot = Object.assign({
-      x: 0.5,
-      y: 0.5
-    }, layerConfig.pivot);
-    let sourcePromise: Promise<SkinImageSource> | null = this.url ? loadImage(this.url) : this.src ? Promise.resolve(this.src) : null;
+    this.pivot = Object.assign(
+      {
+        x: 0.5,
+        y: 0.5
+      },
+      layerConfig.pivot
+    );
+    let sourcePromise: Promise<SkinImageSource> | null = this.url
+      ? loadImage(this.url)
+      : this.src
+        ? Promise.resolve(this.src)
+        : null;
     if (sourcePromise) {
       sourcePromise.then(src => {
         this.src = src;
@@ -77,16 +84,13 @@ export class SkinLayer {
     }
   }
   rescale(scale: number) {
-    const {
-      trackWidth,
-      maxScale
-    } = this.config;
+    const { trackWidth, maxScale } = this.config;
     const maxPixelWidth = trackWidth * maxScale;
     // Only called once the source has loaded (from the load callback and SkinAvatar's onLayerLoad).
     const src = this.src!;
     const srcWidth = (src as HTMLImageElement).naturalWidth || src.width;
     const srcHeight = (src as HTMLImageElement).naturalHeight || src.height;
-    const factor = maxPixelWidth * scale * this.scale / srcWidth;
+    const factor = (maxPixelWidth * scale * this.scale) / srcWidth;
     const width = ~~(srcWidth * factor);
     const height = ~~(srcHeight * factor);
     const scaleX = width / srcWidth;
@@ -103,26 +107,30 @@ export class SkinLayer {
 }
 let matrixSvg: SVGSVGElement;
 export class SkinPattern {
-    url: string;
-    scale: number;
-    src: HTMLImageElement | null;
-    ready: boolean;
-    /** Undefined until the image has loaded (renderers fall back to the skin's main color). */
-    pattern: CanvasPattern | undefined;
+  url: string;
+  scale: number;
+  src: HTMLImageElement | null;
+  ready: boolean;
+  /** Undefined until the image has loaded (renderers fall back to the skin's main color). */
+  pattern: CanvasPattern | undefined;
 
-  constructor(config: Config, view: HTMLCanvasElement, path: string, pattern: SkinPatternConfig = {} as SkinPatternConfig, onReady?: () => void) {
+  constructor(
+    config: Config,
+    view: HTMLCanvasElement,
+    path: string,
+    pattern: SkinPatternConfig = {} as SkinPatternConfig,
+    onReady?: () => void
+  ) {
     this.url = path + pattern.url;
     this.scale = pattern.scale || 1;
     this.src = null;
     this.ready = false;
-    const {
-      maxScale
-    } = config;
+    const { maxScale } = config;
     loadImage(this.url).then(src => {
       this.src = src;
       const srcWidth = ~~(src.naturalWidth || src.width);
       const srcHeight = ~~(src.naturalHeight || src.height);
-      const factor = maxScale * 100 * this.scale / srcWidth;
+      const factor = (maxScale * 100 * this.scale) / srcWidth;
       if (srcWidth == 0) {
         console.log(this.url + " has no width");
       }
@@ -154,13 +162,13 @@ export class SkinPattern {
   }
 }
 export class SkinAvatar {
-    layers: SkinLayer[];
-    scale: number;
-    x: number;
-    y: number;
-    ready: boolean;
-    frontLayers: SkinLayer[];
-    backLayers: SkinLayer[];
+  layers: SkinLayer[];
+  scale: number;
+  x: number;
+  y: number;
+  ready: boolean;
+  frontLayers: SkinLayer[];
+  backLayers: SkinLayer[];
 
   constructor(config: Config, path: string, avatar: SkinAvatarConfig, onReady?: () => void) {
     this.layers = [];
@@ -182,9 +190,16 @@ export class SkinAvatar {
     // Object.assign above copied the raw layer configs; they are replaced by SkinLayer instances here.
     // Cast: at this point `this.layers` still holds those configs, not SkinLayer instances.
     const layerConfigs = (this.layers as SkinLayerConfig[]) || [];
-    this.layers = layerConfigs.map(item => new SkinLayer(config, assign(assign({}, item), {
-      url: item.url && "" + path + item.url
-    }), onLayerLoad));
+    this.layers = layerConfigs.map(
+      item =>
+        new SkinLayer(
+          config,
+          assign(assign({}, item), {
+            url: item.url && "" + path + item.url
+          }),
+          onLayerLoad
+        )
+    );
     this.frontLayers = this.layers.filter(layer => layer.level >= 1).sort((a, b) => a.level - b.level);
     this.backLayers = this.layers.filter(layer => layer.level < 1).sort((a, b) => b.level - a.level);
   }
