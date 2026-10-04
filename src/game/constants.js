@@ -1,0 +1,12 @@
+export const CELL_RADIUS = 25;
+export const CELL_RADIUS_SQ = CELL_RADIUS * CELL_RADIUS;
+export const DEATH_WIN = 0;
+export const DEATH_SELF_INTERSECT = 1;
+export const DEATH_WALL = 2;
+export const DEATH_TRACK_CROSSED = 3;
+export const DEATH_EXIT_CAPTURED = 4;
+export const DEATH_SURROUNDED = 5;
+export const DEATH_REMOVED = 6;
+export const DEATH_CAPITAL_SURROUNDED = 7;
+export const TICK_MS = 1000 / 60;
+export const TICK_MS_X2 = 1000 / 60 * 2;

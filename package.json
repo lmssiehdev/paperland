@@ -1,0 +1,35 @@
+{
+  "name": "paperio",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@babel/generator": "^8.0.6",
+    "@babel/parser": "^7.29.9",
+    "@babel/traverse": "^8.0.6",
+    "@babel/types": "^8.0.6",
+    "@types/bun": "latest",
+    "playwright": "^1.63.0",
+    "prettier": "^3.9.9",
+    "ts-morph": "^28.0.0",
+    "webcrack": "^2.16.0"
+  },
+  "peerDependencies": {
+    "typescript": "^7.0.2"
+  },
+  "scripts": {
+    "extract": "bun scripts/extract-har.ts && bun scripts/fetch-missing-assets.ts",
+    "deob": "bun scripts/decode-strings.ts && webcrack deob/stage1.js -o deob/stage2 -f && bun scripts/rename.ts && bun scripts/rename-locals.ts",
+    "serve": "bun server.ts",
+    "serve:original": "GAME_JS=original bun server.ts",
+    "smoke": "bun scripts/smoke.ts",
+    "survey": "bun scripts/survey.ts deob/game.js",
+    "autopilot": "bun scripts/autopilot.ts",
+    "split": "bun scripts/split.ts",
+    "build": "bun build src/main.js --format=iife --outfile dist/app2.js",
+    "regen": "bun run deob && bun run split && bun run build"
+  },
+  "dependencies": {
+    "js-cookie": "2",
+    "preact": "^11.0.0"
+  }
+}
