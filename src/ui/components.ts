@@ -4,6 +4,8 @@ import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import type { StateUpdater, Dispatch } from "preact/hooks";
 import type { PaperioApi } from "../api";
 import type { GameResult } from "../game/game";
+import { MODES } from "../modes";
+import type { ModeId } from "../modes";
 import { LANGUAGES, getLanguage } from "./i18n";
 import type { Language } from "./i18n";
 
@@ -86,6 +88,8 @@ interface MainMenuProps {
   setLanguage: Setter<Language>;
   api: PaperioApi | null;
   skin: string;
+  mode: ModeId;
+  setMode: Setter<ModeId>;
 }
 const MainMenu = ({
   nickName,
@@ -94,7 +98,9 @@ const MainMenu = ({
   route,
   setLanguage,
   api,
-  skin
+  skin,
+  mode,
+  setMode
 }: MainMenuProps) => {
   const {
     lng
@@ -142,7 +148,15 @@ const MainMenu = ({
     width: "30",
     height: "30",
     src: "assets/skins/select/" + (skin || "noskin").toLowerCase().replace(/\s+/g, "") + ".png"
-  }))), !supported && createElement("p", {
+  }))), createElement("div", {
+    class: "modes"
+  }, MODES.map(item => createElement("button", {
+    key: item.id,
+    id: "mode-" + item.id,
+    class: item.id === mode ? "green" : "orange",
+    style: { margin: "8px 4px 0" },
+    onClick: () => setMode(item.id)
+  }, item.label))), !supported && createElement("p", {
     class: "notsupported"
   }, lng.nosupport)), createElement("div", {
     id: "right_side"
@@ -159,6 +173,7 @@ interface GameScreenProps {
   skin: string;
   /** Extra-life base size (percent); App never passes it. */
   lastPercent?: number;
+  mode: ModeId;
 }
 /** Renders nothing; starts a round when mounted and routes to results on game over. */
 const GameScreen = ({
@@ -170,7 +185,8 @@ const GameScreen = ({
   api,
   route,
   skin,
-  lastPercent
+  lastPercent,
+  mode
 }: GameScreenProps): null => {
   const language = useLanguage();
   useEffect(() => {
@@ -186,7 +202,7 @@ const GameScreen = ({
     if (skin2 === "default" || skin2 === "No skin") {
       skin2 = "";
     }
-    api.start(nickName, skin2, bestScore, onGameOver, lastPercent);
+    api.start(nickName, skin2, bestScore, onGameOver, lastPercent, mode);
     setPreparing(false);
   }, []);
   return null;
@@ -359,6 +375,7 @@ export const App = ({
   const [nickName, setNickName] = useState(stored.nickName || "");
   const [bestScore, setBestScore] = useState(stored.bestScore || 0);
   const [skin, setSkin] = useState(stored.skin || "");
+  const [mode, setMode] = useState<ModeId>("classic");
   const cookieOptions = {
     expires: 365
   };
@@ -404,7 +421,9 @@ export const App = ({
     route: setRoute,
     setLanguage: setLanguage,
     api: api,
-    skin: skin
+    skin: skin,
+    mode: mode,
+    setMode: setMode
   }), route === "game" && api && createElement(GameScreen, {
     nickName: nickName,
     bestScore: bestScore,
@@ -413,7 +432,8 @@ export const App = ({
     setPreparing: setPreparing,
     api: api,
     route: setRoute,
-    skin: skin
+    skin: skin,
+    mode: mode
   }), route === "results" && results && createElement(Results, {
     bestScore: bestScore,
     results: results,

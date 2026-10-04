@@ -5,6 +5,7 @@ import type { Intersection, Segment } from "../engine/segment";
 import type { Vec2 } from "../engine/vec2";
 import type { Base } from "./base";
 import type { Unit } from "./units";
+import { areAllies } from "./team";
 
 /** One base-outline crossing recorded on a trail. */
 export interface TrackBaseCrossing {
@@ -97,7 +98,7 @@ export class Track {
         const reason: DeathReason = game.border.radius - unit.position.distance(game.grid.center) < 5 ? DEATH_WALL : DEATH_SELF_INTERSECT;
         game.kill(this.unit, undefined, reason);
       }
-    } else {
+    } else if (!areAllies(unit, this.unit)) {
       game.kill(this.unit, unit, DEATH_TRACK_CROSSED);
     }
   }

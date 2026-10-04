@@ -2,6 +2,7 @@ import { lerp } from "../engine/math";
 import { Segment } from "../engine/segment";
 import type { Vec2 } from "../engine/vec2";
 import type { Bot } from "../game/units";
+import { areAllies } from "../game/team";
 import type { FsmState } from "./state-machine";
 
 /** Context returned by the "idle" / "attack" enter handlers. */
@@ -47,7 +48,7 @@ const botNearPlayerTrack = (bot: Bot) => {
   const {
     player
   } = bot.game;
-  if (player) {
+  if (player && !areAllies(bot, player)) {
     const range = Math.max(bot.viewRange, player.viewRange);
     const aggroRange = range * bot.aggro * 0.75;
     const {

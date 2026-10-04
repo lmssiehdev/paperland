@@ -10,6 +10,8 @@ import type { AchievementsProfile } from "./achievements";
 import type { City } from "./city";
 import type { Game } from "./game";
 import type { SchemeSet, SchemesManager } from "./scoring";
+import { areAllies } from "./team";
+import type { Team } from "./team";
 
 /** Floating text queued on a unit; Game turns it into a FloatingLabel. */
 export interface UnitLabel {
@@ -57,6 +59,8 @@ export class Unit {
     lastArea: number;
     /** Base the unit is currently inside (its own or an enemy's); null while outside every base. */
     insideBase: Base | null;
+    /** Team in team modes (set by Team.add); null in classic. */
+    team: Team | null = null;
     target: Vec2 | null;
     respawn: boolean;
     statistics: { kills: number; };
@@ -236,7 +240,7 @@ export class Bot extends Unit {
       } = this.game;
       this.game.units.forEach((unit: Unit) => {
         const isFarPlayer = player === unit && this.position.distance(unit.position) > this.viewRange;
-        if (unit !== this && !isFarPlayer) {
+        if (unit !== this && !isFarPlayer && !areAllies(unit, this)) {
           let min = Infinity;
           let nearestTrackPoint: Vec2 | null = null;
           this.track.simplifiedPoints.forEach(point => {

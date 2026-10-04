@@ -25,6 +25,10 @@ import { NamePool } from "./names";
 import { SchemesManager } from "./scoring";
 import { Track } from "./track";
 import type { TrackBaseCrossing } from "./track";
+import { areAllies } from "./team";
+import type { Team } from "./team";
+import { ClassicMode } from "../modes/classic";
+import type { GameMode } from "../modes/mode";
 
 /** Game configuration: DEFAULT_CONFIG plus the overrides applied in main.ts. */
 export type GameConfig = Config;
@@ -188,8 +192,16 @@ export interface RenderContext {
   halfBarWidth: number;
 }
 
-/** Spawn area selector for getSpawnPosition / spawnBot. */
-export type SpawnZone = "player" | "bounds" | "center" | "random";
+/** Where to look for a free spawn spot; "near" means around an anchor unit (default: the player). */
+export type SpawnZone = "near" | "bounds" | "center" | "random";
+
+/** Options for Game.spawnBot used by team modes. */
+export interface SpawnBotOptions {
+  /** Team the bot joins (it takes the team's skin instead of a fresh one). */
+  team?: Team;
+  /** Anchor for the "near" zone. */
+  near?: Unit;
+}
 
 export type GameRenderer = (game: Game) => void;
 
@@ -206,6 +218,8 @@ export class Game {
     citiesManager: { get(country: string): string; } | undefined;
     /** Assigned by api.ts. */
     renderer: GameRenderer | undefined;
+    /** Mode-specific rules (spawning, win condition). Set by createApi; classic by default. */
+    mode: GameMode = new ClassicMode();
     rng: Rng;
     build: number;
     config: GameConfig;
@@ -367,7 +381,7 @@ export class Game {
   addUnit(unit: Unit) {
     this.units.push(unit);
   }
-  getSpawnPosition(zone: SpawnZone, baseRadius2?: number): Vec2 | undefined {
+  getSpawnPosition(zone: SpawnZone, baseRadius2?: number, near: Unit | null = this.player): Vec2 | undefined {
     const {
       center
     } = this.grid;
@@ -378,7 +392,7 @@ export class Game {
       baseRadius
     } = this.config;
     let center2 = center;
-    if (zone === "player" && !this.player) {
+    if (zone === "near" && !near) {
       return;
     }
     baseRadius2 = baseRadius2 || baseRadius;
@@ -389,10 +403,10 @@ export class Game {
     var trackClearanceSq = trackClearance * trackClearance;
     let y;
     switch (zone) {
-      case "player":
+      case "near":
         y = lerp(baseRadius * 12, baseRadius * 16, Math.random());
-        // zone "player" without a player returned above.
-        center2 = this.player!.position;
+        // zone "near" without an anchor returned above.
+        center2 = near!.position;
         break;
       case "bounds":
         y = lerp(Math.max(0, radius - (baseRadius2 + baseRadius * 10)), Math.max(0, radius - (baseRadius2 + baseRadius * 4)), Math.random());
@@ -428,7 +442,8 @@ export class Game {
     }
     return point3;
   }
-  spawnBot(zone: SpawnZone) {
+  /** Spawns one bot if there is room; returns it, or undefined when no bot was spawned. */
+  spawnBot(zone: SpawnZone, { team, near }: SpawnBotOptions = {}): Bot | undefined {
     const {
       baseCount,
       baseRadius,
@@ -447,10 +462,10 @@ export class Game {
     if (!this.nameManager || !this.nameManager.available()) {
       return;
     }
-    if (!this.skinManager || !this.skinManager.available()) {
+    if (!team && (!this.skinManager || !this.skinManager.available())) {
       return;
     }
-    const spawnPosition = this.getSpawnPosition(zone);
+    const spawnPosition = this.getSpawnPosition(zone, undefined, near);
     if (!spawnPosition) {
       return;
     }
@@ -471,10 +486,14 @@ export class Game {
     const type = typeRotation[rotationIndex];
     const name = this.nameManager.get();
     const bot = new Bot(this, type, name, spawnPosition, circlePoints(spawnPosition, baseCount, baseRadius), undefined, this.schemesManager);
-    const skin = this.skinManager.get();
-    bot.setSkin(skin);
+    if (team) {
+      team.add(bot);
+    } else {
+      bot.setSkin(this.skinManager.get());
+    }
     this.addUnit(bot);
     this.bots[type]++;
+    return bot;
   }
   spawnPlayer(name: string, skinName: string, extraLife: number) {
     const {
@@ -503,9 +522,10 @@ export class Game {
       position = this.getSpawnPosition("random", baseRadius2);
     }
     const player = new Player(this, name || this.language.defaultPlayerName, position, circlePoints(position, baseCount, baseRadius2), undefined, this.schemesManager);
-    const playerSkin = this.skinManager.getPlayerSkin(skinName);
+    const playerSkin = this.skinManager.getPlayerSkin(this.mode.playerSkins ? skinName : "");
     player.setSkin(playerSkin);
     this.addPlayer(player);
+    this.mode.onPlayerSpawned(this, player);
     this.scale = maxScale - ~~(player.base.area / this.arenaArea * 20) / 20 * (maxScale - minScale);
     this.startTime = now();
   }
@@ -612,9 +632,11 @@ export class Game {
     }
     this.events.kills++;
     unit.death = true;
-    if (this.skinManager) {
+    // Team members share one skin; it goes back to the pool with the last of them.
+    if (this.skinManager && !this.units.some(other => other !== unit && other.skin === unit.skin)) {
       this.skinManager.release(unit.skin);
     }
+    unit.team?.remove(unit);
     this.units.forEach(unit2 => {
       if (unit2 !== unit && unit2.insideBase === unit.base) {
         unit2.insideBase = null;
@@ -930,7 +952,7 @@ export class Game {
       let nearestBot = null as Bot | null;
       let min = Infinity;
       this.units.forEach(unit => {
-        if (unit instanceof Bot) {
+        if (unit instanceof Bot && !areAllies(unit, player)) {
           let min2 = Infinity;
           player.track.simplifiedPoints.forEach(point => {
             const distSq = point.distance2(unit.position);
@@ -952,16 +974,12 @@ export class Game {
     const targetScale = player ? player.scale : observerScale;
     const scaleDelta = targetScale - this.scale;
     this.scale += scaleDelta * dt / 400;
-    if (player && player.percent > 0.9999) {
+    if (player && this.mode.hasWon(this, player)) {
       player.percent = 1;
       this.gameOver(DEATH_WIN);
     }
     this.timings.spawnStartTime = now();
-    for (let i = 0; i < this.config.nearPlayerBotSpawnCount; i++) {
-      this.spawnBot("player");
-    }
-    this.spawnBot("center");
-    this.spawnBot(this.rng() > 0.3 ? "bounds" : "random");
+    this.mode.spawnBots(this);
     this.timings.spawnEndTime = now();
     this.cycle++;
     return true;
@@ -1210,7 +1228,7 @@ export class Game {
     }
     base.area += captured.area();
     base.polygon.calcPath();
-    this.units.filter(unit => unit !== returningUnit).forEach(item => {
+    this.units.filter(unit => unit !== returningUnit && !areAllies(unit, returningUnit)).forEach(item => {
       if (!item.death) {
         if (item.insideBase === item.base && captured.inside(item.position)) {
           this.kill(item, returningUnit, DEATH_SURROUNDED);
@@ -1318,15 +1336,18 @@ export class Game {
             if (!(entryContact.owner instanceof Base)) {
               throw new Error("Это не база");
             }
-            cutBase({
-              owner: entryContact.owner,
-              enter: entryContact.segment,
-              startPoint: entryContact.point,
-              startT: entryContact.index,
-              leave: exitContact.segment,
-              endPoint: exitContact.point,
-              endT: exitContact.index
-            });
+            // Teammates' territory is never cut.
+            if (!areAllies(entryContact.owner.unit, returningUnit)) {
+              cutBase({
+                owner: entryContact.owner,
+                enter: entryContact.segment,
+                startPoint: entryContact.point,
+                startT: entryContact.index,
+                leave: exitContact.segment,
+                endPoint: exitContact.point,
+                endT: exitContact.index
+              });
+            }
             const intersection = returningUnit.track.intersections.find(intersection => intersection.point.equal(point));
             // The original assumed a crossing is always recorded here and threw otherwise.
             const intersections = intersection ? intersection.intersections.filter((intersection: TrackBaseCrossing) => intersection.base === entryContact.owner) : [];

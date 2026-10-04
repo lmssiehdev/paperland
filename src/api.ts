@@ -11,6 +11,8 @@ import { Controller, KeyboardModeSwitch } from "./input/controller";
 import { renderGame } from "./render/game-renderer";
 import { SkinManager } from "./skins/skin";
 import { LANG_RU } from "./ui/i18n";
+import { createMode } from "./modes";
+import type { ModeId } from "./modes";
 import type { Language } from "./ui/i18n";
 
 /** Builds the SkinManager for a new game (see main.ts). */
@@ -22,8 +24,8 @@ export interface PaperioApi {
   game: Game;
   /** True until the warm-up simulation has finished. */
   preparing: boolean;
-  /** Creates a new Game rendering into `view`. */
-  create(view: HTMLCanvasElement): void;
+  /** Creates a new Game in `mode` (default classic) rendering into `view`. */
+  create(view: HTMLCanvasElement, mode?: ModeId): void;
   /** Runs the warm-up simulation in the background, then starts the loop and calls `onReady`. */
   prepare(onReady?: () => void): void;
   /**
@@ -31,8 +33,9 @@ export interface PaperioApi {
    * @param skinName asset name of the chosen skin ("" for a random colored skin)
    * @param best previous best score
    * @param extraLife fraction of the arena to start with (continue after death); falsy for a normal start
+   * @param mode game mode; if it differs from the current game's, a fresh game is created first
    */
-  start(name: string, skinName: string, best: number, onGameOver?: (result: GameResult) => void, extraLife?: number): void;
+  start(name: string, skinName: string, best: number, onGameOver?: (result: GameResult) => void, extraLife?: number, mode?: ModeId): void;
   /** Installed by the UI (App): same as pressing Play. Used by the headless scripts. */
   startGame?: () => void;
 }
@@ -43,20 +46,26 @@ export const createApi = (config: GameConfig, language: Language, createSkinMana
   }
   // Filled in below; `game` is set by create(), which the UI calls before anything else.
   const result = {} as PaperioApi;
-  result.create = (view: HTMLCanvasElement): void => {
+  // Remembered so start() can recreate the game in another mode.
+  let currentView: HTMLCanvasElement;
+  result.create = (view: HTMLCanvasElement, mode: ModeId = "classic"): void => {
+    currentView = view;
+    const gameMode = createMode(mode);
+    const gameConfig = { ...config, ...gameMode.config };
     const {
       arenaSize,
       quadSize,
       borderPoints
-    } = config;
+    } = gameConfig;
     const spatialGrid = new SpatialGrid(arenaSize, arenaSize, quadSize);
     Vec2.grid = spatialGrid;
     const vec2 = new Vec2(arenaSize / 2, arenaSize / 2);
     const baseRadius = Math.min(vec2.x, vec2.y) * 0.95;
     const border = Border.circular(vec2, borderPoints, baseRadius);
-    const skinManager = createSkinManager(config, view);
-    const game = new Game(config, view, spatialGrid, border, skinManager, null, nameManager, new Controller(view, new KeyboardModeSwitch()), language.lng, schemesManager, achievementsProfile, Math.random());
+    const skinManager = createSkinManager(gameConfig, view);
+    const game = new Game(gameConfig, view, spatialGrid, border, skinManager, null, nameManager, new Controller(view, new KeyboardModeSwitch()), language.lng, schemesManager, achievementsProfile, Math.random());
     game.renderer = renderGame;
+    game.mode = gameMode;
     result.game = game;
     game.controller.addSet([16, 18, 81, 66, 77], () => {
       game.debug = !game.debug;
@@ -101,7 +110,15 @@ export const createApi = (config: GameConfig, language: Language, createSkinMana
       }
     }, 0);
   };
-  result.start = (name: string, skinName: string, best: number, onGameOver?: (result: GameResult) => void, extraLife?: number): void => {
+  result.start = (name: string, skinName: string, best: number, onGameOver?: (result: GameResult) => void, extraLife?: number, mode?: ModeId): void => {
+    if (mode && mode !== result.game.mode.id) {
+      clearInterval(prepareInterval);
+      result.game.stop();
+      result.game.controller.dispose();
+      result.create(currentView, mode);
+      preparedCycles = 0;
+      result.preparing = true;
+    }
     const game = result.game;
     if (result.preparing) {
       clearInterval(prepareInterval);
