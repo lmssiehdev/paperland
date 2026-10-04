@@ -40,7 +40,12 @@ scripts/                 the pipeline + headless tools
 ```sh
 bun run typecheck   # strict: true, 0 errors, no `any`, no ts-ignore, no `_0x` names
 bun run golden      # deterministic sim hash; must not change on refactors
+bun run parity      # 1:1 vs the hosted game: original app2.js served as https://paperio.site, 6 seeds
 ```
+
+`parity` loads the captured original `app2.js` under the real hostname (Playwright route), so its
+domain lock passes and it runs exactly like the live site, then compares per-seed sim hashes with our
+build. The player follows a scripted loop (leaves base, captures, can kill and die).
 
 `golden` seeds `Math.random`, builds a fresh `Game`, runs 4000 ticks (player joins at 1000) and
 hashes unit positions/areas/FSM states. Current hash: `11a98dae6745f942`.

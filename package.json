@@ -30,7 +30,8 @@
     "regen": "bun run deob && bun run split && bun run build",
     "golden": "bun scripts/golden.ts",
     "typecheck": "tsc --noEmit -p .",
-    "rename-props": "bun scripts/rename-props.ts"
+    "rename-props": "bun scripts/rename-props.ts",
+    "parity": "bun scripts/parity.ts"
   },
   "dependencies": {
     "js-cookie": "2",
