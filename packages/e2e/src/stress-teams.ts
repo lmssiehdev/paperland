@@ -85,9 +85,9 @@ const runSeed = (page: import("playwright").Page, seed: number) =>
         return kill(unit, killer, reason);
       };
       const assert = console.assert;
-      console.assert = (cond: unknown, ...args: unknown[]) => {
+      console.assert = (cond?: boolean, ...args: unknown[]) => {
         if (!cond) bad("console.assert failed", String(args[0] ?? ""));
-        return assert(cond as boolean, ...args);
+        return assert(cond, ...args);
       };
 
       const distToSeg = (p: any, sg: any) => {

@@ -29,16 +29,16 @@ export const rangeOverlap = (a1: number, a2: number, b1: number, b2: number): nu
 /** Even-odd test; returns 0 outside, 1 on an edge, 2 inside. `vertices` is a list of [x, y] vertices. */
 export function pointInPolygon(vertices: ArrayLike<ArrayLike<number>>, x: number, y: number): 0 | 1 | 2 {
   let inside = false;
-  let count = vertices.length;
+  const count = vertices.length;
   for (let i = 0, j = count - 1; i < count; j = i++) {
-    let xi = vertices[i][0];
-    let yi = vertices[i][1];
-    let xj = vertices[j][0];
-    let yj = vertices[j][1];
+    const xi = vertices[i][0];
+    const yi = vertices[i][1];
+    const xj = vertices[j][0];
+    const yj = vertices[j][1];
     if (pointOnSegment(x, y, xi, yi, xj, yj)) {
       return 1;
     }
-    var crosses = yi > y != yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+    const crosses = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
     if (crosses) {
       inside = !inside;
     }
@@ -50,13 +50,13 @@ export function pointInPolygon(vertices: ArrayLike<ArrayLike<number>>, x: number
   }
 }
 function pointOnSegment(x: number, y: number, x1: number, y1: number, x2: number, y2: number): boolean {
-  let dx1 = x1 - x;
-  let dy1 = y1 - y;
-  let dx2 = x2 - x;
-  let dy2 = y2 - y;
-  let cross = dx1 * dy2 - dy1 * dx2;
-  let dot = dx1 * dx2 + dy1 * dy2;
-  return cross == 0 && dot <= 0;
+  const dx1 = x1 - x;
+  const dy1 = y1 - y;
+  const dx2 = x2 - x;
+  const dy2 = y2 - y;
+  const cross = dx1 * dy2 - dy1 * dx2;
+  const dot = dx1 * dx2 + dy1 * dy2;
+  return cross === 0 && dot <= 0;
 }
 let idCounter = 1;
 export const nextId = (): number => idCounter++;
@@ -69,11 +69,11 @@ export function createRng(seed: number): Rng {
   if (seed > 0 && seed < 1) {
     seed = Math.floor(seed * 1000000000);
   }
-  let nextInt = (modulus: number): number => {
+  const nextInt = (modulus: number): number => {
     seed = (seed * 69069 + 1) % 2147483648;
     return seed % modulus;
   };
-  let result = (max?: number): number => (max == null ? nextInt(1000000000) / 1000000000 : nextInt(max));
+  const result = (max?: number): number => (max == null ? nextInt(1000000000) / 1000000000 : nextInt(max));
   return result;
 }
 export function fmt2(value: number): string {

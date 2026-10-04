@@ -65,8 +65,8 @@ const drawUnitName = (ctx: CanvasRenderingContext2D, unit: Unit, scale: number, 
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
   let name = unit.name;
-  if (unit == unit.game.player) {
-    if (new Date().getSeconds() % 2 == 0) {
+  if (unit === unit.game.player) {
+    if (new Date().getSeconds() % 2 === 0) {
       if (unit.game.recording) {
         name = "Recording";
       } else if (unit.game.replaying) {
@@ -173,8 +173,11 @@ const drawSkinLayer = (
 ) => {
   const { trackWidth } = config;
   if (layer.image) {
+    // SAFETY: checked non-null by the if above.
     const image = layer.image as SkinImageSource;
+    // SAFETY: a canvas has no naturalWidth (undefined), so `||` falls back to width, as the original.
     const imageWidth = (image as HTMLImageElement).naturalWidth || image.width;
+    // SAFETY: as above.
     const imageHeight = (image as HTMLImageElement).naturalHeight || image.height;
     const layerScale = (trackWidth * display.scale * layer.scale) / imageWidth;
     ctx.save();
@@ -257,7 +260,7 @@ const baseOwners = (units: Unit[]): Unit[] => {
   });
 };
 const drawBases = (renderContext: RenderContext) => {
-  const { game: game, ctx, boundsInView } = renderContext;
+  const { game, ctx, boundsInView } = renderContext;
   const { trackWidth } = game.config;
   baseOwners(game.units).forEach(unit => {
     if (boundsInView(unit.base.polygon, trackWidth) || game.debugView) {
@@ -266,7 +269,7 @@ const drawBases = (renderContext: RenderContext) => {
   });
 };
 const cutTracksFromBases = (renderContext: RenderContext) => {
-  const { game: game, ctx, boundsInView } = renderContext;
+  const { game, ctx, boundsInView } = renderContext;
   const { trackWidth } = game.config;
   ctx.save();
   ctx.lineCap = "round";
@@ -293,7 +296,7 @@ const cutTracksFromBases = (renderContext: RenderContext) => {
   ctx.restore();
 };
 const drawFrontSkinLayers = (renderContext: RenderContext) => {
-  const { game: game, ctx, pointInView } = renderContext;
+  const { game, ctx, pointInView } = renderContext;
   const { trackWidth } = game.config;
   game.units.forEach(unit => {
     if (pointInView(unit.position, trackWidth * 4)) {
@@ -302,7 +305,7 @@ const drawFrontSkinLayers = (renderContext: RenderContext) => {
   });
 };
 const drawUnitNames = (renderContext: RenderContext) => {
-  const { game: game, ctx, scale, scaler, pointInView } = renderContext;
+  const { game, ctx, scale, scaler, pointInView } = renderContext;
   const { trackWidth, font } = game.config;
   game.units.forEach(unit => {
     if (pointInView(unit.position, trackWidth * 20) || game.debugView) {
@@ -311,7 +314,7 @@ const drawUnitNames = (renderContext: RenderContext) => {
   });
 };
 const drawBackSkinLayers = (renderContext: RenderContext) => {
-  const { game: game, ctx, pointInView } = renderContext;
+  const { game, ctx, pointInView } = renderContext;
   const { trackWidth } = game.config;
   game.units.forEach(unit => {
     if (pointInView(unit.position, trackWidth * 4)) {
@@ -320,7 +323,7 @@ const drawBackSkinLayers = (renderContext: RenderContext) => {
   });
 };
 const drawTracks = (renderContext: RenderContext) => {
-  const { game: game, ctx, boundsInView } = renderContext;
+  const { game, ctx, boundsInView } = renderContext;
   const { trackWidth } = game.config;
   ctx.save();
   ctx.lineCap = "round";
@@ -330,7 +333,7 @@ const drawTracks = (renderContext: RenderContext) => {
       if (boundsInView(unit.track.polyline, trackWidth)) {
         drawTrack(
           ctx,
-          game.tailRecovered && unit == game.player ? "#f00" : unit.skin.colors.main,
+          game.tailRecovered && unit === game.player ? "#f00" : unit.skin.colors.main,
           unit.track,
           unit.position,
           trackWidth
@@ -341,7 +344,7 @@ const drawTracks = (renderContext: RenderContext) => {
   ctx.restore();
 };
 const drawBaseSides = (renderContext: RenderContext) => {
-  const { game: game, ctx, boundsInView } = renderContext;
+  const { game, ctx, boundsInView } = renderContext;
   const { trackWidth } = game.config;
   baseOwners(game.units).forEach(unit => {
     if (boundsInView(unit.base.polygon, trackWidth)) {
@@ -350,7 +353,7 @@ const drawBaseSides = (renderContext: RenderContext) => {
   });
 };
 const drawArena = (renderContext: RenderContext) => {
-  const { game: game, ctx, viewScreenWidth, viewScreenHeight } = renderContext;
+  const { game, ctx, viewScreenWidth, viewScreenHeight } = renderContext;
   const { baseHeight, arenaColor, borderColor, backgroundTopColor, backgroundBottomColor } = game.config;
   fillPath(ctx, game.border.polygon.path, arenaColor);
   ctx.translate(0, baseHeight * 3);
@@ -365,7 +368,7 @@ const drawArena = (renderContext: RenderContext) => {
   );
 };
 const drawParticles = (renderContext: RenderContext) => {
-  const { game: game, ctx, pointInView } = renderContext;
+  const { game, ctx, pointInView } = renderContext;
   const { trackWidth } = game.config;
   ctx.save();
   game.particles.forEach(
@@ -374,14 +377,14 @@ const drawParticles = (renderContext: RenderContext) => {
   ctx.restore();
 };
 const drawLabels = (renderContext: RenderContext) => {
-  const { game: game, ctx, scale, scaler } = renderContext;
+  const { game, ctx, scale, scaler } = renderContext;
   const { font } = game.config;
   ctx.scale(1 / scale, 1 / scale);
   game.labels.forEach(label => drawLabel(ctx, label, font, scale, scaler));
   ctx.scale(scale, scale);
 };
 const drawLeaderCrown = (renderContext: RenderContext) => {
-  const { game: game, ctx, scale, scaler } = renderContext;
+  const { game, ctx, scale, scaler } = renderContext;
   const unit = game.units[0];
   if (unit) {
     drawCrown(ctx, unit, scale, scaler);
@@ -389,7 +392,7 @@ const drawLeaderCrown = (renderContext: RenderContext) => {
 };
 const drawMinimap = (renderContext: RenderContext) => {
   // Only called from renderGame when game.player is set.
-  const { game: game, ctx, scaler, calcMult, viewScreenWidth, viewScreenHeight, padding } = renderContext;
+  const { game, ctx, scaler, calcMult, viewScreenWidth, viewScreenHeight, padding } = renderContext;
   const minimapSize = viewScreenWidth / calcMult(8, 3);
   const markerSize = (game.grid.width / minimapSize) * scaler * 3;
   ctx.save();
@@ -423,7 +426,7 @@ const drawMinimap = (renderContext: RenderContext) => {
 let leaderboardCanvas: HTMLCanvasElement | null;
 window.addEventListener("resize", () => (leaderboardCanvas = null), false);
 const drawLeaderboard = (renderContext: RenderContext) => {
-  let { ctx, devicePixelRatio } = renderContext;
+  const { ctx, devicePixelRatio } = renderContext;
   if (!leaderboardCanvas) {
     leaderboardCanvas = document.createElement("canvas");
     leaderboardCanvas.width = ~~renderContext.barWidth;
@@ -432,7 +435,7 @@ const drawLeaderboard = (renderContext: RenderContext) => {
   if (renderContext.game.topListChanged) {
     renderContext.game.topListChanged = false;
     // A canvas always provides a 2d context.
-    let ctx2 = leaderboardCanvas.getContext("2d")!;
+    const ctx2 = leaderboardCanvas.getContext("2d")!;
     ctx2.save();
     ctx2.clearRect(0, 0, leaderboardCanvas.width, leaderboardCanvas.height);
     ctx2.translate(-ctx.canvas.width + leaderboardCanvas.width, 0);
@@ -447,7 +450,7 @@ const drawLeaderboard = (renderContext: RenderContext) => {
 };
 const renderLeaderboard = (ctx: CanvasRenderingContext2D, renderContext: RenderContext) => {
   const {
-    game: game,
+    game,
     viewScreenWidth,
     padding,
     backHeight,
@@ -518,17 +521,7 @@ const renderLeaderboard = (ctx: CanvasRenderingContext2D, renderContext: RenderC
 };
 const drawScoreBar = (renderContext: RenderContext) => {
   // Only called from renderGame when game.player is set.
-  const {
-    game: game,
-    ctx,
-    padding,
-    backHeight,
-    barHeight,
-    halfBarHeight,
-    barWidth,
-    strokeWidth,
-    uiFont
-  } = renderContext;
+  const { game, ctx, padding, backHeight, barHeight, halfBarHeight, barWidth, strokeWidth, uiFont } = renderContext;
   const { player } = game;
   ctx.fillStyle = "#00000022";
   fillRoundedRect(ctx, 0, padding, barWidth, barHeight + backHeight, [
@@ -559,22 +552,22 @@ const drawScoreBar = (renderContext: RenderContext) => {
 };
 const drawBestScore = (renderContext: RenderContext) => {
   // Only called from renderGame when game.player is set.
-  const { game: game, ctx, padding, backHeight, barHeight, uiFont } = renderContext;
+  const { game, ctx, padding, backHeight, barHeight, uiFont } = renderContext;
   ctx.font = uiFont;
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
-  let text = game.language.bestTxt + " " + game.player!.schemes.print(game.best);
+  const text = game.language.bestTxt + " " + game.player!.schemes.print(game.best);
   ctx.fillStyle = "#00000066";
   ctx.fillText(text, padding / 2, padding + barHeight + backHeight + padding / 2);
 };
 const drawKillCounter = (renderContext: RenderContext) => {
   // Only called from renderGame when game.player is set.
-  const { game: game, ctx, scaler, padding, backHeight, barHeight, halfBarHeight, fontSize, uiFont } = renderContext;
+  const { game, ctx, scaler, padding, backHeight, barHeight, halfBarHeight, fontSize, uiFont } = renderContext;
   const padding2 = padding + barHeight + backHeight + fontSize + padding / 2 + 4;
   ctx.font = uiFont;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  let text = "x" + game.player!.statistics.kills;
+  const text = "x" + game.player!.statistics.kills;
   ctx.fillStyle = "#00000088";
   fillRoundedRect(ctx, 0, padding2, barHeight * 1.5 + ctx.measureText(text).width, barHeight, [
     0,
@@ -588,7 +581,7 @@ const drawKillCounter = (renderContext: RenderContext) => {
 };
 const drawNotification = (renderContext: RenderContext) => {
   const {
-    game: game,
+    game,
     ctx,
     scaler,
     padding,
@@ -603,7 +596,7 @@ const drawNotification = (renderContext: RenderContext) => {
     viewScreenHeight
   } = renderContext;
   if (game.notifications.length) {
-    // Notifications are always achievement Tips; GameNotification (game.ts) does not declare title/description/image/position yet.
+    // SAFETY: Notifications are always achievement Tips; GameNotification (game.ts) does not declare title/description/image/position yet.
     const notification = game.notifications[0] as Tip;
     if (notification.ready) {
       ctx.save();
@@ -664,7 +657,8 @@ export function renderGame(game: Game) {
     return;
   }
   const { baseHeight } = game.config;
-  let { ctx, devicePixelRatio, viewWidth, viewHeight, origin, scale } = renderContext;
+  const { ctx, devicePixelRatio, viewWidth, viewHeight } = renderContext;
+  let { origin, scale } = renderContext;
   if (game.debugView) {
     scale = 0.5;
     origin = game.grid.center;

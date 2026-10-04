@@ -34,6 +34,7 @@ test("snapshot round-trips through the protocol", () => {
   for (let i = 0; i < 20; i++) room.tick();
   const [decoded] = decodeServerMessages(encodeMessages(room.snapshot()));
   expect(decoded).toBeInstanceOf(UpdateMsg);
+  // SAFETY: checked by toBeInstanceOf just above.
   const update = decoded as UpdateMsg;
   expect(update.tick).toBe(room.game.cycle);
   expect(update.units.map(unit => unit.id)).toEqual(room.game.units.map(unit => room.unitId(unit)));

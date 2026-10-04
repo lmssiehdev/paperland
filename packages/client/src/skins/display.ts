@@ -33,7 +33,7 @@ export interface SkinPatternConfig {
   scale?: number;
 }
 
-var assign = Object.assign;
+const assign = Object.assign;
 export class SkinLayer {
   level: number;
   scale: number;
@@ -61,14 +61,12 @@ export class SkinLayer {
     this.image = null;
     this.config = config;
     Object.assign(this, layerConfig);
-    this.pivot = Object.assign(
-      {
-        x: 0.5,
-        y: 0.5
-      },
-      layerConfig.pivot
-    );
-    let sourcePromise: Promise<SkinImageSource> | null = this.url
+    this.pivot = {
+      x: 0.5,
+      y: 0.5,
+      ...layerConfig.pivot
+    };
+    const sourcePromise: Promise<SkinImageSource> | null = this.url
       ? loadImage(this.url)
       : this.src
         ? Promise.resolve(this.src)
@@ -88,7 +86,9 @@ export class SkinLayer {
     const maxPixelWidth = trackWidth * maxScale;
     // Only called once the source has loaded (from the load callback and SkinAvatar's onLayerLoad).
     const src = this.src!;
+    // SAFETY: a canvas has no naturalWidth (undefined), so `||` falls back to width, as the original.
     const srcWidth = (src as HTMLImageElement).naturalWidth || src.width;
+    // SAFETY: as above.
     const srcHeight = (src as HTMLImageElement).naturalHeight || src.height;
     const factor = (maxPixelWidth * scale * this.scale) / srcWidth;
     const width = ~~(srcWidth * factor);
@@ -118,6 +118,7 @@ export class SkinPattern {
     config: Config,
     view: HTMLCanvasElement,
     path: string,
+    // SAFETY: callers always pass the pattern; the empty default (url "undefined") is the original's.
     pattern: SkinPatternConfig = {} as SkinPatternConfig,
     onReady?: () => void
   ) {
@@ -131,10 +132,10 @@ export class SkinPattern {
       const srcWidth = ~~(src.naturalWidth || src.width);
       const srcHeight = ~~(src.naturalHeight || src.height);
       const factor = (maxScale * 100 * this.scale) / srcWidth;
-      if (srcWidth == 0) {
+      if (srcWidth === 0) {
         console.log(this.url + " has no width");
       }
-      if (srcHeight == 0) {
+      if (srcHeight === 0) {
         console.log(this.url + " has no heigth");
       }
       const width = Math.floor(srcWidth * factor) || 1;
@@ -187,7 +188,7 @@ export class SkinAvatar {
         }
       }
     };
-    // Object.assign above copied the raw layer configs; they are replaced by SkinLayer instances here.
+    // SAFETY: Object.assign above copied the raw layer configs; they are replaced by SkinLayer instances here.
     // Cast: at this point `this.layers` still holds those configs, not SkinLayer instances.
     const layerConfigs = (this.layers as SkinLayerConfig[]) || [];
     this.layers = layerConfigs.map(

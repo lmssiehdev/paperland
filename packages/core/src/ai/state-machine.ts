@@ -30,6 +30,7 @@ export class StateMachine<P, N extends string> {
     this.change(state);
   }
   change(state: N) {
+    // SAFETY: `state` is only ever set from a key of `states` (constructor/change); before that the lookup misses harmlessly.
     const current = this.states[this.state as N];
     if (current && current.leave) {
       this.context = current.leave(this.payload, this.context) || this.context;
@@ -42,6 +43,7 @@ export class StateMachine<P, N extends string> {
     }
   }
   update() {
+    // SAFETY: see change().
     const current = this.states[this.state as N];
     const next = current && current.update(this.payload, this.context);
     if (next) {

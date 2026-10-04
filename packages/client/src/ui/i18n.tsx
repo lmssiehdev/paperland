@@ -19,7 +19,7 @@ export const buildLanguages = (languages: LanguagesFile): Language[] => {
   const { en } = languages;
   return Object.entries(languages).map(([code, strings]) => ({
     name: code,
-    lng: Object.assign({}, en, strings)
+    lng: { ...en, ...strings }
   }));
 };
 
@@ -38,7 +38,7 @@ export const browserLanguageCode = (): string => {
     legacyNavigator.browserLanguage ||
     "en"
   )
-    .substr(0, 2)
+    .slice(0, 2)
     .toLowerCase();
 };
 

@@ -4,6 +4,7 @@
 // update(1000/60), player spawned at tick 1000, a state snapshot every 500 ticks.
 import { createHeadlessGame } from "../src/headless";
 import type { HeadlessGameOptions } from "../src/headless";
+import type { LanguageStrings } from "../src/language";
 import type { Unit } from "../src/game/units";
 
 /** Expected hash in Chromium (Playwright's build): the browser golden, see README "Checks". */
@@ -20,6 +21,18 @@ export const mulberry32 = (seed: number) => {
   };
 };
 
+export type GoldenSetup = Pick<HeadlessGameOptions, "skinNames" | "language">;
+
+/** Skin names and English strings from the captured assets, as the browser loads them. */
+export const loadGoldenSetup = async (): Promise<GoldenSetup> => {
+  const assets = new URL("../../../original/assets/", import.meta.url).pathname;
+  // SAFETY: captured asset files with a fixed shape (the client and server read the same files).
+  const skins = (await Bun.file(assets + "skins/skins.json").json()) as { name: string }[];
+  // SAFETY: as above; "en" is the complete entry.
+  const languages = (await Bun.file(assets + "languages.json").json()) as { en: LanguageStrings };
+  return { skinNames: skins.map(skin => skin.name), language: languages.en };
+};
+
 export interface GoldenResult {
   checkpoints: string[];
   units: number;
@@ -27,10 +40,7 @@ export interface GoldenResult {
 }
 
 /** Runs the scenario with Math.random seeded (restored afterwards). Hash `checkpoints.join("\n")` with sha256. */
-export function runGoldenScenario(
-  setup: Pick<HeadlessGameOptions, "skinNames" | "language">,
-  ticks = 4000
-): GoldenResult {
+export function runGoldenScenario(setup: GoldenSetup, ticks = 4000): GoldenResult {
   const realRandom = Math.random;
   Math.random = mulberry32(12345);
   try {

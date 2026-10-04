@@ -27,7 +27,7 @@ declare global {
     /** Game API used by the UI and the host page. */
     paperio2api?: PaperioApi | null;
     /** Debug handle: core classes and configs, for poking at the game from the console. */
-    __paperio?: Record<string, unknown>;
+    __paperio?: typeof paperioDebug;
   }
 }
 
@@ -52,8 +52,8 @@ Promise.all([languagesRequest, skinsRequest]).then(([languagesFile, skinsList]) 
   const languages = buildLanguages(languagesFile);
   const initialLanguage = pickLanguage(languages);
   const createSkinManager = (config: Config, view: HTMLCanvasElement): SkinManager => {
-    let coloredPool = new ColoredPool(config, createColorAvatar);
-    let classicSkinPool = new ClassicSkinPool(config, view, "assets/skins/", skinsList);
+    const coloredPool = new ColoredPool(config, createColorAvatar);
+    const classicSkinPool = new ClassicSkinPool(config, view, "assets/skins/", skinsList);
     const skinManager = new SkinManager(coloredPool, classicSkinPool, 1);
     return skinManager;
   };
@@ -91,7 +91,7 @@ Promise.all([languagesRequest, skinsRequest]).then(([languagesFile, skinsList]) 
     root
   );
 });
-window.__paperio = {
+const paperioDebug = {
   Game,
   Unit,
   Player,
@@ -104,3 +104,4 @@ window.__paperio = {
   CONFIG,
   createRng
 };
+window.__paperio = paperioDebug;

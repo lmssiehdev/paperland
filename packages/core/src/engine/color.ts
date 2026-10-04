@@ -12,9 +12,9 @@ export interface HSV {
 }
 
 export const hexToRgb = (item: string): RGB => {
-  const red = parseInt(item.substring(1, 3), 16);
-  const green = parseInt(item.substring(3, 5), 16);
-  const blue = parseInt(item.substring(5, 7), 16);
+  const red = parseInt(item.slice(1, 3), 16);
+  const green = parseInt(item.slice(3, 5), 16);
+  const blue = parseInt(item.slice(5, 7), 16);
   return {
     r: red,
     g: green,
@@ -22,27 +22,20 @@ export const hexToRgb = (item: string): RGB => {
   };
 };
 export const rgbToHsv = ({ r, g, b }: RGB): HSV => {
-  let rNorm;
-  let gNorm;
-  let bNorm;
   let rDiff;
   let gDiff;
   let bDiff;
   // One of the three branches below always assigns: `max` is one of rNorm/gNorm/bNorm.
   let hue!: number;
   let saturation;
-  let max;
-  let delta;
-  let channelDiff;
-  let round2;
-  rNorm = r / 255;
-  gNorm = g / 255;
-  bNorm = b / 255;
-  max = Math.max(rNorm, gNorm, bNorm);
-  delta = max - Math.min(rNorm, gNorm, bNorm);
-  channelDiff = (channel: number): number => (max - channel) / 6 / delta + 1 / 2;
-  round2 = (value: number): number => Math.round(value * 100) / 100;
-  if (delta == 0) {
+  const rNorm = r / 255;
+  const gNorm = g / 255;
+  const bNorm = b / 255;
+  const max = Math.max(rNorm, gNorm, bNorm);
+  const delta = max - Math.min(rNorm, gNorm, bNorm);
+  const channelDiff = (channel: number): number => (max - channel) / 6 / delta + 1 / 2;
+  const round2 = (value: number): number => Math.round(value * 100) / 100;
+  if (delta === 0) {
     hue = saturation = 0;
   } else {
     saturation = delta / max;
@@ -80,20 +73,15 @@ const rgbToHex = ({ r, g, b }: RGB): string => {
   return "#" + toHexByte(r) + toHexByte(g) + toHexByte(b);
 };
 const hsvToRgb = ({ h, s, v }: HSV): RGB => {
-  var red;
-  var green;
-  var blue;
-  var sector;
-  var fraction;
-  var p;
-  var q;
-  var t;
+  let red;
+  let green;
+  let blue;
   h = Math.max(0, Math.min(360, h));
   s = Math.max(0, Math.min(100, s));
   v = Math.max(0, Math.min(100, v));
   s /= 100;
   v /= 100;
-  if (s == 0) {
+  if (s === 0) {
     red = green = blue = v;
     return {
       r: Math.round(red * 255),
@@ -102,11 +90,11 @@ const hsvToRgb = ({ h, s, v }: HSV): RGB => {
     };
   }
   h /= 60;
-  sector = Math.floor(h);
-  fraction = h - sector;
-  p = v * (1 - s);
-  q = v * (1 - s * fraction);
-  t = v * (1 - s * (1 - fraction));
+  const sector = Math.floor(h);
+  const fraction = h - sector;
+  const p = v * (1 - s);
+  const q = v * (1 - s * fraction);
+  const t = v * (1 - s * (1 - fraction));
   switch (sector) {
     case 0:
       red = v;
@@ -146,7 +134,8 @@ const hsvToRgb = ({ h, s, v }: HSV): RGB => {
 };
 export const hsvToHex = (hsv: HSV): string => rgbToHex(hsvToRgb(hsv));
 export function hsvMulValue(hsv: HSV, factor: number): HSV {
-  let { h, s, v } = hsv;
+  const { h, s } = hsv;
+  let { v } = hsv;
   v *= factor;
   return {
     h: h,
@@ -155,7 +144,8 @@ export function hsvMulValue(hsv: HSV, factor: number): HSV {
   };
 }
 export function hsvLighten(hsv: HSV, amount: number): HSV {
-  let { h, s, v } = hsv;
+  const { h, s } = hsv;
+  let { v } = hsv;
   const headroom = 100 - v;
   v = Math.max(v * amount, v + (amount * headroom) / 4);
   return {
@@ -165,7 +155,8 @@ export function hsvLighten(hsv: HSV, amount: number): HSV {
   };
 }
 export function hsvSetValue(hsv: HSV, value: number): HSV {
-  let { h, s, v } = hsv;
+  const { h, s } = hsv;
+  let { v } = hsv;
   v = value;
   return {
     h: h,

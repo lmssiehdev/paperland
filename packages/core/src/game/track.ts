@@ -148,7 +148,7 @@ export class Track {
   }
   /** `unit` moved along `movement` and crossed this trail at `intersection`. */
   handleIntersect(intersection: Intersection, unit: Unit, movement: Segment) {
-    let game = unit.game;
+    const game = unit.game;
     if (unit === this.unit) {
       if (
         intersection.overlay === true ||

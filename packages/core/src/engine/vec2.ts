@@ -119,7 +119,7 @@ export class Vec2 {
   }
   static alloc(x?: number, y?: number): Vec2 {
     if (vecPoolSize) {
-      let result = vecPool[--vecPoolSize].set(x, y);
+      const result = vecPool[--vecPoolSize].set(x, y);
       return result;
     }
     return new Vec2(x, y);

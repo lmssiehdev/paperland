@@ -57,13 +57,13 @@ const botNearPlayerTrack = (bot: Bot) => {
     }
   }
 };
-const botFeelsThreatened = (bot: Bot, _unused?: unknown) => {
+const botFeelsThreatened = (bot: Bot, _unused?: undefined) => {
   if (bot.insideBase === bot.base) {
     return false;
   }
   return bot.maxDanger > bot.defense * 0.8;
 };
-export var BOT_STATES: BotStates = {
+export const BOT_STATES: BotStates = {
   idle: {
     enter: function () {
       return {};
@@ -126,6 +126,7 @@ export var BOT_STATES: BotStates = {
   },
   exit: {
     enter: function (bot: Bot) {
+      // SAFETY: exitPoint is filled in by the search below before the context is used (as in the original).
       const result = {} as ExitContext;
       let min = Infinity;
       let exitIndex: number | undefined;
@@ -149,7 +150,7 @@ export var BOT_STATES: BotStates = {
     },
     update: function (bot: Bot, ctx: ExitContext) {
       if (bot.insideBase !== bot.base) {
-        // ORIGINAL: reassigns the local parameter only (no effect on the FSM context).
+        // SAFETY: ORIGINAL: reassigns the local parameter only (no effect on the FSM context).
         ctx = {} as ExitContext;
         return "capture";
       }
@@ -161,7 +162,7 @@ export var BOT_STATES: BotStates = {
       const index = ~~(bot.game.rng() * length);
       const start = bot.base.polygon.segments[index].start;
       const dist = start.distance(bot.position);
-      let dist2 = ctx.exitPoint.distance(bot.position);
+      const dist2 = ctx.exitPoint.distance(bot.position);
       if (dist > minDistance && dist < dist2) {
         ctx.exitPoint = start;
       } else {

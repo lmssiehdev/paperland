@@ -11,8 +11,8 @@ export type ParticleColor = string | ImageHandle;
  * overwrites the Vec2 velocity/acceleration with scalar speeds (see spawnDeathParticles).
  */
 type HomingParticle = Omit<Particle, "velocity" | "acceleration"> & {
-  velocity: number;
-  acceleration: number;
+  velocity: Vec2 | number;
+  acceleration: Vec2 | number | null;
 };
 
 export class Particle {
@@ -116,7 +116,7 @@ export class Particle {
  * with `transferScore` they are bigger and add the victim's score share to the collector's scheme.
  */
 export function spawnDeathParticles(unit: Unit, collector: Unit | null, segments: Segment[], transferScore?: boolean) {
-  let game = unit.game;
+  const game = unit.game;
   if (game.visible) {
     const victimScore = unit.schemes.scores();
     let particleCount = 0;
@@ -149,7 +149,7 @@ export function spawnDeathParticles(unit: Unit, collector: Unit | null, segments
           time,
           (particle: Particle) => {
             if (collector) {
-              const homing: HomingParticle = particle as unknown as HomingParticle;
+              const homing: HomingParticle = particle;
               homing.target = collector;
               homing.time = 1;
               homing.velocity = particle.velocity.magnitude();

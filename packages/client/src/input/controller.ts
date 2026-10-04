@@ -83,6 +83,7 @@ export class Controller {
     };
     const onMouseMove = (event: MouseEvent) => {
       if (this.mouse === null) {
+        // SAFETY: x and y are assigned on the next two lines.
         this.mouse = {} as PointerPosition;
       }
       this.mouse.x = event.pageX;
@@ -111,6 +112,7 @@ export class Controller {
     };
     const onTouchMove = (event: TouchEvent) => {
       if (this.mouse === null) {
+        // SAFETY: x and y are assigned right below, from the first changed touch.
         this.mouse = {} as PointerPosition;
       }
       const changedTouch = event.changedTouches[0];

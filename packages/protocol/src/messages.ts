@@ -160,6 +160,7 @@ export class DiedMsg implements Msg {
     if (reason > DEATH_CAPITAL_SURROUNDED) {
       throw new ProtocolError(`DiedMsg: unknown death reason ${reason}`);
     }
+    // SAFETY: range-checked against the last DEATH_* code above.
     this.reason = reason as DeathReason;
     this.killerId = s.readUint16();
     this.percent = s.readFloat(0, 1, Limits.PercentBits);
@@ -197,6 +198,7 @@ function decode<M extends Message>(bytes: Uint8Array, table: Partial<Record<MsgT
   const messages: M[] = [];
   while (s.remainingBits >= 8) {
     const type = s.readUint8();
+    // SAFETY: any byte is a valid lookup key; unknown types miss and throw below.
     const MessageClass = table[type as MsgType];
     if (!MessageClass) {
       throw new ProtocolError(`unexpected message type ${type}`);

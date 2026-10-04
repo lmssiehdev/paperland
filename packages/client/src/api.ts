@@ -65,6 +65,7 @@ export const createApi = (
     return null;
   }
   // Filled in below; `game` is set by create(), which the UI calls before anything else.
+  // SAFETY: every member is assigned below before createApi returns; `game` by create(), which the UI calls first.
   const result = {} as PaperioApi;
   // Remembered so start() can recreate the game in another mode.
   let currentView: HTMLCanvasElement;
@@ -129,7 +130,7 @@ export const createApi = (
     }
   };
   result.prepare = (onReady?: () => void): void => {
-    const { game: game } = result;
+    const { game } = result;
     prepareInterval = setInterval(() => {
       if (nameManager.available()) {
         runPrepareBatch();

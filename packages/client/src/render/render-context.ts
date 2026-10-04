@@ -67,7 +67,7 @@ export function getRenderContext(game: Game): RenderContext | undefined {
   }
   if (game.origin && (!game.player || game.player.killer)) {
     const dist = game.origin.distance(point);
-    let dist3 = dist / 30;
+    const dist3 = dist / 30;
     const step = point.clone().sub(game.origin).normalize().mulScalar(dist3);
     point = game.origin.add(step);
   }

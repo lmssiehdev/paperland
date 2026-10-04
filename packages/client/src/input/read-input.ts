@@ -8,7 +8,7 @@ export const readControllerInput: InputSource = (game, dt) => {
     return;
   }
   if (game.controller.pressed()) {
-    game.keyboard = Object.assign({}, game.controller.mouse);
+    game.keyboard = { ...game.controller.mouse };
     const maxTurn = (TAU * dt) / 1000;
     if (game.controller.keyboardModeSwitch.mode2) {
       let turn = 0;

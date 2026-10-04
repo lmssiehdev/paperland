@@ -7,14 +7,11 @@
 // build; the constant below is Bun's (JSC's) result for the same scenario. If a Bun upgrade changes its
 // libm this may move: re-check that the Chromium test still passes, then update it.
 import { expect, test } from "bun:test";
-import type { LanguageStrings } from "@paperio/core/language";
-import { runGoldenScenario } from "./golden-scenario";
+import { loadGoldenSetup, runGoldenScenario } from "./golden-scenario";
 
 const BUN_GOLDEN_HASH = "e969d562c614ced4";
 
-const assets = new URL("../../../original/assets/", import.meta.url).pathname;
-const skinNames = ((await Bun.file(assets + "skins/skins.json").json()) as { name: string }[]).map(skin => skin.name);
-const language = ((await Bun.file(assets + "languages.json").json()) as { en: LanguageStrings }).en;
+const { skinNames, language } = await loadGoldenSetup();
 const sha16 = (text: string) => new Bun.CryptoHasher("sha256").update(text).digest("hex").slice(0, 16);
 
 test("headless golden in Bun is deterministic and pinned", () => {

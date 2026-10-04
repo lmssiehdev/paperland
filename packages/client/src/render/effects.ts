@@ -18,18 +18,18 @@ const SQUARE_PATH = createSquarePath();
 export function drawParticle(ctx: CanvasRenderingContext2D, particle: Particle) {
   const { x, y } = particle.position;
   const { rotation, color, scale } = particle;
-  let transform = ctx.getTransform();
+  const transform = ctx.getTransform();
   ctx.translate(x, y);
   ctx.rotate(rotation);
   ctx.scale(scale, scale);
-  if (typeof color === "string") {
+  if (color instanceof HTMLImageElement) {
+    ctx.scale(1 / 20, 1 / 20);
+    ctx.drawImage(color, -color.width / 2, -color.height / 2);
+  } else {
     if (ctx.fillStyle !== color) {
       ctx.fillStyle = color;
     }
     ctx.fill(SQUARE_PATH);
-  } else {
-    ctx.scale(1 / 20, 1 / 20);
-    ctx.drawImage(color, -color.width / 2, -color.height / 2);
   }
   ctx.setTransform(transform);
 }

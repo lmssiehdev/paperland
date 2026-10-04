@@ -19,12 +19,12 @@ export class BitStream {
 
   /** Pass bytes to read them, or a capacity in bytes (default 64) to write. */
   constructor(source: Uint8Array | ArrayBuffer | number = 64) {
-    if (typeof source === "number") {
-      this.bytes = new Uint8Array(Math.max(1, source));
-      this.lengthBits = 0;
-    } else {
+    if (source instanceof Uint8Array || source instanceof ArrayBuffer) {
       this.bytes = source instanceof Uint8Array ? source : new Uint8Array(source);
       this.lengthBits = this.bytes.length * 8;
+    } else {
+      this.bytes = new Uint8Array(Math.max(1, source));
+      this.lengthBits = 0;
     }
   }
 

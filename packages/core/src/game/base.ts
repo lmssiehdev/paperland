@@ -61,7 +61,7 @@ export class Base {
     const { start } = segments[0];
     this.path.moveTo(start.x, start.y);
     for (let i = 1; i < length; i++) {
-      const { start: start } = segments[i];
+      const { start } = segments[i];
       this.path.lineTo(start.x, start.y);
     }
     this.path.closePath();
@@ -136,7 +136,7 @@ export class Base {
       return;
     }
     unit.onScoreChanged();
-    const { point: point, segment: segment } = intersection;
+    const { point, segment } = intersection;
     if (unit.insideBase === this) {
       if (intersection.zn < 0) {
         return;
@@ -187,7 +187,7 @@ export class Base {
     }
   }
   handleEnemyIntersect(intersection: Intersection, unit: Unit, movement: Segment) {
-    const { point: point, segment: segment } = intersection;
+    const { point, segment } = intersection;
     if (unit.insideBase === this) {
       if (intersection.zn < 0) {
         return;

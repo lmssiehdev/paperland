@@ -40,7 +40,7 @@ export const DEFAULT_CONFIG = {
   botAttackTrackLength: 1500,
   font: "PT Sans Caption"
 };
-export var PALETTE = [
+export const PALETTE = [
   "#3b5998",
   "#8b9dc3",
   "#2a4d69",

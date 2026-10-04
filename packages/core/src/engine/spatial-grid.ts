@@ -63,7 +63,7 @@ export class SpatialGrid {
     return this.getCell(Math.floor(point.x / this.size) % this.w, Math.floor(point.y / this.size) % this.h);
   }
   getCell(j: number, i: number): GridCell {
-    let cell = this.cells[j + i * this.w];
+    const cell = this.cells[j + i * this.w];
     if (!cell) {
       debugger;
     }
@@ -78,7 +78,7 @@ export class SpatialGrid {
     for (let i = 0; i < this.h; i++) {
       for (let j = 0; j < this.w; j++) {
         this.getCell(j, i).points.forEach(point => {
-          // TODO(types): Segment has no `id`, so every entry lands under the key "undefined" (FINDINGS #21).
+          // SAFETY: TODO(types): Segment has no `id`, so every entry lands under the key "undefined" (FINDINGS #21).
           // The cast claims a numeric id only so the original indexing type-checks; it is undefined at runtime.
           point.segments.forEach(segment => (result[(segment as Segment & { id: number }).id] = segment));
         });

@@ -108,8 +108,9 @@ export class AssetPool {
     this.assets = [];
   }
   get(name: string, onlyReady?: boolean) {
-    let found: Asset | undefined;
-    found = this.assets.find(asset => asset.name === name && (onlyReady ? asset.ready === true : true));
+    const found: Asset | undefined = this.assets.find(
+      asset => asset.name === name && (onlyReady ? asset.ready === true : true)
+    );
     if (!found) {
       return null;
     }
@@ -196,15 +197,15 @@ class SkinManagerBase {
     };
   }
   registerAssets(pool: AssetPool, tag: string) {
-    for (let asset of pool.assets) {
+    for (const asset of pool.assets) {
       this.registerAsset(asset, tag);
     }
   }
   /** Number of unused assets, optionally only those with the given tag. */
   available(tag?: string) {
-    let unused = Object.values(this.unusedAssets);
+    const unused = Object.values(this.unusedAssets);
     if (tag) {
-      return unused.filter(item => item.tag == tag).length;
+      return unused.filter(item => item.tag === tag).length;
     } else {
       return unused.length;
     }
@@ -213,13 +214,13 @@ class SkinManagerBase {
     return name in this.unusedAssets;
   }
   randomAssetName(tag?: string, onlyUnused = true) {
-    let source = onlyUnused ? this.unusedAssets : this.assets;
+    const source = onlyUnused ? this.unusedAssets : this.assets;
     let names = Object.keys(source);
     if (tag) {
-      names = names.filter(item => source[item].tag == tag);
+      names = names.filter(item => source[item].tag === tag);
     }
-    let roll = this.rng(names.length);
-    let result = names[roll];
+    const roll = this.rng(names.length);
+    const result = names[roll];
     return result;
   }
   /** Creates a Skin from the named asset (random one with `tag` if no name) and marks it used. */
@@ -227,7 +228,7 @@ class SkinManagerBase {
     if (!name) {
       name = this.randomAssetName(tag);
     }
-    let asset = this.assets[name].asset;
+    const asset = this.assets[name].asset;
     delete this.unusedAssets[name];
     asset.load();
     const skin = new Skin();
@@ -237,17 +238,17 @@ class SkinManagerBase {
     return skin;
   }
   release(skin: Skin) {
-    this.usedBy[skin.name] = this.usedBy[skin.name].filter((item): boolean => item != skin);
-    if (this.usedBy[skin.name].length == 0) {
+    this.usedBy[skin.name] = this.usedBy[skin.name].filter((item): boolean => item !== skin);
+    if (this.usedBy[skin.name].length === 0) {
       delete this.usedBy[skin.name];
       this.unusedAssets[skin.name] = this.assets[skin.name];
     }
   }
   /** Gives every unit currently using skin `name` a fresh random skin, freeing `name`. */
   reskin(name: string) {
-    let users = this.usedBy[name];
+    const users = this.usedBy[name];
     if (users) {
-      for (let item of users) {
+      for (const item of users) {
         item.user.setSkin(this.get());
       }
       delete this.usedBy[name];
@@ -274,8 +275,8 @@ export class SkinManager extends SkinManagerBase {
     return this.get(skinName);
   }
   getBotSkin() {
-    let tagOrder = this.rng() < 0.25 ? ["colored", "classic"] : ["classic", "colored"];
-    let name = this.randomAssetName(tagOrder[0], true) || this.randomAssetName(tagOrder[1]);
+    const tagOrder = this.rng() < 0.25 ? ["colored", "classic"] : ["classic", "colored"];
+    const name = this.randomAssetName(tagOrder[0], true) || this.randomAssetName(tagOrder[1]);
     return this.get(name);
   }
 }

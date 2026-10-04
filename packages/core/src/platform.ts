@@ -19,6 +19,7 @@ export interface Platform {
 }
 
 // Assertion, not annotation: in the client PathHandle is widened to Path2D (see handles.ts).
+// SAFETY: core only calls moveTo/lineTo/closePath on its paths; the client installs Path2D before anything is drawn.
 const headlessPath = {
   moveTo(_x: number, _y: number) {},
   lineTo(_x: number, _y: number) {},
@@ -30,6 +31,7 @@ export const platform: Platform = {
   createPath: () => headlessPath,
   loadImage: (_url, done) => done(null),
   storage: {
+    // SAFETY: each key is read back as the type its single writer (AchievementStore) stored.
     getJSON: <T>(key: string) => memoryStorage.get(key) as T | undefined,
     set: (key, value) => {
       memoryStorage.set(key, value);

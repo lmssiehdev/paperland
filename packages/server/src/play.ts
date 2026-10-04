@@ -12,7 +12,7 @@ export const CloseCode = {
 } as const;
 
 /** The only way to send on /play: binary frames of server messages (so a client message cannot be sent by mistake). */
-const send = (ws: { sendBinary(data: Uint8Array): unknown }, ...messages: ServerMessage[]) => {
+const send = (ws: { sendBinary(data: Uint8Array): number }, ...messages: ServerMessage[]) => {
   // sendBinary, not ws.send(): Elysia's send() JSON-stringifies anything that is not a Node Buffer.
   ws.sendBinary(encodeMessages(...messages));
 };

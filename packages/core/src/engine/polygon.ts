@@ -129,7 +129,7 @@ export class Polygon {
     if (result.length > 1) {
       result.sort((a, b) => a.distance - b.distance);
       result = result.filter(function (item, index) {
-        return result.findIndex(item2 => item2.point === item.point) == index;
+        return result.findIndex(item2 => item2.point === item.point) === index;
       });
     }
     return result;
@@ -178,7 +178,7 @@ export class Polygon {
     const { start } = segments[0];
     path.moveTo(start.x, start.y);
     for (let i = 1; i < length; i++) {
-      const { start: start } = segments[i];
+      const { start } = segments[i];
       path.lineTo(start.x, start.y);
     }
     path.closePath();
@@ -230,7 +230,9 @@ export class Polygon {
   }
 }
 export const circlePoints = (point: Vec2, baseCount: number, baseRadius: number): Vec2[] => {
-  if (typeof point.x !== "number") {
+  // Original sanity check `typeof point.x !== "number"`, written without typeof (a boxed primitive is a Number
+  // exactly when it is a number). Vec2.set always stores numbers, so it never fires.
+  if (!(Object(point.x) instanceof Number)) {
     throw Error("circle");
   }
   const fullTurn = Math.PI * 2;

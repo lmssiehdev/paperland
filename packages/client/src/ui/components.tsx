@@ -12,8 +12,8 @@ export type Route = "menu" | "game" | "results" | "skins";
 
 /** Cookie storage (the js-cookie default export); only the methods the UI calls. */
 export interface CookieStorage {
-  getJSON(name: string): unknown;
-  set(name: string, value: unknown, options?: { expires?: number }): unknown;
+  getJSON<T>(name: string): T | undefined;
+  set(name: string, value: object, options?: { expires?: number }): void;
 }
 
 /** Persisted UI state in the "paper.io.storage" cookie. */
@@ -307,7 +307,7 @@ export const App = ({ api, storage, skins }: AppProps) => {
   const [preparing, setPreparing] = useState(true);
   const [results, setResults] = useState<GameResult | null>(null);
   const storageKey = "paper.io.storage";
-  const stored: StoredProfile = (storage.getJSON(storageKey) as StoredProfile) || {};
+  const stored: StoredProfile = storage.getJSON<StoredProfile>(storageKey) || {};
   const [nickName, setNickName] = useState(stored.nickName || "");
   const [bestScore, setBestScore] = useState(stored.bestScore || 0);
   const [skin, setSkin] = useState(stored.skin || "");

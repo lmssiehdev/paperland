@@ -15,7 +15,7 @@ export interface SkinConfig {
   avatar?: SkinAvatarConfig;
 }
 
-var assign = Object.assign;
+const assign = Object.assign;
 export class ImageAsset extends Asset {
   declare pool: ClassicSkinPool;
   source: SkinConfig;
@@ -72,7 +72,7 @@ export class ClassicSkinPool extends AssetPool {
     this.path = path;
     this.add(skinConfigs);
     if (preload) {
-      for (let asset of this.assets) {
+      for (const asset of this.assets) {
         asset.load();
       }
     }

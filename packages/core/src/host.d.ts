@@ -8,6 +8,7 @@ interface Console {
   error(...data: unknown[]): void;
   assert(condition?: boolean, ...data: unknown[]): void;
 }
+// oxlint-disable-next-line no-var -- ambient globals must be declared with var to live on globalThis
 declare var console: Console;
 
 declare function setTimeout(handler: () => void, timeout?: number): number;
@@ -15,4 +16,5 @@ declare function clearTimeout(id: number | undefined): void;
 declare function setInterval(handler: () => void, timeout?: number): number;
 declare function clearInterval(id: number | undefined): void;
 
+// oxlint-disable-next-line no-var -- ambient global, see above
 declare var performance: { now(): number };

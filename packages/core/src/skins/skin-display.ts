@@ -22,7 +22,7 @@ export class SkinDisplay {
     return this.displays.every(display => display.ready);
   }
   sort() {
-    this.frontLayers = ([] as SkinDisplayLayer[])
+    this.frontLayers = new Array<SkinDisplayLayer>()
       .concat(
         ...this.displays.map(display =>
           display.frontLayers.map((frontLayer): SkinDisplayLayer => ({
@@ -32,7 +32,7 @@ export class SkinDisplay {
         )
       )
       .sort((a, b) => a.layer.level - b.layer.level);
-    this.backLayers = ([] as SkinDisplayLayer[])
+    this.backLayers = new Array<SkinDisplayLayer>()
       .concat(
         ...this.displays.map(display =>
           display.backLayers.map((backLayer): SkinDisplayLayer => ({

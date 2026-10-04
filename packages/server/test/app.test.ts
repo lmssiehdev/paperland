@@ -34,8 +34,9 @@ const connect = (path: string) => {
   const closed = new Promise<CloseEvent>(resolve => ws.addEventListener("close", resolve));
   const opened = new Promise<void>(resolve => ws.addEventListener("open", () => resolve()));
   ws.addEventListener("message", event => {
-    if (typeof event.data === "string") texts.push(event.data);
-    else messages.push(...decodeServerMessages(new Uint8Array(event.data as ArrayBuffer)));
+    // binaryType "arraybuffer": binary frames arrive as ArrayBuffer, text frames as string.
+    if (event.data instanceof ArrayBuffer) messages.push(...decodeServerMessages(new Uint8Array(event.data)));
+    else texts.push(String(event.data));
   });
   return { ws, messages, texts, closed, opened };
 };
@@ -69,7 +70,9 @@ test("ws /play: binary Join -> Joined + Update", async () => {
   await until(() => c.messages.length >= 2);
   expect(c.messages.map(m => m.type)).toEqual([MsgType.Joined, MsgType.Update]);
   expect(c.messages[0]).toBeInstanceOf(JoinedMsg);
+  // SAFETY: both types are asserted by the toEqual on the type list and the toBeInstanceOf above.
   expect((c.messages[0] as JoinedMsg).tickRate).toBe(20);
+  // SAFETY: checked by the type list above.
   expect((c.messages[1] as UpdateMsg).units.length).toBeGreaterThan(0);
   c.ws.close();
 });

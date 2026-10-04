@@ -90,7 +90,7 @@ export class Unit {
     name: string,
     position: Vec2,
     basePoints: Vec2[] | Base,
-    unusedArg: unknown,
+    unusedArg: undefined,
     schemesManager: SchemesManager
   ) {
     this.killer = undefined;
@@ -200,7 +200,7 @@ export class Player extends Unit {
     name: string,
     position: Vec2,
     basePoints: Vec2[] | Base,
-    unusedArg: unknown,
+    unusedArg: undefined,
     schemesManager: SchemesManager
   ) {
     super(game, name, position, basePoints, unusedArg, schemesManager);
@@ -243,7 +243,7 @@ export class Bot extends Unit {
     name: string,
     position: Vec2,
     basePoints: Vec2[] | Base,
-    unusedArg: unknown,
+    unusedArg: undefined,
     schemesManager: SchemesManager
   ) {
     super(game, name, position, basePoints, unusedArg, schemesManager);

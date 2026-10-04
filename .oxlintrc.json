@@ -28,8 +28,19 @@
     "anti-slop/no-array-filter-map": "warn",
     "anti-slop/no-object-parameters": "off",
     "anti-slop/require-readable-spacing": "off",
-    "anti-slop/no-known-value-widening": "warn",
-    "anti-slop/no-shape-in-symbol-names": "warn",
-    "anti-slop/no-conditional-empty-object-spread": "warn"
-  }
+    // Tried: 6 hits, all Record<> annotations on small lookup tables (no real issue).
+    "anti-slop/no-known-value-widening": "off",
+    // Tried: 49 hits, all `Shape` (polygon/polyline) — the geometry domain term, not structure-naming.
+    "anti-slop/no-shape-in-symbol-names": "off",
+    // Tried: 0 hits; kept.
+    "anti-slop/no-conditional-empty-object-spread": "error"
+  },
+  "overrides": [
+    {
+      // Playwright scripts: page.evaluate() callbacks introspect the live page through an untyped window
+      // ((window as any).paperio2api ...); there is no invariant to state per assertion.
+      "files": ["packages/e2e/src/**"],
+      "rules": { "anti-slop/require-safety-comment-for-type-assertion": "off" }
+    }
+  ]
 }

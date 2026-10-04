@@ -11,7 +11,9 @@ export interface GameData {
 const assets = new URL("../../../original/assets/", import.meta.url).pathname;
 
 export async function loadGameData(): Promise<GameData> {
+  // SAFETY: captured asset file with a fixed shape (the client reads the same file).
   const skins = (await Bun.file(assets + "skins/skins.json").json()) as { name: string }[];
+  // SAFETY: captured asset file; "en" is complete (see LanguagesFile).
   const languages = (await Bun.file(assets + "languages.json").json()) as { en: LanguageStrings };
   return { skinNames: skins.map(skin => skin.name), language: languages.en };
 }

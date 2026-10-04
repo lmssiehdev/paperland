@@ -15,10 +15,9 @@ import type { Game } from "../src/game/game";
 import type { Unit } from "../src/game/units";
 import { createHeadlessGame } from "../src/headless";
 import type { HeadlessGameOptions } from "../src/headless";
-import type { LanguageStrings } from "../src/language";
 import type { ModeId } from "../src/modes/index";
 import type { TeamsMode } from "../src/modes/teams";
-import { mulberry32 } from "./golden-scenario";
+import { loadGoldenSetup, mulberry32 } from "./golden-scenario";
 
 const CHECK = 10;
 const OVERLAP = 60;
@@ -53,10 +52,11 @@ function withSimulatedGlobals<T>(
   const timers: { at: number; fn: () => void }[] = [];
   Math.random = mulberry32(seed);
   // gameOver schedules the player's removal with setTimeout: run it on simulated time.
-  globalThis.setTimeout = ((fn: () => void, ms = 0) => {
+  const fakeSetTimeout = (fn: () => void, ms = 0) => {
     timers.push({ at: simTime + ms, fn });
     return 0;
-  }) as unknown as typeof setTimeout;
+  };
+  Object.assign(globalThis, { setTimeout: fakeSetTimeout });
   console.assert = (condition?: boolean, ...data: unknown[]) => {
     if (!condition) {
       onAssertFail(String(data[0] ?? ""));
@@ -75,7 +75,7 @@ function withSimulatedGlobals<T>(
     return run(advance);
   } finally {
     Math.random = realRandom;
-    globalThis.setTimeout = realSetTimeout;
+    Object.assign(globalThis, { setTimeout: realSetTimeout });
     console.assert = realAssert;
   }
 }
@@ -108,6 +108,7 @@ export function runTeamsStressSeed(setup: Setup, seed: number, ticks: number): S
     message => bad("console.assert failed", message),
     advance => {
       const game = createHeadlessGame({ ...setup, mode: "teams" });
+      // SAFETY: the game was created in "teams" mode just above.
       const mode = game.mode as TeamsMode;
       game.debugView = true;
 
@@ -203,7 +204,7 @@ export function runTeamsStressSeed(setup: Setup, seed: number, ticks: number): S
           try {
             game.spawnPlayer("stress", "", 0);
           } catch (e) {
-            bad("exception in spawnPlayer", (e as Error).message);
+            bad("exception in spawnPlayer", e instanceof Error ? e.message : String(e));
           }
           if (game.player) {
             playerSpawns++;
@@ -226,8 +227,11 @@ export function runTeamsStressSeed(setup: Setup, seed: number, ticks: number): S
         try {
           game.update(1000 / 60);
         } catch (e) {
-          const error = e as Error;
-          bad("exception in update", `${error.message} @ ${(error.stack || "").split("\n").slice(1, 4).join(" | ")}`);
+          const stack = e instanceof Error ? e.stack || "" : "";
+          bad(
+            "exception in update",
+            `${e instanceof Error ? e.message : String(e)} @ ${stack.split("\n").slice(1, 4).join(" | ")}`
+          );
           break;
         }
         advance(1000 / 60);
@@ -236,7 +240,7 @@ export function runTeamsStressSeed(setup: Setup, seed: number, ticks: number): S
           try {
             check(tick % OVERLAP === 0);
           } catch (e) {
-            bad("exception in check", (e as Error).message);
+            bad("exception in check", e instanceof Error ? e.message : String(e));
           }
         }
       }
@@ -270,7 +274,8 @@ export function runModeSwitches(setup: Setup, seed = 1): { log: string[]; errors
     seed,
     message => errors.push(`console.assert: ${message}`),
     advance => {
-      for (const id of ["classic", "teams", "classic", "teams", "classic"] as ModeId[]) {
+      const modes: ModeId[] = ["classic", "teams", "classic", "teams", "classic"];
+      for (const id of modes) {
         try {
           const game: Game = createHeadlessGame({ ...setup, mode: id });
           for (let i = 0; i < 600; i++) {
@@ -283,7 +288,7 @@ export function runModeSwitches(setup: Setup, seed = 1): { log: string[]; errors
           );
           game.stop();
         } catch (e) {
-          errors.push(`${id}: ${(e as Error).message}`);
+          errors.push(`${id}: ${e instanceof Error ? e.message : String(e)}`);
         }
       }
     }
@@ -291,12 +296,7 @@ export function runModeSwitches(setup: Setup, seed = 1): { log: string[]; errors
   return { log, errors };
 }
 
-export const loadSetup = async (): Promise<Setup> => {
-  const assets = new URL("../../../original/assets/", import.meta.url).pathname;
-  const skinNames = ((await Bun.file(assets + "skins/skins.json").json()) as { name: string }[]).map(skin => skin.name);
-  const language = ((await Bun.file(assets + "languages.json").json()) as { en: LanguageStrings }).en;
-  return { skinNames, language };
-};
+export const loadSetup = loadGoldenSetup;
 
 export const countViolations = (result: StressResult) => Object.values(result.violations).reduce((a, b) => a + b, 0);
 

@@ -244,8 +244,8 @@ export class Game {
   best!: number;
   isTest: boolean | undefined;
   playerDeathCallback: (() => void) | undefined;
-  /** Mouse position when a key was last pressed; null once the mouse takes over, deleted in the constructor. */
-  keyboard?: { x: number; y: number } | null;
+  /** Mouse position when a key was last pressed ({} if the pointer was outside the view); null once the mouse takes over, deleted in the constructor. */
+  keyboard?: { x?: number; y?: number } | null;
   tailRecovered: boolean;
   topListChanged: boolean;
   /** Country -> city name lookup (flag mode only; never set in this build). */
@@ -429,7 +429,7 @@ export class Game {
     this.stopped = true;
     clearInterval(this.updateParticlesId);
     // Teammates share one skin object; release each skin once.
-    for (let skin of new Set(this.units.map(unit => unit.skin))) {
+    for (const skin of new Set(this.units.map(unit => unit.skin))) {
       this.skinManager.release(skin);
     }
   }
@@ -459,10 +459,10 @@ export class Game {
     }
     baseRadius2 = baseRadius2 || baseRadius;
     const trackClearanceScale = this.player ? lerp(3, 1, this.player.percent) : 2;
-    var baseClearance = baseRadius2 + baseRadius * 2;
-    var baseClearanceSq = baseClearance * baseClearance;
-    var trackClearance = baseRadius2 + baseRadius * 2 * trackClearanceScale;
-    var trackClearanceSq = trackClearance * trackClearance;
+    const baseClearance = baseRadius2 + baseRadius * 2;
+    const baseClearanceSq = baseClearance * baseClearance;
+    const trackClearance = baseRadius2 + baseRadius * 2 * trackClearanceScale;
+    const trackClearanceSq = trackClearance * trackClearance;
     let y;
     switch (zone) {
       case "near":
@@ -484,14 +484,14 @@ export class Game {
         y = lerp(0, Math.max(0, radius - (baseRadius2 + baseRadius)), Math.random());
         break;
     }
-    var offset = Vec2.alloc(0, y).rotate(Math.random() * Math.PI * 2);
-    var point3 = center2.clone().add(offset);
+    const offset = Vec2.alloc(0, y).rotate(Math.random() * Math.PI * 2);
+    const point3 = center2.clone().add(offset);
     offset.release();
     if (point3.distance(center) > radius - (baseRadius2 + baseRadius)) {
       return;
     }
-    for (var i = 0; i < this.units.length; i++) {
-      var unit = this.units[i];
+    for (let i = 0; i < this.units.length; i++) {
+      const unit = this.units[i];
       if (unit.base.polygon.inside(point3)) {
         return;
       }
@@ -547,7 +547,7 @@ export class Game {
         botCountsByType[unit.type!]++;
       }
     });
-    this.bots = Object.assign({}, botCountsByType);
+    this.bots = { ...botCountsByType };
     const typeRotation = typeRotations[Math.round(this.level * (typeRotations.length - 1))];
     let rotationIndex = -1;
     while (botCountsByType[typeRotation[++rotationIndex]] > 0) {
@@ -605,7 +605,7 @@ export class Game {
     }
     let position;
     let attempts = 0;
-    var baseRadius2 = extraLife ? Math.sqrt((this.arenaArea * extraLife) / Math.PI) : baseRadius;
+    const baseRadius2 = extraLife ? Math.sqrt((this.arenaArea * extraLife) / Math.PI) : baseRadius;
     while (!position) {
       if (attempts++ > 50) {
         attempts = 0;
@@ -779,14 +779,14 @@ export class Game {
       const vector = segment.vector;
       if (intersections.length === 2) {
         const vector2 = intersections[0].segment.vector;
-        let angle = Math.atan2(vector.x * vector2.y - vector2.x * vector.y, vector.dot(vector2));
+        const angle = Math.atan2(vector.x * vector2.y - vector2.x * vector.y, vector.dot(vector2));
         hit = angle > 0 ? intersections[0] : intersections[1];
       } else {
         hit = intersections[0];
       }
-      const { segment: segment2, point: point } = hit;
+      const { segment: segment2, point } = hit;
       const vector2 = segment2.vector;
-      let angle = Math.atan2(vector.x * vector2.y - vector2.x * vector.y, vector.dot(vector2));
+      const angle = Math.atan2(vector.x * vector2.y - vector2.x * vector.y, vector.dot(vector2));
       if (angle < 0) {
         break;
       }
@@ -827,7 +827,7 @@ export class Game {
     return this.cycle < this.config.prepareCounter;
   }
   finishPrepare() {
-    let targetCycle = this.replaying ? this.replaying.start : this.config.prepareCounter;
+    const targetCycle = this.replaying ? this.replaying.start : this.config.prepareCounter;
     if (this.cycle < targetCycle) {
       console.log("skip cycles to: " + targetCycle);
     }
@@ -836,13 +836,13 @@ export class Game {
     }
   }
   recoverTail() {
-    let player = this.player;
-    if (player && player.insideBase == player.base && !player.base.polygon.inside(player.position)) {
-      let nearestSegment = player.base.polygon.segments.reduce((acc, segment) =>
+    const player = this.player;
+    if (player && player.insideBase === player.base && !player.base.polygon.inside(player.position)) {
+      const nearestSegment = player.base.polygon.segments.reduce((acc, segment) =>
         acc.start.distance2(player.position) < segment.start.distance2(player.position) ? acc : segment
       );
-      let delta = nearestSegment.start.clone().sub(player.position);
-      let len = delta.magnitude();
+      const delta = nearestSegment.start.clone().sub(player.position);
+      const len = delta.magnitude();
       player.position = delta.mulScalar(1 + 1 / len).add(player.position);
       player.track.remove();
       if (this.debug) {
@@ -972,7 +972,7 @@ export class Game {
       this.player.achievements.update(this.player, dt, this);
     }
     if (player && player.track.length > this.config.botAttackTrackLength) {
-      // `as`: widens the initializer so TS doesn't narrow to null (it can't see the forEach assignment).
+      // SAFETY: `as`: widens the initializer so TS doesn't narrow to null (it can't see the forEach assignment).
       let nearestBot = null as Bot | null;
       let min = Infinity;
       this.units.forEach(unit => {
@@ -1066,7 +1066,7 @@ export class Game {
   }
   changeShields() {
     // Only called by setLeaderboard right after it assigns a non-null leaderboard.
-    const { countries: countries } = this.leaderboard!;
+    const { countries } = this.leaderboard!;
     if (countries) {
       const goldCountry = countries[0] && countries[0].country;
       const silverCountry = countries[1] && countries[1].country;
@@ -1088,10 +1088,11 @@ export class Game {
               break;
           }
           if (asset.name !== shieldName) {
-            // TODO(types): Skin has no removeAsset (flag/shield mode only, unreachable in this build)
+            // SAFETY: TODO(types): Skin has no removeAsset (flag/shield mode only, unreachable in this build)
             (unit.skin as Skin & { removeAsset(asset: Asset): void }).removeAsset(asset);
             if ("shieldSkinAssets" in this.skinManager) {
               unit.skin.addAsset(
+                // SAFETY: guarded by the "shieldSkinAssets" in-check above (flag mode only, unreachable in this build).
                 (this.skinManager as SkinManager & FlagSkinManagerExtras).shieldSkinAssets!.get(shieldName)
               );
             }
@@ -1104,13 +1105,14 @@ export class Game {
     // Flag mode only (dead in this build): flag skins always carry a "flags" asset and a citiesManager is set.
     const name = unit.skin.assets.find((asset: Asset) => asset.pool.name === "flags")!.name;
     const city = new City(this.citiesManager!.get(name), false, unit.position.clone(), unit);
+    // SAFETY: optional flag-mode extras; absent (undefined) on the classic skin manager.
     if ((this.skinManager as SkinManager & FlagSkinManagerExtras).isFlagSkinManager) {
       const citySkin = this.skinManager.getCitySkin(name);
       city.skin = citySkin;
     }
     unit.cities.push(city);
   }
-  checkSegments(unusedArg?: unknown) {
+  checkSegments(unusedArg?: undefined) {
     let segmentCount = 0;
     this.units.forEach(unit => {
       segmentCount += unit.base.polygon.segments.length;
@@ -1129,7 +1131,7 @@ export class Game {
     }
     this.events.returns++;
     const polylineCopy = trail.polyline.clone();
-    const { base: base } = returningUnit;
+    const { base } = returningUnit;
     const index = base.polygon.segments.findIndex(segment => segment.start === polylineCopy.start);
     const index2 = base.polygon.segments.findIndex(segment => segment.start === polylineCopy.end);
     if (returningUnit.team) {
@@ -1343,7 +1345,7 @@ export class Game {
             return intersections[intersections.length - 1].enter;
           });
         } else {
-          let matching = openContacts.filter(item =>
+          const matching = openContacts.filter(item =>
             contacts.some(item2 => {
               return item2.owner === item.owner;
             })
@@ -1726,7 +1728,7 @@ export class Game {
       if (unit.death) {
         return;
       }
-      let movement = this.getMovement(dt, unit);
+      const movement = this.getMovement(dt, unit);
       while (movement.length) {
         if (unit.death) {
           return;
@@ -1834,7 +1836,7 @@ export class Game {
         }
         unit.position = end;
         if (this.visible && !movement.length && unit.insideBase && unit.insideBase !== unit.base) {
-          let trailParticle = Particle.nom(unit, step, this.config.trackWidth);
+          const trailParticle = Particle.nom(unit, step, this.config.trackWidth);
           this.particles.push(trailParticle);
         }
       }
@@ -1847,13 +1849,13 @@ export class Game {
     this.labels.push(new FloatingLabel(text, color || "#000000", this.player));
   }
   loop() {
-    let time = now();
+    const time = now();
     if (this.stopped) {
       return;
     }
     if (!this.debugView && (this.visible || this.cycle < this.config.prepareCounter)) {
       this.looped = true;
-      if (this.last == 0) {
+      if (this.last === 0) {
         this.last = time;
       }
       let frameTime = time - this.last;
