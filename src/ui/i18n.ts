@@ -51,7 +51,6 @@ export var LANG_RU = {
     btnSelect: "ВЫБРАТЬ"
   }
 } satisfies Language;
-var objectAssign = Object.assign;
 export const LANGUAGES: Language[] = [];
 export const setLanguages = (languages: LanguagesFile): void => {
   const {
@@ -60,7 +59,7 @@ export const setLanguages = (languages: LanguagesFile): void => {
   Object.entries(languages).forEach(([code, strings]) => {
     LANGUAGES.push({
       name: code,
-      lng: objectAssign(objectAssign({}, en), strings)
+      lng: Object.assign({}, en, strings)
     });
   });
 };
@@ -71,4 +70,11 @@ type LegacyNavigator = Navigator & {
 };
 const legacyNavigator: LegacyNavigator = navigator;
 const browserLanguageCode = (legacyNavigator.languages && legacyNavigator.languages.length && legacyNavigator.languages[0] || legacyNavigator.userLanguage || legacyNavigator.language || legacyNavigator.browserLanguage || "en").substr(0, 2).toLowerCase();
-export const getLanguage = (): Language | undefined => LANGUAGES.find(item => item.name === browserLanguageCode) || LANGUAGES.find(item => item.name === "en");
+/** The browser's language, else English. Call after setLanguages(). */
+export const getLanguage = (): Language => {
+  const language = LANGUAGES.find(item => item.name === browserLanguageCode) || LANGUAGES.find(item => item.name === "en");
+  if (!language) {
+    throw new Error("languages.json has no \"en\" entry");
+  }
+  return language;
+};

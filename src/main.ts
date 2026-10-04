@@ -19,37 +19,6 @@ import { App } from "./ui/components";
 import { getLanguage, setLanguages } from "./ui/i18n";
 import type { LanguagesFile } from "./ui/i18n";
 import type { SkinConfig } from "./skins/skin";
-import "./engine/math";
-import "./engine/segment";
-import "./engine/spatial-grid";
-import "./engine/vec2";
-import "./game/constants";
-import "./engine/polyline";
-import "./engine/polygon";
-import "./engine/color";
-import "./engine/load-image";
-import "./engine/border";
-import "./game/base";
-import "./game/track";
-import "./ai/state-machine";
-import "./ai/bot-states";
-import "./game/particles";
-import "./game/scoring";
-import "./game/achievements";
-import "./game/city";
-import "./game/units";
-import "./game/floating-label";
-import "./game/names";
-import "./game/game";
-import "./input/controller";
-import "./skins/display";
-import "./render/game-renderer";
-import "./render/debug-overlay";
-import "./ui/i18n";
-import "./api";
-import "./ui/components";
-import "./config";
-import "./skins/skin";
 
 declare global {
   interface Window {
@@ -60,13 +29,10 @@ declare global {
   }
 }
 
-var objectAssign = Object.assign;
-console.log("Version: A6 2020-10-14T10:51:36.392Z");
-const CONFIG: Config = objectAssign(objectAssign({}, DEFAULT_CONFIG), {
-  followKiller: true,
-  selfKillDelay: 1000,
-  enemyKillDelay: 2000
-});
+/** Build of the original game this port is based on. */
+export const VERSION = "A6 2020-10-14T10:51:36.392Z";
+/** Live game config: a copy of DEFAULT_CONFIG (the original's overrides all equalled the defaults). */
+const CONFIG: Config = { ...DEFAULT_CONFIG };
 const languagesRequest = fetch("assets/languages.json").then((result): Promise<LanguagesFile> => result.json());
 const skinsRequest = fetch("assets/skins/skins.json").then((result): Promise<SkinConfig[]> => result.json());
 Promise.all([languagesRequest, skinsRequest]).then(([languages, skinsList]) => {
@@ -82,11 +48,15 @@ Promise.all([languagesRequest, skinsRequest]).then(([languages, skinsList]) => {
   achievementStore.load();
   const api = createApi(CONFIG, getLanguage(), createSkinManager, new NamePool(BOT_NAMES, Math.random()), schemesManager, achievementStore);
   window.paperio2api = api;
+  const root = document.getElementById("game");
+  if (!root) {
+    throw new Error("index.html has no #game element");
+  }
   render(createElement(App, {
     api: api,
     storage: Cookies,
     skins: skinsList
-  }), document.getElementById("game"));
+  }), root);
 });
 window.__paperio = {
   Game,
