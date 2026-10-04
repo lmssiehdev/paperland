@@ -86,6 +86,22 @@ export class Base {
       this.handleEnemyIntersect(intersection, unit, movement);
     }
   }
+  /** Sum of the crossing signs of `movement` against `segments` (outline segments at one point). */
+  znSum(movement: Segment, segments: Segment[]): number {
+    return segments.reduce((acc, segment) => {
+      const hit = segment.intersect(movement);
+      return acc + (hit ? hit.zn : 0);
+    }, 0);
+  }
+  /** Ported from the teams build (checkSelfLeave): does `movement` leave this base at `point`? Used by handleCross. */
+  checkSelfLeave(movement: Segment, point: Vec2, segments: Segment[]): boolean {
+    const znSum = this.znSum(movement, segments);
+    return !(znSum < 0) && !point.equal(movement.end) && (znSum !== 0 || !this.polygon.inside(movement.end));
+  }
+  /** Ported from the teams build (checkSelfEntry): does `movement` enter this base? Used by handleCross. */
+  checkSelfEntry(movement: Segment, segments: Segment[]): boolean {
+    return !(this.znSum(movement, segments) > 0);
+  }
   handleSelfIntersect(intersection: Intersection, unit: Unit, movement: Segment) {
     if (intersection.overlay) {
       return;
@@ -123,6 +139,19 @@ export class Base {
       }
       this.polygon.insert(segment, point);
       unit.track.add(point);
+      if (unit.team) {
+        // Team modes follow the original teams order: collect the teammates whose trails share a vertex with
+        // mine, drop my trail and stand home BEFORE capturing, then capture their loops for them.
+        const crossed = unit.track.crossedTeammates();
+        const trail = { polyline: unit.track.polyline, intersections: unit.track.intersections };
+        unit.track.remove();
+        unit.insideBase = this;
+        if (trail.polyline.end) {
+          unit.game.handleReturn(unit, trail);
+          crossed.forEach(mate => unit.game.handleCross(mate, unit));
+        }
+        return;
+      }
       if (unit.track.polyline.end) {
         unit.game.handleReturn(unit);
       }
