@@ -1,4 +1,4 @@
-import { Fragment, createContext, createElement } from "preact";
+import { createContext } from "preact";
 import type { TargetedEvent } from "preact";
 import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import type { StateUpdater, Dispatch } from "preact/hooks";
@@ -55,12 +55,11 @@ const Tips = ({
     const intervalId = setInterval(() => setTipIndex(index => (index + 1) % messages.length), 3000);
     return () => clearInterval(intervalId);
   }, []);
-  return createElement("div", {
-    class: "tips"
-  }, createElement("div", {
-    class: "tip",
-    key: tipIndex
-  }, messages[tipIndex]));
+  return (
+    <div class="tips">
+      <div class="tip" key={tipIndex}>{messages[tipIndex]}</div>
+    </div>
+  );
 };
 
 interface LanguageFooterProps {
@@ -70,15 +69,14 @@ const LanguageFooter = ({
   setLanguage
 }: LanguageFooterProps) => {
   const currentLanguage = useLanguage();
-  const languageItems = LANGUAGES.map((item, index) => createElement("li", {
-    class: item === currentLanguage ? "active" : "",
-    onClick: () => setLanguage(LANGUAGES[index])
-  }, item.name.toUpperCase()));
-  return createElement("div", {
-    id: "footer"
-  }, createElement("ul", {
-    id: "lng"
-  }, languageItems));
+  const languageItems = LANGUAGES.map((item, index) => (
+    <li class={item === currentLanguage ? "active" : ""} onClick={() => setLanguage(LANGUAGES[index])}>{item.name.toUpperCase()}</li>
+  ));
+  return (
+    <div id="footer">
+      <ul id="lng">{languageItems}</ul>
+    </div>
+  );
 };
 interface MainMenuProps {
   nickName: string;
@@ -113,54 +111,31 @@ const MainMenu = ({
       start();
     }
   };
-  return createElement(Fragment, null, createElement("div", {
-    id: "left_side"
-  }), createElement("div", {
-    class: "uibox"
-  }, createElement("div", {
-    class: "logo"
-  }, createElement("img", {
-    src: "assets/images/logo.png"
-  })), createElement(Tips, {
-    messages: lng.messages
-  }), createElement("div", {
-    class: "play"
-  }, createElement("input", {
-    type: "text",
-    id: "nick",
-    name: "nick",
-    value: nickName,
-    autocomplete: "off",
-    placeholder: lng.placeholderText,
-    maxlength: "12",
-    oninput: onNickInput
-  }), createElement("button", {
-    id: "play",
-    name: "play",
-    class: "yellow" + (supported ? "" : " disabled"),
-    onClick: onPlayClick
-  }, lng.btnPlay), createElement("button", {
-    id: "skins",
-    name: "skins",
-    class: "orange noPadding",
-    onClick: () => route("skins")
-  }, createElement("img", {
-    width: "30",
-    height: "30",
-    src: "assets/skins/select/" + (skin || "noskin").toLowerCase().replace(/\s+/g, "") + ".png"
-  }))), createElement("div", {
-    class: "modes"
-  }, MODES.map(item => createElement("button", {
-    key: item.id,
-    id: "mode-" + item.id,
-    class: item.id === mode ? "green" : "orange",
-    style: { margin: "8px 4px 0" },
-    onClick: () => setMode(item.id)
-  }, item.label))), !supported && createElement("p", {
-    class: "notsupported"
-  }, lng.nosupport)), createElement("div", {
-    id: "right_side"
-  }));
+  return (
+    <>
+      <div id="left_side" />
+      <div class="uibox">
+        <div class="logo">
+          <img src="assets/images/logo.png" />
+        </div>
+        <Tips messages={lng.messages} />
+        <div class="play">
+          <input type="text" id="nick" name="nick" value={nickName} autocomplete="off" placeholder={lng.placeholderText} maxlength={12} onInput={onNickInput} />
+          <button id="play" name="play" class={"yellow" + (supported ? "" : " disabled")} onClick={onPlayClick}>{lng.btnPlay}</button>
+          <button id="skins" name="skins" class="orange noPadding" onClick={() => route("skins")}>
+            <img width="30" height="30" src={"assets/skins/select/" + (skin || "noskin").toLowerCase().replace(/\s+/g, "") + ".png"} />
+          </button>
+        </div>
+        <div class="modes">
+          {MODES.map(item => (
+            <button key={item.id} id={"mode-" + item.id} class={item.id === mode ? "green" : "orange"} style={{ margin: "8px 4px 0" }} onClick={() => setMode(item.id)}>{item.label}</button>
+          ))}
+        </div>
+        {!supported && <p class="notsupported">{lng.nosupport}</p>}
+      </div>
+      <div id="right_side" />
+    </>
+  );
 };
 interface GameScreenProps {
   nickName: string;
@@ -221,49 +196,36 @@ const Results = ({
   const {
     lng
   } = useLanguage();
-  return createElement(Fragment, null, createElement("div", {
-    id: "left_side"
-  }), createElement("div", {
-    class: "uibox"
-  }, createElement("div", {
-    class: "logo"
-  }, createElement("img", {
-    src: "assets/images/logo.png"
-  })), createElement("div", {
-    class: "nav"
-  }, createElement("button", {
-    class: "yellow slider-5",
-    id: "menu",
-    onClick: goToMenu
-  }, lng.btnContinue)), createElement("div", {
-    class: "resultbox"
-  }, createElement("div", {
-    class: "results"
-  }, createElement("div", {
-    class: "left"
-  }, createElement("div", {
-    class: "slider-1"
-  }, lng.yourScore, ":"), createElement("div", {
-    class: "slider-2"
-  }, results.newBest && createElement("span", {
-    class: "newScore"
-  }, lng.newText, " "), lng.bestScore, ":"), createElement("div", {
-    class: "slider-3"
-  }, lng.timePlayed, ":"), createElement("div", {
-    class: "slider-4"
-  }, lng.playersKilled, ":")), createElement("div", {
-    class: "right"
-  }, createElement("div", {
-    class: "slider-1"
-  }, results.score.toFixed(2) + "%"), createElement("div", {
-    class: "slider-2"
-  }, bestScore.toFixed(2) + "%"), createElement("div", {
-    class: "slider-3"
-  }, new Date(results.time).toISOString().slice(14, -5)), createElement("div", {
-    class: "slider-4"
-  }, results.kills))))), createElement("div", {
-    id: "right_side"
-  }));
+  return (
+    <>
+      <div id="left_side" />
+      <div class="uibox">
+        <div class="logo">
+          <img src="assets/images/logo.png" />
+        </div>
+        <div class="nav">
+          <button class="yellow slider-5" id="menu" onClick={goToMenu}>{lng.btnContinue}</button>
+        </div>
+        <div class="resultbox">
+          <div class="results">
+            <div class="left">
+              <div class="slider-1">{lng.yourScore}{":"}</div>
+              <div class="slider-2">{results.newBest && <span class="newScore">{lng.newText}{" "}</span>}{lng.bestScore}{":"}</div>
+              <div class="slider-3">{lng.timePlayed}{":"}</div>
+              <div class="slider-4">{lng.playersKilled}{":"}</div>
+            </div>
+            <div class="right">
+              <div class="slider-1">{results.score.toFixed(2) + "%"}</div>
+              <div class="slider-2">{bestScore.toFixed(2) + "%"}</div>
+              <div class="slider-3">{new Date(results.time).toISOString().slice(14, -5)}</div>
+              <div class="slider-4">{results.kills}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="right_side" />
+    </>
+  );
 };
 interface SkinPreviewProps {
   name: string;
@@ -271,13 +233,14 @@ interface SkinPreviewProps {
 const SkinPreview = ({
   name
 }: SkinPreviewProps) => {
-  return createElement("div", {
-    class: "skin"
-  }, createElement("div", {
-    class: "skin-view"
-  }, createElement("h3", null, name), createElement("img", {
-    src: "assets/skins/select/" + name.toLowerCase().replace(/\s+/g, "") + ".png"
-  })));
+  return (
+    <div class="skin">
+      <div class="skin-view">
+        <h3>{name}</h3>
+        <img src={"assets/skins/select/" + name.toLowerCase().replace(/\s+/g, "") + ".png"} />
+      </div>
+    </div>
+  );
 };
 interface SkinPickerProps {
   skins: SkinInfo[];
@@ -302,26 +265,18 @@ const SkinPicker = ({
       setSkin(skins[nextIndex].name);
     }
   };
-  return createElement("div", {
-    class: "skinbox"
-  }, createElement("div", {
-    class: "skins-container"
-  }, createElement("button", {
-    name: "left",
-    class: "orange",
-    onClick: () => selectSkin(selectedIndex - 1)
-  }, "<"), createElement(SkinPreview, {
-    name: skins[selectedIndex].name
-  }), createElement("button", {
-    name: "right",
-    class: "orange",
-    onClick: () => selectSkin(selectedIndex + 1)
-  }, ">")), createElement("div", {
-    class: "nav"
-  }, createElement("button", {
-    class: "green",
-    onClick: menu
-  }, lng.btnSelect)));
+  return (
+    <div class="skinbox">
+      <div class="skins-container">
+        <button name="left" class="orange" onClick={() => selectSkin(selectedIndex - 1)}>{"<"}</button>
+        <SkinPreview name={skins[selectedIndex].name} />
+        <button name="right" class="orange" onClick={() => selectSkin(selectedIndex + 1)}>{">"}</button>
+      </div>
+      <div class="nav">
+        <button class="green" onClick={menu}>{lng.btnSelect}</button>
+      </div>
+    </div>
+  );
 };
 interface SkinsScreenProps {
   skins: SkinInfo[];
@@ -336,24 +291,18 @@ const SkinsScreen = ({
   setSkin
 }: SkinsScreenProps) => {
   const goToMenu = () => route("menu");
-  return createElement(Fragment, null, createElement("div", {
-    id: "left_side"
-  }), createElement("div", {
-    class: "uibox"
-  }, createElement("div", {
-    class: "logo"
-  }, createElement("img", {
-    src: "assets/images/logo.png"
-  })), createElement(SkinPicker, {
-    skins: [{
-      name: "No skin"
-    }].concat(skins),
-    menu: goToMenu,
-    setSkin: setSkin,
-    skin: skin
-  })), createElement("div", {
-    id: "right_side"
-  }));
+  return (
+    <>
+      <div id="left_side" />
+      <div class="uibox">
+        <div class="logo">
+          <img src="assets/images/logo.png" />
+        </div>
+        <SkinPicker skins={[{ name: "No skin" }].concat(skins)} menu={goToMenu} setSkin={setSkin} skin={skin} />
+      </div>
+      <div id="right_side" />
+    </>
+  );
 };
 export interface AppProps {
   api: PaperioApi | null;
@@ -403,47 +352,19 @@ export const App = ({
   if (api) {
     api.startGame = startGame;
   }
-  return createElement(Fragment, null, createElement("canvas", {
-    class: route === "game" || preparing ? "" : "fadein",
-    id: "view",
-    ref: viewRef
-  }), route !== "game" && createElement("div", {
-    id: "ui_overlay"
-  }), createElement(LanguageContext.Provider, {
-    value: language
-  }, createElement("div", {
-    id: "ui",
-    class: route === "game" ? "hide" : ""
-  }, route === "menu" && createElement(MainMenu, {
-    nickName: nickName,
-    setNickName: setNickName,
-    start: startGame,
-    route: setRoute,
-    setLanguage: setLanguage,
-    api: api,
-    skin: skin,
-    mode: mode,
-    setMode: setMode
-  }), route === "game" && api && createElement(GameScreen, {
-    nickName: nickName,
-    bestScore: bestScore,
-    setBestScore: setBestScore,
-    setResults: setResults,
-    setPreparing: setPreparing,
-    api: api,
-    route: setRoute,
-    skin: skin,
-    mode: mode
-  }), route === "results" && results && createElement(Results, {
-    bestScore: bestScore,
-    results: results,
-    route: setRoute
-  }), route === "skins" && createElement(SkinsScreen, {
-    skins: skins,
-    skin: skin,
-    route: setRoute,
-    setSkin: setSkin
-  })), route !== "game" && createElement(LanguageFooter, {
-    setLanguage: setLanguage
-  })));
+  return (
+    <>
+      <canvas class={route === "game" || preparing ? "" : "fadein"} id="view" ref={viewRef} />
+      {route !== "game" && <div id="ui_overlay" />}
+      <LanguageContext.Provider value={language}>
+        <div id="ui" class={route === "game" ? "hide" : ""}>
+          {route === "menu" && <MainMenu nickName={nickName} setNickName={setNickName} start={startGame} route={setRoute} setLanguage={setLanguage} api={api} skin={skin} mode={mode} setMode={setMode} />}
+          {route === "game" && api && <GameScreen nickName={nickName} bestScore={bestScore} setBestScore={setBestScore} setResults={setResults} setPreparing={setPreparing} api={api} route={setRoute} skin={skin} mode={mode} />}
+          {route === "results" && results && <Results bestScore={bestScore} results={results} route={setRoute} />}
+          {route === "skins" && <SkinsScreen skins={skins} skin={skin} route={setRoute} setSkin={setSkin} />}
+        </div>
+        {route !== "game" && <LanguageFooter setLanguage={setLanguage} />}
+      </LanguageContext.Provider>
+    </>
+  );
 };

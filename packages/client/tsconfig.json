@@ -1,5 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "lib": ["ES2022", "DOM", "DOM.Iterable"], "types": [] },
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": [],
+    // Preact JSX via the automatic runtime (preact/jsx-runtime); bun build reads these too.
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  },
   "include": ["src"]
 }

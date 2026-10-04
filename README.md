@@ -182,7 +182,7 @@ Patches vs the original (both applied by `split.ts`):
 
 | Area | Names (see `packages/core/src` and `packages/client/src`) |
 |---|---|
-| UI | Preact (from npm), `App` in `client/src/ui/components.ts` |
+| UI | Preact (from npm), `App` in `client/src/ui/components.tsx` |
 | Geometry | `Vec2` (pooled), `Segment`, `Polyline`, `Polygon`, `SpatialGrid` (20px cells), `Border` |
 | Entities | `Unit` -> `Player`, `Bot`; each has a `Base` (polygon) and `Track` (trail) |
 | Bot AI | `StateMachine` + `BOT_STATES` |
