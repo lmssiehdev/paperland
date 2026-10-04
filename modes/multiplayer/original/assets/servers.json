@@ -1,0 +1,9 @@
+{
+  "ca1": {
+    "uri": "https://psus.paperio.site",
+    "group": "public"
+  },
+  "master": {
+    "uri": "https://psus.paperio.site"
+  }
+}

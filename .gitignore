@@ -1,6 +1,8 @@
+*.har
 node_modules
 shots
+dist
 deob/stage1.js
 deob/stage2
-*.har
-dist
+modes/*/deob/stage-*.js
+modes/battleroyale/deob/pass2

@@ -1,0 +1,128 @@
+[
+    {
+        "name": "Tank",
+        "colors": {
+            "main": "#7f782d",
+            "back": "#5b4c20",
+            "nick": "#5b4c20",
+            "plate": "#5b4c20",
+            "particles": ["#7f7c2d", "#c7be4f", "#ada63c", "#d0cd9a"]
+        },
+        "pattern": {
+            "url": "tankPattern.svg",
+            "scale": 0.3
+        },
+        "avatar": {
+            "y": -0.2,
+            "layers": [
+                { "level": 0, "url": "tankBottom.svg" },
+                {
+                    "level": 1,
+                    "url": "tankDown.svg"
+                },
+                {
+                    "level": 1.5,
+                    "scale": 0.5,
+                    "direction": "target",
+                    "pivot": { "y": 0.8 },
+                    "url": "tank-top.svg"
+                }
+            ]
+        }
+    },
+    {
+        "name": "Duck",
+        "colors": {
+            "main": "#33cdcf",
+            "back": "#218C8F",
+            "nick": "#218C8F",
+            "plate": "#218C8F",
+            "particles": ["#53D3D7", "#99E6E8", "#C7F0F1", "#218C8F"]
+        },
+        "pattern": { "url": "duckPattern.svg", "scale": 0.3 },
+        "avatar": {
+            "scale": 1,
+            "y": 0,
+            "layers": [
+                { "level": 0, "url": "duckDown.svg", "rotation": 0 },
+                {
+                    "level": 1,
+                    "url": "duckUp.svg",
+                    "rotation": 0,
+                    "pivot": { "x": 0.5, "y": 0.6 },
+                    "y": -0.05
+                }
+            ]
+        }
+    },
+    {
+        "name": "Cake",
+        "colors": {
+            "main": "#ffd8d9",
+            "back": "#feef94",
+            "nick": "#894737",
+            "plate": "#894737",
+            "particles": ["#ffd8d9", "#FFB9BB", "#feef94", "#894737"]
+        },
+        "pattern": {
+            "url": "cakePattern.svg",
+            "scale": 0.4
+        },
+        "avatar": {
+            "scale": 1,
+            "layers": [
+                {
+                    "level": 0,
+                    "url": "cakeDown.svg"
+                },
+                {
+                    "level": 0.5,
+                    "url": "cakeMiddle.svg",
+                    "direction": "target"
+                },
+                { "level": 1.1, "url": "cakeTop.svg" }
+            ]
+        }
+    },
+    {
+        "name": "Bat",
+        "colors": {
+            "main": "#43423F",
+            "back": "#302C2D",
+            "nick": "#121011",
+            "plate": "#121011",
+            "particles": ["#1D1C1B", "#352F31", "#4E4349", "#615050"]
+        },
+        "pattern": null,
+        "avatar": {
+            "y": -0.4,
+            "layers": [
+                { "level": 0, "url": "batDownN.svg", "y": 0.4 },
+                {
+                    "level": 1,
+                    "scale": 3.5,
+                    "url": "batUpN.svg"
+                }
+            ]
+        }
+    },
+    {
+        "name": "Watermelon",
+        "colors": {
+            "main": "#ee4445",
+            "back": "#1f831f",
+            "nick": "#000000",
+            "plate": "#000000",
+            "particles": ["#e52135", "#F1858F", "#FAD3D8", "#B9EEB9"]
+        },
+        "pattern": { "url": "watermelPattern.svg", "scale": 0.3 },
+        "avatar": {
+            "scale": 1.6,
+            "y": -0.2,
+            "layers": [
+                { "level": 0, "url": "watermelShadow.svg", "rotation": 0 },
+                { "level": 1, "url": "watermel.svg", "rotation": 0 }
+            ]
+        }
+    }
+]
