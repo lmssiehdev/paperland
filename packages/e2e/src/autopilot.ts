@@ -24,7 +24,8 @@ async function runTrial(mode: "straight" | "autopilot") {
     const player = game.player;
     game.debugView = true; // pauses the rAF update loop; we step manually below
 
-    let death: { reason: number; cycle: number } | null = null;
+    // `as`: TS cannot see the assignment inside the gameOver closure and would narrow this to null.
+    let death = null as { reason: number; cycle: number } | null;
     const origGameOver = game.gameOver.bind(game);
     game.gameOver = (reason: number) => { death ??= { reason, cycle: game.cycle }; try { origGameOver(reason); } catch {} };
 
