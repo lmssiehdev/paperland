@@ -1,4 +1,17 @@
-export const hexToRgb = (item: string): string => {
+export interface RGB {
+  r: number;
+  g: number;
+  b: number;
+}
+
+/** Hue in degrees [0, 360], saturation and value in percent [0, 100]. */
+export interface HSV {
+  h: number;
+  s: number;
+  v: number;
+}
+
+export const hexToRgb = (item: string): RGB => {
   const _0xb42ed3 = parseInt(item.substring(1, 3), 16);
   const _0x4c451e = parseInt(item.substring(3, 5), 16);
   const _0x900965 = parseInt(item.substring(5, 7), 16);
@@ -12,7 +25,7 @@ export const rgbToHsv = ({
   r,
   g,
   b
-}) => {
+}: RGB): HSV => {
   let _0x41c2d1;
   let _0x3e79c6;
   let _0x1e228e;
@@ -62,8 +75,8 @@ const rgbToHex = ({
   r,
   g,
   b
-}) => {
-  const _0x76d75 = (_0x42cf50: { toString: (arg0: number) => any; }): { toString: (arg0: number) => any; } => {
+}: RGB): string => {
+  const _0x76d75 = (_0x42cf50: number): string => {
     const result = _0x42cf50.toString(16);
     if (result.length < 2) {
       return "0" + result;
@@ -77,7 +90,7 @@ const hsvToRgb = ({
   h,
   s,
   v
-}) => {
+}: HSV): RGB => {
   var _0x18605b;
   var _0x1af8eb;
   var _0xd7fdbe;
@@ -142,8 +155,8 @@ const hsvToRgb = ({
     b: Math.round(_0xd7fdbe * 255)
   };
 };
-export const hsvToHex = (_0x8d0fc2: { h: any; s: any; v: any; }): { h: any; s: any; v: any; } => rgbToHex(hsvToRgb(_0x8d0fc2));
-export function hsvMulValue(_0x25a581: { h: any; s: any; v: any; }, _0x474ff8: number) {
+export const hsvToHex = (_0x8d0fc2: HSV): string => rgbToHex(hsvToRgb(_0x8d0fc2));
+export function hsvMulValue(_0x25a581: HSV, _0x474ff8: number): HSV {
   let {
     h,
     s,
@@ -156,7 +169,7 @@ export function hsvMulValue(_0x25a581: { h: any; s: any; v: any; }, _0x474ff8: n
     v: v
   };
 }
-export function hsvLighten(_0xf88f07: { h: any; s: any; v: any; }, _0x5301b4: number) {
+export function hsvLighten(_0xf88f07: HSV, _0x5301b4: number): HSV {
   let {
     h,
     s,
@@ -170,7 +183,7 @@ export function hsvLighten(_0xf88f07: { h: any; s: any; v: any; }, _0x5301b4: nu
     v: v
   };
 }
-export function hsvSetValue(_0x4e37c0: { h: any; s: any; v: any; }, _0x5b933a: number) {
+export function hsvSetValue(_0x4e37c0: HSV, _0x5b933a: number): HSV {
   let {
     h,
     s,

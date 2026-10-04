@@ -2,8 +2,9 @@ import { EPSILON, isZero, pointInPolygon } from "./math";
 import { Segment } from "./segment";
 import { Vec2 } from "./vec2";
 import { CELL_RADIUS, CELL_RADIUS_SQ } from "../game/constants";
-import { Polyline } from "./polyline";
-import { Polyline } from "./polyline";
+import type { Bounds, Polyline } from "./polyline";
+import type { Intersection } from "./segment";
+import type { Base } from "../game/base";
 
 const rayCrossingSign = (point: Vec2, point2: Vec2, point3: Vec2) => {
   const dx = point.x - point3.x;
@@ -29,14 +30,16 @@ const rayCrossingSign = (point: Vec2, point2: Vec2, point3: Vec2) => {
   }
   return 1;
 };
+/** Closed ring of segments (a unit's territory), with a simplified outline, bounds and Path2D. */
 export class Polygon {
     segments: Segment[];
-    simplify: any[];
-    owner: this;
-    bounds: { left: number; right: number; top: number; bottom: number; };
+    /** Outline vertices thinned to roughly CELL_RADIUS spacing; used for bounds. */
+    simplify: Vec2[];
+    owner: Base | null;
+    bounds: Bounds | null;
     path: Path2D;
 
-  constructor(points: any[]) {
+  constructor(points: Vec2[]) {
     this.segments = [];
     this.simplify = [];
     this.owner = null;
@@ -49,21 +52,21 @@ export class Polygon {
     }
     this.updateBounds();
   }
-  commit(owner: this) {
+  commit(owner?: Base): void {
     if (owner) {
       this.owner = owner;
     }
     this.segments.forEach(segment => segment.commit(this));
   }
-  remove() {
+  remove(): void {
     this.segments.forEach(segment => segment.remove());
   }
-  reverse() {
+  reverse(): this {
     this.segments.reverse();
     this.segments.forEach(segment => segment.reverse());
     return this;
   }
-  insert(segment: Segment, end: any) {
+  insert(segment: Segment, end: Vec2): void {
     if (!segment.has(end)) {
       const index = this.segments.findIndex(segment2 => segment2 === segment);
       const _0x55e498 = new Segment(segment.start, end).commit(this);
@@ -72,26 +75,26 @@ export class Polygon {
       this.segments.splice(index, 1, _0x55e498, _0x121664);
     }
   }
-  hasPoint(_0x451bf0: any) {
-    return this.segments.some(segment => segment.has(_0x451bf0));
+  hasPoint(point: Vec2): boolean {
+    return this.segments.some(segment => segment.has(point));
   }
-  findSegment(_0x596d0c: any) {
-    const index = this.segments.findIndex(segment => segment.start === _0x596d0c);
+  findSegment(point: Vec2): number {
+    const index = this.segments.findIndex(segment => segment.start === point);
     return index;
   }
-  splice(_0x4ff73a: Polyline, _0x2e9f8f: number, _0x198893: number) {
+  splice(_0x4ff73a: Polyline, _0x2e9f8f: number, _0x198893: number): void {
     const removed = this.segments.splice(_0x2e9f8f, _0x198893 - _0x2e9f8f, ..._0x4ff73a.segments);
     removed.forEach(item => item.remove());
     _0x4ff73a.commit(this);
   }
-  unsplice(polylineCopy: Polyline, _0x35431a: number, _0x11653f: number) {
+  unsplice(polylineCopy: Polyline, _0x35431a: number, _0x11653f: number): void {
     const removed = this.segments.splice(_0x35431a, _0x11653f - _0x35431a);
     this.remove();
     this.segments = removed.concat(polylineCopy.reverse().segments);
     polylineCopy.commit(this);
   }
-  left(removed2: string | any[], _0x2a2bca: number, _0x48f39f: number) {
-    const _0x18a162 = [];
+  left(removed2: Vec2[], _0x2a2bca: number, _0x48f39f: number): void {
+    const _0x18a162: Segment[] = [];
     for (let i = 0; i < removed2.length - 1; i++) {
       _0x18a162.push(new Segment(removed2[i], removed2[i + 1]));
     }
@@ -99,8 +102,8 @@ export class Polygon {
     _0x18a162.forEach(item => item.commit(this));
     removed.forEach(item => item.remove());
   }
-  right(removed2: string | any[], _0x4ab91c: number, _0x458307: number) {
-    const _0x9feb94 = [];
+  right(removed2: Vec2[], _0x4ab91c: number, _0x458307: number): void {
+    const _0x9feb94: Segment[] = [];
     for (let i = 0; i < removed2.length - 1; i++) {
       _0x9feb94.push(new Segment(removed2[i], removed2[i + 1]));
     }
@@ -109,11 +112,11 @@ export class Polygon {
     _0x9feb94.reverse().forEach(item => item.reverse().commit(this));
     this.segments = removed.concat(_0x9feb94);
   }
-  points() {
+  points(): Vec2[] {
     return this.segments.map(segment => segment.start);
   }
-  intersections(_0x5d6a44: Segment) {
-    let result: any[] = [];
+  intersections(_0x5d6a44: Segment): Intersection[] {
+    let result: Intersection[] = [];
     if (this.segments.length > 1) {
       this.segments.forEach(segment => {
         const _0x3c561e = segment.intersect(_0x5d6a44);
@@ -130,7 +133,7 @@ export class Polygon {
     }
     return result;
   }
-  inside(point3: Vec2) {
+  inside(point3: Vec2): boolean {
     const {
       length
     } = this.segments;
@@ -148,10 +151,10 @@ export class Polygon {
     }
     return _0x50b175 !== 1;
   }
-  insideNew(point: Vec2) {
+  insideNew(point: Vec2): boolean {
     return !!pointInPolygon(this.segments.map(segment => [segment.start.x, segment.start.y]), point.x, point.y);
   }
-  rawSquare() {
+  rawSquare(): number {
     let _0x3e0443 = 0;
     this.segments.forEach(segment => {
       const {
@@ -162,7 +165,7 @@ export class Polygon {
     });
     return _0x3e0443 / 2;
   }
-  square() {
+  square(): number {
     let result = this.rawSquare();
     if (result < 0) {
       {
@@ -171,7 +174,7 @@ export class Polygon {
     }
     return result;
   }
-  calcPath() {
+  calcPath(): void {
     const path = new Path2D();
     const {
       segments
@@ -193,7 +196,7 @@ export class Polygon {
     this.path = path;
     this.updateBounds();
   }
-  calcSimplify() {
+  calcSimplify(): void {
     this.simplify = [];
     let _0x3ed40b = 0;
     this.segments.forEach(segment => {
@@ -214,7 +217,7 @@ export class Polygon {
       }
     });
   }
-  updateBounds() {
+  updateBounds(): void {
     this.calcSimplify();
     let min = Infinity;
     let max = -Infinity;
@@ -242,13 +245,13 @@ export class Polygon {
     };
   }
 }
-export const circlePoints = (point: Vec2, baseCount: number, baseRadius: number) => {
+export const circlePoints = (point: Vec2, baseCount: number, baseRadius: number): Vec2[] => {
   if (typeof point.x !== "number") {
     throw Error("circle");
   }
   const _0x25a8fb = Math.PI * 2;
   const _0x2d7adf = _0x25a8fb / baseCount;
-  const result = [];
+  const result: Vec2[] = [];
   for (let i = 0; i < _0x25a8fb - EPSILON; i += _0x2d7adf) {
     result.push(new Vec2(point.x + Math.cos(i) * baseRadius, point.y + Math.sin(i) * baseRadius));
   }

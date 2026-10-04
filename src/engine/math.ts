@@ -1,11 +1,11 @@
 import { Vec2 } from "./vec2";
 
 export const EPSILON = Math.pow(2, -26);
-export const isZero = (distance: number): number => Math.abs(distance) <= EPSILON;
-export const nearlyEqual = (_0x2bc84b: number, _0x422639: number) => Math.abs(_0x2bc84b - _0x422639) <= EPSILON;
-export const lerp = (_0x497e73: number, _0x1215fd: number, _0xc805ba: number) => _0x497e73 + (_0x1215fd - _0x497e73) * _0xc805ba;
+export const isZero = (distance: number): boolean => Math.abs(distance) <= EPSILON;
+export const nearlyEqual = (_0x2bc84b: number, _0x422639: number): boolean => Math.abs(_0x2bc84b - _0x422639) <= EPSILON;
+export const lerp = (_0x497e73: number, _0x1215fd: number, _0xc805ba: number): number => _0x497e73 + (_0x1215fd - _0x497e73) * _0xc805ba;
 export const easeOutCubic = (_0x570a19: number): number => --_0x570a19 * _0x570a19 * _0x570a19 + 1;
-export const clamp = (_0x2cbd0e: number, _0x349ac0: number, _0x26617c: number) => {
+export const clamp = (_0x2cbd0e: number, _0x349ac0: number, _0x26617c: number): number => {
   if (_0x26617c < _0x2cbd0e) {
     return _0x2cbd0e;
   }
@@ -14,9 +14,9 @@ export const clamp = (_0x2cbd0e: number, _0x349ac0: number, _0x26617c: number) =
   }
   return _0x26617c;
 };
-export const cross2d = (_0x485df3: number, _0x2a85fc: number, _0x18d0a3: number, _0x4b57d3: number) => _0x485df3 * _0x4b57d3 - _0x2a85fc * _0x18d0a3;
-export const inRange = (_0x50b329: number, _0x1b8016: number, _0x13f44a: number) => Math.min(_0x50b329, _0x1b8016) - EPSILON <= _0x13f44a && _0x13f44a <= Math.max(_0x50b329, _0x1b8016) + EPSILON;
-export const rangeOverlap = (_0x398a2a: number, _0x88af21: number, _0x9eb278: number, _0x369d4a: number) => {
+export const cross2d = (_0x485df3: number, _0x2a85fc: number, _0x18d0a3: number, _0x4b57d3: number): number => _0x485df3 * _0x4b57d3 - _0x2a85fc * _0x18d0a3;
+export const inRange = (_0x50b329: number, _0x1b8016: number, _0x13f44a: number): boolean => Math.min(_0x50b329, _0x1b8016) - EPSILON <= _0x13f44a && _0x13f44a <= Math.max(_0x50b329, _0x1b8016) + EPSILON;
+export const rangeOverlap = (_0x398a2a: number, _0x88af21: number, _0x9eb278: number, _0x369d4a: number): number => {
   if (_0x398a2a > _0x88af21) {
     [_0x398a2a, _0x88af21] = [_0x88af21, _0x398a2a];
   }
@@ -25,7 +25,8 @@ export const rangeOverlap = (_0x398a2a: number, _0x88af21: number, _0x9eb278: nu
   }
   return Math.min(_0x88af21, _0x369d4a) - Math.max(_0x398a2a, _0x9eb278);
 };
-export function pointInPolygon(_0x29a68f: string | any[], x: number, y: number) {
+/** Even-odd test; returns 0 outside, 1 on an edge, 2 inside. `_0x29a68f` is a list of [x, y] vertices. */
+export function pointInPolygon(_0x29a68f: ArrayLike<ArrayLike<number>>, x: number, y: number): 0 | 1 | 2 {
   let _0x562c11 = false;
   let count = _0x29a68f.length;
   for (let i = 0, _0xea5051 = count - 1; i < count; _0xea5051 = i++) {
@@ -47,7 +48,7 @@ export function pointInPolygon(_0x29a68f: string | any[], x: number, y: number) 
     return 0;
   }
 }
-function pointOnSegment(x: number, y: number, _0x546daf: number, _0x21e81c: number, _0x3d49bc: number, _0x3776c9: number) {
+function pointOnSegment(x: number, y: number, _0x546daf: number, _0x21e81c: number, _0x3d49bc: number, _0x3776c9: number): boolean {
   let _0x539722 = _0x546daf - x;
   let _0x4520c5 = _0x21e81c - y;
   let _0xbbd220 = _0x3d49bc - x;
@@ -57,10 +58,13 @@ function pointOnSegment(x: number, y: number, _0x546daf: number, _0x21e81c: numb
   return _0x3d83e6 == 0 && _0x10959f <= 0;
 }
 let _0x5e2101 = 1;
-export const nextId = () => _0x5e2101++;
+export const nextId = (): number => _0x5e2101++;
 const clock = typeof performance !== "undefined" ? performance : Date;
 export const now = clock.now.bind(clock);
-export function createRng(seed: number) {
+/** Seeded LCG. rng() returns a float in [0, 1); rng(n) returns an integer in [0, n). */
+export type Rng = (max?: number) => number;
+
+export function createRng(seed: number): Rng {
   if (seed > 0 && seed < 1) {
     seed = Math.floor(seed * 1000000000);
   }
@@ -68,17 +72,17 @@ export function createRng(seed: number) {
     seed = (seed * 69069 + 1) % 2147483648;
     return seed % _0x51efea;
   };
-  let result = (_0x1dfc31: null): null => _0x1dfc31 == null ? _0x449b8e(1000000000) / 1000000000 : _0x449b8e(_0x1dfc31);
+  let result = (_0x1dfc31?: number): number => _0x1dfc31 == null ? _0x449b8e(1000000000) / 1000000000 : _0x449b8e(_0x1dfc31);
   return result;
 }
-export function fmt2(_0x2134de: number) {
+export function fmt2(_0x2134de: number): string {
   return _0x2134de.toFixed(2);
 }
 export const TAU = Math.PI * 2;
 const _0x1b92c1 = Math.cos(0);
 const _0x55d618 = Math.sin(0);
 export const _0xd09b08 = 240;
-export const vecFromAngle = (direction: number): number => {
+export const vecFromAngle = (direction: number): Vec2 => {
   const cos = Math.cos(direction);
   const sin = Math.sin(direction);
   const x = _0x1b92c1 * cos - _0x55d618 * sin;

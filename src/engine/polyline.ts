@@ -1,15 +1,27 @@
 import { Segment } from "./segment";
+import type { Shape } from "./segment";
+import type { Vec2 } from "./vec2";
+import type { Track } from "../game/track";
 
+/** Axis-aligned bounding box. */
+export interface Bounds {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+/** Open chain of segments (a unit's trail), with bounds and a Path2D built incrementally. */
 export class Polyline {
-    owner: any;
-    start: { x: any; y: any; };
-    end: { x: any; y: any; };
-    segments: any[];
-    bounds: { left: number; right: number; top: number; bottom: number; };
+    owner: Track | null;
+    start: Vec2 | null;
+    end: Vec2 | null;
+    segments: Segment[];
+    bounds: Bounds;
     path: Path2D;
 
-  constructor(_0x3d26c8: this) {
-    this.owner = _0x3d26c8 || null;
+  constructor(owner?: Track) {
+    this.owner = owner || null;
     this.start = null;
     this.end = null;
     this.segments = [];
@@ -21,20 +33,20 @@ export class Polyline {
     };
     this.path = new Path2D();
   }
-  commit(_0x3f07dd: any) {
-    this.segments.forEach(segment => segment.commit(_0x3f07dd));
+  commit(shape: Shape): void {
+    this.segments.forEach(segment => segment.commit(shape));
   }
-  remove() {
+  remove(): void {
     this.segments.forEach(segment => segment.remove());
   }
-  reverse() {
+  reverse(): this {
     this.segments.reverse().forEach(item => item.reverse());
     if (this.end) {
       [this.start, this.end] = [this.end, this.start];
     }
     return this;
   }
-  clone() {
+  clone(): Polyline {
     const polyline = new Polyline();
     polyline.segments = this.segments.map(segment => segment.clone());
     polyline.start = this.start;
@@ -42,17 +54,17 @@ export class Polyline {
     Object.assign(polyline.bounds, this.bounds);
     return polyline;
   }
-  updateBounds(_0x1f0631: { x: any; y: any; }) {
+  updateBounds(point: Vec2): void {
     const {
       x,
       y
-    } = _0x1f0631;
+    } = point;
     this.bounds.left = Math.min(this.bounds.left, x);
     this.bounds.right = Math.max(this.bounds.right, x);
     this.bounds.top = Math.min(this.bounds.top, y);
     this.bounds.bottom = Math.max(this.bounds.bottom, y);
   }
-  add2(end: { x: any; y: any; }) {
+  add2(end: Vec2): boolean {
     const _0x2b66d7 = this.end || this.start;
     if (_0x2b66d7 && _0x2b66d7.equal(end)) {
       return false;
@@ -80,14 +92,14 @@ export class Polyline {
     this.path.moveTo(x, y);
     return true;
   }
-  points() {
+  points(): Vec2[] {
     const segments = this.segments.map(segment => segment.start);
     if (this.end) {
       segments.push(this.end);
     }
     return segments;
   }
-  toString() {
+  toString(): string {
     return this.segments.map(segment => segment.start.toString()).join("");
   }
 }

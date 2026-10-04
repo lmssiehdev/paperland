@@ -1,32 +1,52 @@
 import { EPSILON, cross2d, inRange, isZero, rangeOverlap } from "./math";
 import { Vec2 } from "./vec2";
+import type { Polygon } from "./polygon";
+import type { Polyline } from "./polyline";
 
+/** A shape that owns segments: a territory polygon or a trail polyline. */
+export type Shape = Polygon | Polyline;
+
+/** Result of intersecting two segments (see Segment.intersect). */
+export interface Intersection {
+  /** Intersection point; reuses an existing endpoint Vec2 when it coincides with one. */
+  point: Vec2;
+  /** The segment `intersect` was called on. */
+  segment: Segment;
+  /** Squared distance from the other segment's start to `point`. */
+  distance: number;
+  /** True when the segments are collinear and overlap over a length. */
+  overlay: boolean;
+  /** Sign of the cross product of the two segment normals (0 when parallel). */
+  zn: number;
+}
+
+/** Directed line segment between two Vec2 points, with cached direction vector and normalized line equation ax + by + c = 0. */
 export class Segment {
-    vector: any;
+    vector: Vec2;
     a: number;
     b: number;
     c: number;
     mark: number;
-    shape: this;
-    start: { equal: (arg0: any) => any; };
-    end: any;
+    shape: Shape | null;
+    start: Vec2;
+    end: Vec2;
 
-  constructor(start: { equal: (arg0: any) => any; }, end: { x: any; y: any; }) {
+  constructor(start: Vec2, end: Vec2) {
     this.vector = undefined;
     this.a = undefined;
     this.b = undefined;
     this.c = undefined;
-    if (start.equal(end)) ;
+    if (start.equal(end)) {}
     this.mark = 0;
     this.shape = null;
     this.start = start;
     this.end = end;
     this.calc();
   }
-  get owner(): any {
+  get owner(): null {
     return null;
   }
-  calc() {
+  calc(): void {
     const {
       start,
       end
@@ -41,31 +61,31 @@ export class Segment {
     this.b = dx;
     this.c = -(dy * start.x + dx * start.y);
   }
-  clone() {
+  clone(): Segment {
     return new Segment(this.start, this.end);
   }
-  reverse() {
+  reverse(): this {
     const start = this.start;
     this.start = this.end;
     this.end = start;
     this.calc();
     return this;
   }
-  commit(shape: this | this) {
+  commit(shape: Shape): this {
     this.shape = shape;
     this.start.commit(this);
     this.end.commit(this);
     return this;
   }
-  remove() {
+  remove(): void {
     this.shape = null;
     this.start.remove(this);
     this.end.remove(this);
   }
-  length() {
+  length(): number {
     return this.vector.magnitude();
   }
-  zn(_0xc6e8f: { a: any; b: any; }) {
+  zn(_0xc6e8f: Segment): number {
     const a2 = _0xc6e8f.a;
     const b2 = _0xc6e8f.b;
     const {
@@ -74,7 +94,7 @@ export class Segment {
     } = this;
     return cross2d(a2, b2, a, b);
   }
-  intersect(segment: Segment) {
+  intersect(segment: Segment): Intersection | null {
     const a2 = segment.a;
     const b2 = segment.b;
     const c2 = segment.c;
@@ -132,7 +152,7 @@ export class Segment {
     }
     return null;
   }
-  has(_0x1924dc: any) {
-    return this.start === _0x1924dc || this.end === _0x1924dc;
+  has(point: Vec2): boolean {
+    return this.start === point || this.end === point;
   }
 }
