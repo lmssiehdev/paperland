@@ -11,7 +11,7 @@
   "scripts": {
     "start": "bun src/index.ts",
     "dev": "bun --watch src/index.ts",
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsgo --noEmit -p ."
   },
   "devDependencies": {
     "@elysiajs/eden": "1.4.9"

@@ -14,6 +14,6 @@
   },
   "scripts": {
     "build": "bun build src/main.ts --format=iife --outfile dist/app2.js",
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsgo --noEmit -p ."
   }
 }

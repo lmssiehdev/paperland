@@ -9,7 +9,7 @@ bun install
 bun run build            # packages/client -> packages/client/dist/app2.js
 bun run serve            # Elysia server on :3000 (PORT=3100 bun run serve for another port)
 bun run dev              # build once, then serve with --watch on the server
-bun run typecheck        # every package, 0 errors
+bun run typecheck        # every package with tsgo (TypeScript 7 native), 0 errors
 bun test                 # unit tests of every package (+ the Chromium headless golden, needs Playwright)
 bun run smoke            # headless boot + start round + units move + screenshots in shots/
 bun run autopilot 5 180  # 5 trials x 180 simulated seconds, straight-line vs AI autopilot

@@ -10,6 +10,6 @@
     "@paperio/core": "workspace:*"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p test"
+    "typecheck": "tsgo --noEmit -p . && tsgo --noEmit -p test"
   }
 }
