@@ -2,6 +2,8 @@ import { Segment } from "./segment";
 import type { Shape } from "./segment";
 import type { Vec2 } from "./vec2";
 import type { Track } from "../game/track";
+import type { PathHandle } from "../handles";
+import { platform } from "../platform";
 
 /** Axis-aligned bounding box. */
 export interface Bounds {
@@ -18,7 +20,7 @@ export class Polyline {
     end: Vec2 | null;
     segments: Segment[];
     bounds: Bounds;
-    path: Path2D;
+    path: PathHandle;
 
   constructor(owner?: Track) {
     this.owner = owner || null;
@@ -31,7 +33,7 @@ export class Polyline {
       top: Infinity,
       bottom: -Infinity
     };
-    this.path = new Path2D();
+    this.path = platform.createPath();
   }
   commit(shape: Shape): void {
     this.segments.forEach(segment => segment.commit(shape));

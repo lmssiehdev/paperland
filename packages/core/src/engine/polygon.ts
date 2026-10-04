@@ -5,6 +5,8 @@ import { CELL_RADIUS, CELL_RADIUS_SQ } from "../game/constants";
 import type { Bounds, Polyline } from "./polyline";
 import type { Intersection } from "./segment";
 import type { Base } from "../game/base";
+import type { PathHandle } from "../handles";
+import { platform } from "../platform";
 
 const rayCrossingSign = (point: Vec2, point2: Vec2, point3: Vec2) => {
   const dx = point.x - point3.x;
@@ -39,7 +41,7 @@ export class Polygon {
     /** Assigned by this.updateBounds() in the constructor (TS can't see through the call). */
     bounds!: Bounds;
     /** Assigned by calcPath(), which Base and Game call right after building every polygon that gets drawn. */
-    path!: Path2D;
+    path!: PathHandle;
 
   constructor(points: Vec2[]) {
     this.segments = [];
@@ -176,7 +178,7 @@ export class Polygon {
     return result;
   }
   calcPath(): void {
-    const path = new Path2D();
+    const path = platform.createPath();
     const {
       segments
     } = this;

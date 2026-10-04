@@ -1,5 +1,6 @@
 import { easeOutCubic } from "../engine/math";
-import Cookies from "js-cookie";
+import type { ImageHandle } from "../handles";
+import { platform } from "../platform";
 import type { Game } from "./game";
 import type { Player, Unit } from "./units";
 
@@ -46,7 +47,7 @@ export class Tip {
     current: number;
     states: number[];
     /** Set once the icon at `url` has loaded. */
-    image: HTMLImageElement | null;
+    image: ImageHandle | null;
     ready: boolean;
 
   constructor(title: string, description: string, url: string) {
@@ -58,15 +59,11 @@ export class Tip {
     this.image = null;
     if (url) {
       this.ready = false;
-      const image = new Image();
-      image.onload = () => {
+      // Loaded: ready with the image. Failed: ready without one (image stays null).
+      platform.loadImage(url, image => {
         this.ready = true;
         this.image = image;
-      };
-      image.onerror = () => {
-        this.ready = true;
-      };
-      image.src = url;
+      });
     } else {
       this.ready = true;
     }
@@ -131,7 +128,7 @@ export class AchievementStore {
     this.achievements = definitions.map(item => new Achievement(item.name, item.modes, item.getChecker, item.description, item.url, item.onEarned));
   }
   load() {
-    const challenges: ChallengeFlags = Cookies.getJSON("paperio_challenges") || {};
+    const challenges: ChallengeFlags = platform.storage.getJSON("paperio_challenges") || {};
     const loadChallenge = (challengeId: string, achievementName: string) => {
       if (challenges[challengeId]) {
         const achievement = this.achievements.find(achievement => achievement.name === achievementName);
@@ -144,7 +141,7 @@ export class AchievementStore {
     loadChallenge("c22", "capAmerica");
     loadChallenge("c22", "thanos");
     loadChallenge("geraldquest1", "geralt");
-    const storage: AchievementStorage = Cookies.getJSON(this.storageName) || {};
+    const storage: AchievementStorage = platform.storage.getJSON(this.storageName) || {};
     if (storage.achievements) {
       storage.achievements.forEach(achievement => {
         const achievement2 = this.achievements.find(achievement2 => achievement2.name === achievement.name);
@@ -161,13 +158,13 @@ export class AchievementStore {
       best: achievement.best,
       earned: achievement.earned
     }));
-    const storage: AchievementStorage = Cookies.getJSON(this.storageName) || {};
+    const storage: AchievementStorage = platform.storage.getJSON(this.storageName) || {};
     storage.achievements = achievements;
     const cookieOptions = {
       expires: 365
     };
-    Cookies.set(this.storageName, storage, cookieOptions);
-    const challenges: ChallengeFlags = Cookies.getJSON("paperio_challenges") || {};
+    platform.storage.set(this.storageName, storage, cookieOptions);
+    const challenges: ChallengeFlags = platform.storage.getJSON("paperio_challenges") || {};
     const saveChallenge = (challengeId: string, achievementName: string) => {
       const achievement = this.achievements.find(achievement => achievement.name === achievementName);
       if (achievement && achievement.earned) {
@@ -181,7 +178,7 @@ export class AchievementStore {
     saveChallenge("sanitizerquest", "sanitizer");
     saveChallenge("doctorquest", "doctor");
     saveChallenge("covidquest", "covid");
-    Cookies.set("paperio_challenges", challenges, cookieOptions);
+    platform.storage.set("paperio_challenges", challenges, cookieOptions);
   }
 }
 export class AchievementsProfile {

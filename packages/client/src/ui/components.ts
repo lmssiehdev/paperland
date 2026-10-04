@@ -3,9 +3,9 @@ import type { TargetedEvent } from "preact";
 import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import type { StateUpdater, Dispatch } from "preact/hooks";
 import type { PaperioApi } from "../api";
-import type { GameResult } from "../game/game";
-import { MODES } from "../modes";
-import type { ModeId } from "../modes";
+import type { GameResult } from "@paperio/core/game/game";
+import { MODES } from "@paperio/core/modes/index";
+import type { ModeId } from "@paperio/core/modes/index";
 import { LANGUAGES, getLanguage } from "./i18n";
 import type { Language } from "./i18n";
 

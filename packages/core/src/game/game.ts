@@ -1,4 +1,4 @@
-import { TAU, METRICS_HISTORY_LENGTH, clamp, createRng, easeOutCubic, inRange, isZero, lerp, nearlyEqual, now, rangeOverlap, vecFromAngle } from "../engine/math";
+import { TAU, METRICS_HISTORY_LENGTH, createRng, easeOutCubic, isZero, lerp, nearlyEqual, now, vecFromAngle } from "../engine/math";
 import { Polygon, circlePoints } from "../engine/polygon";
 import { Segment } from "../engine/segment";
 import { Vec2 } from "../engine/vec2";
@@ -11,14 +11,13 @@ import { Particle, spawnDeathParticles } from "./particles";
 import { Bot, Player } from "./units";
 import type { Border } from "../engine/border";
 import type { Rng } from "../engine/math";
-import type { Bounds } from "../engine/polyline";
 import type { Intersection, Shape } from "../engine/segment";
 import type { Config } from "../config";
-import type { LanguageStrings } from "../ui/i18n";
+import type { LanguageStrings } from "../language";
 import type { Unit } from "./units";
 import type { DeathReason } from "./constants";
 import { SpatialGrid } from "../engine/spatial-grid";
-import { Controller } from "../input/controller";
+import type { ControllerHandle, ViewHandle } from "../handles";
 import { SkinManager } from "../skins/skin";
 import type { Asset, Skin } from "../skins/skin";
 import { NamePool } from "./names";
@@ -162,36 +161,6 @@ interface IntersectionGroup {
   intersections: Intersection[];
 }
 
-/** Per-frame view data passed to the renderers (see Game.getRenderContext). */
-export interface RenderContext {
-  game: Game;
-  view: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
-  viewWidth: number;
-  viewHeight: number;
-  devicePixelRatio: number;
-  /** Screen diagonal relative to the reference resolution. */
-  scaler: number;
-  /** World -> canvas scale. */
-  scale: number;
-  /** World point at the center of the view. */
-  origin: Vec2;
-  pointInView: (point: Vec2, margin?: number) => boolean;
-  boundsInView: (item: { bounds: Bounds; }, margin?: number) => boolean;
-  calcMult: (landscape: number, portrait: number) => number;
-  viewScreenWidth: number;
-  viewScreenHeight: number;
-  fontSize: number;
-  strokeWidth: number;
-  backHeight: number;
-  uiFont: string;
-  padding: number;
-  barHeight: number;
-  halfBarHeight: number;
-  barWidth: number;
-  halfBarWidth: number;
-}
-
 /** Where to look for a free spawn spot; "near" means around an anchor unit (default: the player). */
 export type SpawnZone = "near" | "bounds" | "center" | "random";
 
@@ -204,6 +173,15 @@ export interface SpawnBotOptions {
 }
 
 export type GameRenderer = (game: Game) => void;
+
+/** Steers the player from local input; called by readInput() every update (client: input/read-input.ts). */
+export type InputSource = (game: Game, dt: number) => void;
+
+/** Draws the player's territory as a PNG data URL for the results screen (client: render/territory-image.ts). */
+export type TerritoryImager = (player: Player) => string;
+
+/** Schedules the next loop() call (client: requestAnimationFrame). */
+export type FrameScheduler = (callback: () => void) => void;
 
 export class Game {
     /** Best score so far; assigned by api.start() right before spawnPlayer (read only for the player's result/HUD). */
@@ -218,18 +196,26 @@ export class Game {
     citiesManager: { get(country: string): string; } | undefined;
     /** Assigned by api.ts. */
     renderer: GameRenderer | undefined;
+    /** Assigned by api.ts; without one readInput() does nothing (headless). */
+    input: InputSource | undefined;
+    /** Assigned by api.ts; without one GameResult.image is undefined (headless). */
+    territoryImage: TerritoryImager | undefined;
+    /** Assigned by api.ts (requestAnimationFrame); the headless default waits one tick. */
+    requestFrame: FrameScheduler = callback => {
+      setTimeout(callback, TICK_MS);
+    };
     /** Mode-specific rules (spawning, win condition). Set by createApi; classic by default. */
     mode: GameMode = new ClassicMode();
     rng: Rng;
     build: number;
     config: GameConfig;
     language: LanguageStrings;
-    controller: Controller;
+    controller: ControllerHandle;
     skinManager: SkinManager;
     nameManager: NamePool;
     achievementsProfile: AchievementStore;
     grid: SpatialGrid;
-    view: HTMLCanvasElement | null;
+    view: ViewHandle | null;
     border: Border;
     player: Player | null;
     units: Unit[];
@@ -267,7 +253,7 @@ export class Game {
     stats: GameStats;
     timings: GameTimings;
     events: GameEvents;
-    updateParticlesId: number;
+    updateParticlesId: ReturnType<typeof setInterval>;
     /** Assigned by spawnPlayer; only read in gameOver, which needs a spawned player. */
     startTime!: number;
     /** Player heading quantized to 0..253; assigned at the start of every update(), before any reader runs. */
@@ -275,7 +261,7 @@ export class Game {
     /** Smoothed camera center; undefined until the first getRenderContext(). */
     origin: Vec2 | undefined;
 
-  constructor(config: GameConfig, view: HTMLCanvasElement | null, space: SpatialGrid, border: Border, skinManager: SkinManager, gameOverCallback: ((result: GameResult) => void) | null, nameManager: NamePool, controller: Controller, language: LanguageStrings, schemesManager: SchemesManager, achievementsProfile: AchievementStore, seed: number) {
+  constructor(config: GameConfig, view: ViewHandle | null, space: SpatialGrid, border: Border, skinManager: SkinManager, gameOverCallback: ((result: GameResult) => void) | null, nameManager: NamePool, controller: ControllerHandle, language: LanguageStrings, schemesManager: SchemesManager, achievementsProfile: AchievementStore, seed: number) {
     this.isTest = undefined;
     this.playerDeathCallback = undefined;
     this.keyboard = undefined;
@@ -283,6 +269,8 @@ export class Game {
     this.topListChanged = false;
     this.citiesManager = undefined;
     this.renderer = undefined;
+    this.input = undefined;
+    this.territoryImage = undefined;
     this.rng = createRng(seed);
     this.build = 704;
     this.config = config;
@@ -329,10 +317,7 @@ export class Game {
     this.border.polygon.calcPath();
     this.quality = 1;
     this.fpsSequence = [];
-    if (view) {
-      const onResize = () => {};
-      window.addEventListener("resize", onResize, false);
-    }
+    // (The original added an empty window "resize" listener here when there was a view; dropped with the DOM.)
     this.stats = {
       fps: 0,
       ut: 0,
@@ -533,44 +518,7 @@ export class Game {
     // Callers (kill of the player, the win check in update) only run while a player exists.
     const player = this.player!;
     if (!player.win) {
-      let minX = Infinity;
-      let maxX = 0;
-      let minY = Infinity;
-      let maxY = 0;
-      player.base.polygon.segments.forEach(segment => {
-        const {
-          x,
-          y
-        } = segment.start;
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x);
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
-      });
-      const width = maxX - minX;
-      const height = maxY - minY;
-      const size = Math.max(width, height);
-      const vec2 = new Vec2(minX + width / 2, minY + height / 2);
-      const imageSize = 500;
-      const imageScale = imageSize * 0.95 / size;
-      const depth = imageSize / 100;
-      let image;
-      if (typeof document !== "undefined") {
-        const canvas = document.createElement("canvas");
-        canvas.width = imageSize;
-        canvas.height = imageSize;
-        // A fresh canvas always provides a 2D context.
-        const ctx = canvas.getContext("2d")!;
-        ctx.scale(imageScale, imageScale);
-        ctx.translate(imageSize / 2 / imageScale - vec2.x, imageSize / 2 / imageScale - vec2.y);
-        ctx.translate(0, depth / imageScale);
-        ctx.fillStyle = player.skin.colors.back;
-        ctx.fill(player.base.polygon.path);
-        ctx.translate(0, depth * -2 / imageScale);
-        ctx.fillStyle = player.skin.pattern && player.skin.pattern.pattern || player.skin.colors.main;
-        ctx.fill(player.base.polygon.path);
-        image = canvas.toDataURL("image/png");
-      }
+      const image = this.territoryImage ? this.territoryImage(player) : undefined;
       const result: GameResult = {
         build: this.build,
         game: this,
@@ -725,53 +673,8 @@ export class Game {
     return result;
   }
   readInput(dt: number) {
-    if (!this.controller) {
-      return;
-    }
-    if (this.controller.pressed()) {
-      this.keyboard = Object.assign({}, this.controller.mouse);
-      const maxTurn = TAU * dt / 1000;
-      if (this.controller.keyboardModeSwitch.mode2) {
-        let turn = 0;
-        if (this.controller.left) {
-          turn = -1;
-        }
-        if (this.controller.right) {
-          turn = 1;
-        }
-        if (turn) {
-          this.direction.rotate(turn * maxTurn);
-        }
-      } else {
-        const vec2 = new Vec2();
-        if (this.controller.up) {
-          vec2.add(new Vec2(0, -1));
-        }
-        if (this.controller.down) {
-          vec2.add(new Vec2(0, 1));
-        }
-        if (this.controller.left) {
-          vec2.add(new Vec2(-1, 0));
-        }
-        if (this.controller.right) {
-          vec2.add(new Vec2(1, 0));
-        }
-        if (vec2.magnitude()) {
-          let angle = Math.atan2(this.direction.x * vec2.y - vec2.x * this.direction.y, this.direction.x * vec2.x + this.direction.y * vec2.y);
-          if (Math.abs(angle) > maxTurn) {
-            angle = Math.sign(angle) * maxTurn;
-          }
-          this.direction.rotate(angle);
-        }
-      }
-    } else if (this.controller.mouse) {
-      if (!this.keyboard || this.keyboard.x !== this.controller.mouse.x && this.keyboard.y !== this.controller.mouse.y) {
-        this.keyboard = null;
-        // A controller (and so mouse input) only exists for a game with a view (see api.ts).
-        this.direction = new Vec2(this.controller.mouse.x, this.controller.mouse.y).sub(new Vec2(this.view!.clientWidth / 2, this.view!.clientHeight / 2)).normalize();
-      }
-    } else if (!this.keyboard && this.controller.lastMouse) {
-      this.direction = new Vec2(this.controller.lastMouse.x, this.controller.lastMouse.y).sub(new Vec2(this.view!.clientWidth / 2, this.view!.clientHeight / 2)).normalize();
+    if (this.input) {
+      this.input(this, dt);
     }
   }
   prepareAndUpdate(dt: number) {
@@ -983,102 +886,6 @@ export class Game {
     this.timings.spawnEndTime = now();
     this.cycle++;
     return true;
-  }
-  get renderContext(): RenderContext | undefined {
-    return this.getRenderContext();
-  }
-  getRenderContext(): RenderContext | undefined {
-    const {
-      view
-    } = this;
-    if (!view) {
-      return;
-    }
-    const {
-      font
-    } = this.config;
-    // The game canvas is only ever used with a 2D context.
-    const ctx = view.getContext("2d")!;
-    const clientWidth = view.clientWidth;
-    const clientHeight = view.clientHeight;
-    const viewWidth = ~~(clientWidth * this.quality);
-    const viewHeight = ~~(clientHeight * this.quality);
-    if (view.width !== viewWidth || view.height !== viewHeight) {
-      view.width = viewWidth;
-      view.height = viewHeight;
-    }
-    const {
-      devicePixelRatio
-    } = window;
-    const viewScreenWidth = viewWidth * devicePixelRatio;
-    const viewScreenHeight = viewHeight * devicePixelRatio;
-    const scaler = Math.sqrt(viewScreenWidth * viewScreenWidth + viewScreenHeight * viewScreenHeight) / Math.sqrt(2455780);
-    const scale = this.scale * scaler / devicePixelRatio;
-    let point: Vec2;
-    if (this.player) {
-      point = this.player.position;
-      if (this.player.killer && this.config.followKiller) {
-        point = this.player.killer.position;
-      }
-    } else {
-      point = this.grid.center;
-    }
-    if (this.origin && (!this.player || this.player.killer)) {
-      const dist = this.origin.distance(point);
-      let dist3 = dist / 30;
-      const step = point.clone().sub(this.origin).normalize().mulScalar(dist3);
-      point = this.origin.add(step);
-    }
-    this.origin = point.clone();
-    const left = point.x - viewWidth / 2 / scale;
-    const right = point.x + viewWidth / 2 / scale;
-    const top = point.y - viewHeight / 2 / scale;
-    const bottom = point.y + viewHeight / 2 / scale;
-    const pointInView = (point: Vec2, margin = 0) => inRange(left - margin, right + margin, point.x) && inRange(top - margin, bottom + margin, point.y);
-    const boundsInView = (item: { bounds: Bounds; }, margin = 0) => rangeOverlap(item.bounds.left - margin, item.bounds.right + margin, left, right) > 0 && rangeOverlap(item.bounds.top - margin, item.bounds.bottom + margin, top, bottom) > 0;
-    const calcMult = (landscape: number, portrait: number) => {
-      const landscapeAspect = 16 / 9;
-      const portraitAspect = 9 / 16;
-      const aspect = clamp(portraitAspect, landscapeAspect, viewScreenWidth / viewScreenHeight);
-      const multRange = landscape - portrait;
-      const aspectRange = portraitAspect - landscapeAspect;
-      const intercept = -(multRange * landscapeAspect + aspectRange * landscape);
-      return -(intercept + multRange * aspect) / aspectRange;
-    };
-    const fontSize = ~~(calcMult(20, 30) * scaler);
-    const strokeWidth = this.config.platesStrokeWidth * scaler;
-    const backHeight = ~~(scaler * 4);
-    const uiFont = fontSize + "px " + font;
-    const padding = ~~(scaler * 16);
-    const halfBarHeight = ~~(fontSize * 0.75);
-    const barHeight = halfBarHeight * 2;
-    const barWidth = ~~(viewScreenWidth / calcMult(4, 2.25));
-    const halfBarWidth = ~~(barWidth / 2);
-    return {
-      game: this,
-      view: view,
-      ctx: ctx,
-      viewWidth: viewWidth,
-      viewHeight: viewHeight,
-      devicePixelRatio: devicePixelRatio,
-      scaler: scaler,
-      scale: scale,
-      origin: point,
-      pointInView: pointInView,
-      boundsInView: boundsInView,
-      calcMult: calcMult,
-      viewScreenWidth: viewScreenWidth,
-      viewScreenHeight: viewScreenHeight,
-      fontSize: fontSize,
-      strokeWidth: strokeWidth,
-      backHeight: backHeight,
-      uiFont: uiFont,
-      padding: padding,
-      barHeight: barHeight,
-      halfBarHeight: halfBarHeight,
-      barWidth: barWidth,
-      halfBarWidth: halfBarWidth
-    };
   }
   updateMetrics(frameTime: number) {
     const {
@@ -1565,6 +1372,6 @@ export class Game {
     }
     this.timings.renderEndTime = now();
     this.last = time;
-    requestAnimationFrame(timestamp => this.loop());
+    this.requestFrame(() => this.loop());
   }
 }

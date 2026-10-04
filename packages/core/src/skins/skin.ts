@@ -5,8 +5,8 @@ import type { Rng } from "../engine/math";
 import { createRng } from "../engine/math";
 import type { Game } from "../game/game";
 import type { Unit } from "../game/units";
-import type { SkinAvatarConfig, SkinPatternConfig } from "./display";
-import { SkinAvatar, SkinDisplay, SkinPattern } from "./display";
+import type { ImageHandle, SkinAvatarHandle, SkinPatternHandle } from "../handles";
+import { SkinDisplay } from "./skin-display";
 
 /** Unit color scheme (hex strings). */
 export interface SkinColors {
@@ -17,23 +17,15 @@ export interface SkinColors {
   particles: string[];
 }
 
-/** One entry of assets/skins/skins.json. */
-export interface SkinConfig {
-  name: string;
-  colors?: Partial<SkinColors>;
-  pattern?: SkinPatternConfig;
-  avatar?: SkinAvatarConfig;
-}
-
 /** What a loaded asset contributes to a Skin. */
 export interface AssetContent {
   colors?: SkinColors;
-  pattern?: SkinPattern;
-  display?: SkinAvatar;
+  pattern?: SkinPatternHandle;
+  display?: SkinAvatarHandle;
   /** Shield pool assets only (not in this build): nickname color. */
   color?: string;
   /** Flag pool assets only (not in this build): round flag icon for minimap/leaderboard. */
-  roundedFlag?: HTMLCanvasElement | HTMLImageElement;
+  roundedFlag?: ImageHandle;
 }
 
 /** Entry of SkinManager.assets: an asset plus the pool tag it was registered with. */
@@ -42,7 +34,6 @@ interface RegisteredAsset {
   tag: string;
 }
 
-var assign = Object.assign;
 export class Skin {
     config: unknown;
     /** Set by Unit.setSkin, which every caller of SkinManager.get runs on the new skin. */
@@ -51,7 +42,7 @@ export class Skin {
     name!: string;
     assets: Asset[];
     colors: SkinColors;
-    pattern: SkinPattern | null;
+    pattern: SkinPatternHandle | null;
     container: SkinDisplay;
 
   constructor() {
@@ -106,45 +97,7 @@ export class ColorAsset extends Asset {
     this.source = source;
   }
 }
-export class ImageAsset extends Asset {
-    declare pool: ClassicSkinPool;
-    source: SkinConfig;
-
-  constructor(pool: ClassicSkinPool, name: string, source: SkinConfig) {
-    super(name);
-    this.pool = pool;
-    this.source = source;
-  }
-  load() {
-    if (this.loadingStarted) {
-      return;
-    }
-    this.loadingStarted = true;
-    const updateReady = () => {
-      // Every skins.json entry has an avatar, so `display` is set below before any layer/pattern finishes loading.
-      this.ready = this.content.display!.ready && (this.content.pattern ? this.content.pattern.ready : true);
-    };
-    const {
-      source
-    } = this;
-    if (source.colors) {
-      this.content.colors = assign({
-        main: "#000000",
-        back: "#000000",
-        nick: "#000000",
-        plate: "#000000",
-        particles: ["#000000"]
-      }, source.colors);
-    }
-    if (source.pattern) {
-      this.content.pattern = new SkinPattern(this.pool.config, this.pool.view, this.pool.path, source.pattern, updateReady);
-    }
-    if (source.avatar) {
-      this.content.display = new SkinAvatar(this.pool.config, this.pool.path, source.avatar, updateReady);
-    }
-  }
-}
-class AssetPool {
+export class AssetPool {
     /** Set by every subclass constructor right after super(). */
     config!: Config;
     name: string;
@@ -164,10 +117,16 @@ class AssetPool {
     return found;
   }
 }
+/** Builds the avatar drawn for a plain-colored skin (client: skins/image-skins.ts). Headless: none. */
+export type ColorAvatarFactory = (config: Config, colors: SkinColors) => SkinAvatarHandle;
+
 export class ColoredPool extends AssetPool {
-  constructor(config: Config) {
+    colorAvatar: ColorAvatarFactory | undefined;
+
+  constructor(config: Config, colorAvatar?: ColorAvatarFactory) {
     super("colors");
     this.config = config;
+    this.colorAvatar = colorAvatar;
     this.add(PALETTE);
   }
   add(hexColors: string[]) {
@@ -194,15 +153,8 @@ export class ColoredPool extends AssetPool {
       };
       const colorAsset = new ColorAsset(this, item, source);
       colorAsset.content.colors = source;
-      if (config) {
-        colorAsset.content.display = new SkinAvatar(config, "", {
-          layers: [{
-            src: makeColorCanvas(source.nick, source.nick)
-          }, {
-            level: 1,
-            src: makeColorCanvas(source.main, source.back)
-          }]
-        });
+      if (config && this.colorAvatar) {
+        colorAsset.content.display = this.colorAvatar(config, source);
       }
       colorAsset.ready = true;
       colorAsset.name = item;
@@ -212,38 +164,6 @@ export class ColoredPool extends AssetPool {
   loadAsset(asset: Asset) {
     return asset;
   }
-}
-export class ClassicSkinPool extends AssetPool {
-    view: HTMLCanvasElement;
-    path: string;
-
-  constructor(config: Config, view: HTMLCanvasElement, path: string, skinConfigs: SkinConfig[], preload = false) {
-    super("classic");
-    this.config = config;
-    this.view = view;
-    this.path = path;
-    this.add(skinConfigs);
-    if (preload) {
-      for (let asset of this.assets) {
-        asset.load();
-      }
-    }
-  }
-  add(skinConfigs: SkinConfig[]) {
-    this.assets.push(...(skinConfigs || []).map((item): ImageAsset => new ImageAsset(this, item.name, item)));
-  }
-}
-function makeColorCanvas(innerColor: string, borderColor: string) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 100;
-  canvas.height = 100;
-  // A fresh canvas always provides a 2d context.
-  const ctx = canvas.getContext("2d")!;
-  ctx.fillStyle = borderColor;
-  ctx.fillRect(0, 0, 100, 100);
-  ctx.fillStyle = innerColor;
-  ctx.fillRect(10, 10, 80, 80);
-  return canvas;
 }
 class SkinManagerBase {
     usedBy: Record<string, Skin[]>;
@@ -330,7 +250,7 @@ class SkinManagerBase {
   }
 }
 export class SkinManager extends SkinManagerBase {
-  constructor(coloredPool: ColoredPool, classicSkinPool: ClassicSkinPool, seed: number) {
+  constructor(coloredPool: ColoredPool, classicSkinPool: AssetPool, seed: number) {
     super(seed);
     this.registerAssets(coloredPool, "colored");
     this.registerAssets(classicSkinPool, "classic");

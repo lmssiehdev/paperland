@@ -31,23 +31,4 @@ export class FloatingLabel {
       this.position.add(this.velocity.clone().mulScalar(dt / 1000));
     }
   }
-  draw(ctx: CanvasRenderingContext2D, font: string, scale: number, uiScale: number) {
-    const easeOutQuint = (t: number): number => 1 + --t * t * t * t * t;
-    let alphaHex = Math.floor(easeOutQuint(this.time / this.duration) * 255).toString(16);
-    if (alphaHex.length < 2) {
-      alphaHex = "0" + alphaHex;
-    }
-    const point = this.unit ? this.unit.position.clone().add(this.position) : this.position;
-    const {
-      devicePixelRatio
-    } = window;
-    const fontSize = uiScale * 30 / devicePixelRatio;
-    ctx.save();
-    ctx.fillStyle = "" + this.color + (this.fading ? alphaHex : "");
-    ctx.font = "bold " + fontSize + "px " + font;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(this.text, point.x * scale, point.y * scale);
-    ctx.restore();
-  }
 }

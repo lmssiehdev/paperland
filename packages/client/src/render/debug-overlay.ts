@@ -1,5 +1,5 @@
-import { METRICS_HISTORY_LENGTH } from "../engine/math";
-import type { Game } from "../game/game";
+import { METRICS_HISTORY_LENGTH } from "@paperio/core/engine/math";
+import type { Game } from "@paperio/core/game/game";
 
 export function renderDebugOverlay(game: Game) {
   const {

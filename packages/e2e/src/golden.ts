@@ -1,10 +1,10 @@
 // Deterministic regression check: seeded Math.random, fresh Game via paperio2api.create(),
 // fixed number of manual ticks, then a hash of the simulation state.
-// Same hash before/after a refactor => same behavior.  usage: bun scripts/golden.ts [ticks=4000]
+// Same hash before/after a refactor => same behavior.  usage: [BASE_URL=http://localhost:3000/] bun packages/e2e/src/golden.ts [ticks=4000]
 import { chromium } from "playwright";
 
 const ticks = Number(process.argv[2] ?? 4000);
-const url = process.argv[3] ?? "http://localhost:3000/";
+const url = process.argv[3] ?? process.env.BASE_URL ?? "http://localhost:3000/";
 const browser = await chromium.launch();
 const page = await browser.newPage();
 await page.route("**/*", (r) => (new URL(r.request().url()).hostname === "localhost" ? r.continue() : r.abort()));

@@ -1,21 +1,10 @@
 import { Vec2 } from "../engine/vec2";
 import type { Segment } from "../engine/segment";
 import type { Unit } from "./units";
-
-const createSquarePath = () => {
-  const path = new Path2D();
-  const half = 1;
-  path.moveTo(-half, -half);
-  path.lineTo(half, -half);
-  path.lineTo(half, half);
-  path.lineTo(-half, half);
-  path.closePath();
-  return path;
-};
-const SQUARE_PATH = createSquarePath();
+import type { ImageHandle } from "../handles";
 
 /** A fill color, or an image drawn centered at 1/20 scale. */
-export type ParticleColor = string | HTMLImageElement | HTMLCanvasElement;
+export type ParticleColor = string | ImageHandle;
 
 /**
  * State a death particle is switched to when it flies to a collector unit: the original code
@@ -69,31 +58,6 @@ export class Particle {
     }
     this.rotation += this.rotate * seconds;
     this.scale += this.vscale * seconds;
-  }
-  draw(ctx: CanvasRenderingContext2D) {
-    const {
-      x,
-      y
-    } = this.position;
-    const {
-      rotation,
-      color,
-      scale
-    } = this;
-    let transform = ctx.getTransform();
-    ctx.translate(x, y);
-    ctx.rotate(rotation);
-    ctx.scale(scale, scale);
-    if (typeof color === "string") {
-      if (ctx.fillStyle !== color) {
-        ctx.fillStyle = color;
-      }
-      ctx.fill(SQUARE_PATH);
-    } else {
-      ctx.scale(1 / 20, 1 / 20);
-      ctx.drawImage(color, -color.width / 2, -color.height / 2);
-    }
-    ctx.setTransform(transform);
   }
   /** Crumb spawned when `unit` eats into the base it is currently in. */
   static nom(unit: Unit, segment: Segment, trackWidth: number) {

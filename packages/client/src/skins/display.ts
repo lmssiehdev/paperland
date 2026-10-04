@@ -1,5 +1,8 @@
-import type { Config } from "../config";
+import type { Config } from "@paperio/core/config";
 import { loadImage } from "../engine/load-image";
+
+export { SkinDisplay } from "@paperio/core/skins/skin-display";
+export type { SkinDisplayLayer } from "@paperio/core/skins/skin-display";
 
 /** Bitmap a skin layer/pattern is drawn from (loaded image or generated canvas). */
 export type SkinImageSource = HTMLImageElement | HTMLCanvasElement;
@@ -28,12 +31,6 @@ export interface SkinAvatarConfig {
 export interface SkinPatternConfig {
   url: string;
   scale?: number;
-}
-
-/** A layer of a SkinAvatar paired with its owning display (see SkinDisplay.sort). */
-export interface SkinDisplayLayer {
-  display: SkinAvatar;
-  layer: SkinLayer;
 }
 
 var assign = Object.assign;
@@ -190,40 +187,5 @@ export class SkinAvatar {
     }), onLayerLoad));
     this.frontLayers = this.layers.filter(layer => layer.level >= 1).sort((a, b) => a.level - b.level);
     this.backLayers = this.layers.filter(layer => layer.level < 1).sort((a, b) => b.level - a.level);
-  }
-}
-export class SkinDisplay {
-    displays: SkinAvatar[];
-    frontLayers: SkinDisplayLayer[];
-    backLayers: SkinDisplayLayer[];
-    maxScale: number;
-
-  constructor() {
-    this.displays = [];
-    this.frontLayers = [];
-    this.backLayers = [];
-    this.maxScale = 0;
-  }
-  get ready() {
-    return this.displays.every(display => display.ready);
-  }
-  sort() {
-    this.frontLayers = ([] as SkinDisplayLayer[]).concat(...this.displays.map(display => display.frontLayers.map((frontLayer): SkinDisplayLayer => ({
-      display: display,
-      layer: frontLayer
-    })))).sort((a, b) => a.layer.level - b.layer.level);
-    this.backLayers = ([] as SkinDisplayLayer[]).concat(...this.displays.map(display => display.backLayers.map((backLayer): SkinDisplayLayer => ({
-      display: display,
-      layer: backLayer
-    })))).sort((a, b) => b.layer.level - a.layer.level);
-    this.maxScale = Math.max(...this.frontLayers.map(frontLayer => frontLayer.display.scale * frontLayer.layer.scale));
-  }
-  add(display: SkinAvatar) {
-    this.displays.push(display);
-    this.sort();
-  }
-  remove(removed: SkinAvatar) {
-    this.displays = this.displays.filter(display => display !== removed);
-    this.sort();
   }
 }

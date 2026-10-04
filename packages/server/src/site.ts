@@ -4,13 +4,16 @@
 //   /teams/          teams mode       (MODE_JS=deob|original, default deob)
 //   /battleroyale/   battle royale    (MODE_JS=deob|original, default deob)
 // Game-over POSTs (results.php) are swallowed. Recorded responses (lb.php, token.php) are replayed.
+// Paths are relative to the repo root, whatever the cwd.
+const ROOT = new URL("../../../", import.meta.url).pathname;
+const file = (path: string) => Bun.file(path.startsWith("/") ? path : ROOT + path);
 const GAME_JS = process.env.GAME_JS ?? "src";
 const MODE_JS = process.env.MODE_JS ?? "deob";
 const JS_PATHS: Record<string, string> = {
   original: "original/app2.js",
   deob: "deob/stage2/deobfuscated.js",
   game: "deob/game.js",
-  src: "dist/app2.js",
+  src: "packages/client/dist/app2.js",
 };
 
 // mode prefix -> { dir, js file name in page, deobfuscated build }
@@ -29,7 +32,7 @@ const cleanHtml = (html: string) =>
     .replace(/<script type="text\/javascript" >[\s\S]*?ym\([\s\S]*?<\/script>/, "")
     .replace("<head>", "<head>" + AD_STUBS);
 
-const classicHtml = cleanHtml(await Bun.file("original/index.html").text());
+const classicHtml = cleanHtml(await file("original/index.html").text());
 const html = (body: string) => new Response(body, { headers: { "content-type": "text/html" } });
 
 const server = Bun.serve({
@@ -45,21 +48,21 @@ const server = Bun.serve({
     if (prefix) {
       const mode = MODES[prefix]!;
       const rel = pathname.slice(prefix.length) || "index.html";
-      if (rel === "index.html") return html(cleanHtml(await Bun.file(`${mode.dir}/index.html`).text()));
-      if (rel === "app.js" && MODE_JS === "deob") return new Response(Bun.file(mode.deob), { headers: { "content-type": "text/javascript" } });
-      const file = Bun.file(`${mode.dir}/${rel}`);
-      if (await file.exists()) return new Response(file);
+      if (rel === "index.html") return html(cleanHtml(await file(`${mode.dir}/index.html`).text()));
+      if (rel === "app.js" && MODE_JS === "deob") return new Response(file(mode.deob), { headers: { "content-type": "text/javascript" } });
+      const modeFile = file(`${mode.dir}/${rel}`);
+      if (await modeFile.exists()) return new Response(modeFile);
       // shared root assets (icons etc.)
-      const shared = Bun.file(`original/${rel}`);
+      const shared = file(`original/${rel}`);
       if (await shared.exists()) return new Response(shared);
       console.log("[404]", pathname);
       return new Response("not found", { status: 404 });
     }
 
     if (pathname === "/") return html(classicHtml);
-    if (pathname === "/app2.js") return new Response(Bun.file(process.env.GAME_JS_PATH ?? JS_PATHS[GAME_JS]!));
-    const file = Bun.file(`original${pathname}`);
-    if (await file.exists()) return new Response(file);
+    if (pathname === "/app2.js") return new Response(file(process.env.GAME_JS_PATH ?? JS_PATHS[GAME_JS]!));
+    const asset = file(`original${pathname}`);
+    if (await asset.exists()) return new Response(asset);
     console.log("[404]", pathname);
     return new Response("not found", { status: 404 });
   },

@@ -1,11 +1,14 @@
-import { Vec2 } from "../engine/vec2";
+import { Vec2 } from "@paperio/core/engine/vec2";
 import { renderDebugOverlay } from "./debug-overlay";
-import type { Track } from "../game/track";
-import type { Unit } from "../game/units";
-import type { Game, RenderContext } from "../game/game";
-import type { Config } from "../config";
-import type { Asset } from "../skins/skin";
-import type { Tip } from "../game/achievements";
+import type { Track } from "@paperio/core/game/track";
+import type { Unit } from "@paperio/core/game/units";
+import type { Game } from "@paperio/core/game/game";
+import { drawLabel, drawParticle } from "./effects";
+import { getRenderContext } from "./render-context";
+import type { RenderContext } from "./render-context";
+import type { Config } from "@paperio/core/config";
+import type { Asset } from "@paperio/core/skins/skin";
+import type { Tip } from "@paperio/core/game/achievements";
 import type { SkinAvatar, SkinDisplay, SkinImageSource, SkinLayer } from "../skins/display";
 
 type FillStyle = string | CanvasGradient | CanvasPattern;
@@ -371,7 +374,7 @@ const drawParticles = (renderContext: RenderContext) => {
     trackWidth
   } = game.config;
   ctx.save();
-  game.particles.forEach(particle => particle.time > 0 && pointInView(particle.position, trackWidth) && particle.draw(ctx));
+  game.particles.forEach(particle => particle.time > 0 && pointInView(particle.position, trackWidth) && drawParticle(ctx, particle));
   ctx.restore();
 };
 const drawLabels = (renderContext: RenderContext) => {
@@ -385,7 +388,7 @@ const drawLabels = (renderContext: RenderContext) => {
     font
   } = game.config;
   ctx.scale(1 / scale, 1 / scale);
-  game.labels.forEach(label => label.draw(ctx, font, scale, scaler));
+  game.labels.forEach(label => drawLabel(ctx, label, font, scale, scaler));
   ctx.scale(scale, scale);
 };
 const drawLeaderCrown = (renderContext: RenderContext) => {
@@ -656,7 +659,7 @@ const drawNotification = (renderContext: RenderContext) => {
   }
 };
 export function renderGame(game: Game) {
-  const renderContext = game.getRenderContext();
+  const renderContext = getRenderContext(game);
   if (!renderContext) {
     return;
   }

@@ -1,18 +1,20 @@
-import { Border } from "./engine/border";
-import { now } from "./engine/math";
-import { SpatialGrid } from "./engine/spatial-grid";
-import { Vec2 } from "./engine/vec2";
-import { AchievementStore } from "./game/achievements";
-import { Game } from "./game/game";
-import type { GameConfig, GameResult } from "./game/game";
-import { SchemesManager } from "./game/scoring";
-import { NamePool } from "./game/names";
+import { Border } from "@paperio/core/engine/border";
+import { now } from "@paperio/core/engine/math";
+import { SpatialGrid } from "@paperio/core/engine/spatial-grid";
+import { Vec2 } from "@paperio/core/engine/vec2";
+import { AchievementStore } from "@paperio/core/game/achievements";
+import { Game } from "@paperio/core/game/game";
+import type { GameConfig, GameResult } from "@paperio/core/game/game";
+import { SchemesManager } from "@paperio/core/game/scoring";
+import { NamePool } from "@paperio/core/game/names";
 import { Controller, KeyboardModeSwitch } from "./input/controller";
+import { readControllerInput } from "./input/read-input";
 import { renderGame } from "./render/game-renderer";
-import { SkinManager } from "./skins/skin";
+import { renderTerritoryImage } from "./render/territory-image";
+import { SkinManager } from "@paperio/core/skins/skin";
 import { LANG_RU } from "./ui/i18n";
-import { createMode } from "./modes";
-import type { ModeId } from "./modes";
+import { createMode } from "@paperio/core/modes/index";
+import type { ModeId } from "@paperio/core/modes/index";
 import type { Language } from "./ui/i18n";
 
 /** Builds the SkinManager for a new game (see main.ts). */
@@ -65,6 +67,11 @@ export const createApi = (config: GameConfig, language: Language, createSkinMana
     const skinManager = createSkinManager(gameConfig, view);
     const game = new Game(gameConfig, view, spatialGrid, border, skinManager, null, nameManager, new Controller(view, new KeyboardModeSwitch()), language.lng, schemesManager, achievementsProfile, Math.random());
     game.renderer = renderGame;
+    game.input = readControllerInput;
+    game.territoryImage = renderTerritoryImage;
+    game.requestFrame = callback => {
+      requestAnimationFrame(callback);
+    };
     game.mode = gameMode;
     result.game = game;
     game.controller.addSet([16, 18, 81, 66, 77], () => {

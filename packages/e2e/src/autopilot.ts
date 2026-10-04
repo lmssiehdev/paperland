@@ -1,6 +1,6 @@
 // Headless experiment: drive the human player with the game's own bot AI and measure results.
 // The sim is stepped manually (fast-forward), so a 3-minute round takes a few seconds.
-// usage: bun scripts/autopilot.ts [trials=5] [seconds=180]
+// usage: [BASE_URL=http://localhost:3000/] bun packages/e2e/src/autopilot.ts [trials=5] [seconds=180]
 import { chromium } from "playwright";
 
 const trials = Number(process.argv[2] ?? 5);
@@ -13,7 +13,7 @@ async function runTrial(mode: "straight" | "autopilot") {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page.route("**/*", (r) => (new URL(r.request().url()).hostname === "localhost" ? r.continue() : r.abort()));
   page.on("console", () => {}); // game logs dt every frame in some paths; ignore
-  await page.goto("http://localhost:3000/");
+  await page.goto(process.env.BASE_URL ?? "http://localhost:3000/");
   await page.waitForFunction(() => (window as any).paperio2api?.game && (window as any).__paperio);
   await page.evaluate(() => (window as any).paperio2api.startGame());
   await page.waitForFunction(() => (window as any).paperio2api.game.player);

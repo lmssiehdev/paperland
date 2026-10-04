@@ -2,6 +2,8 @@ import { Polygon } from "../engine/polygon";
 import type { Unit } from "./units";
 import type { Intersection, Segment } from "../engine/segment";
 import type { Vec2 } from "../engine/vec2";
+import type { PathHandle } from "../handles";
+import { platform } from "../platform";
 
 export class Base {
     unit: Unit;
@@ -10,7 +12,7 @@ export class Base {
     merges: unknown[];
     polygon: Polygon;
     /** Only set by calcPath(), which nothing calls (the drawn path is polygon.path). */
-    path: Path2D | undefined;
+    path: PathHandle | undefined;
     /** Assigned by calcArea() in the constructor. */
     area!: number;
 
@@ -24,7 +26,7 @@ export class Base {
     this.polygon.calcPath();
   }
   calcPath() {
-    this.path = new Path2D();
+    this.path = platform.createPath();
     const {
       segments
     } = this.polygon;
