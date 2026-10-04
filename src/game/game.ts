@@ -24,6 +24,7 @@ import type { Asset, Skin } from "../skins/skin";
 import { NamePool } from "./names";
 import { SchemesManager } from "./scoring";
 import { Track } from "./track";
+import type { TrackBaseCrossing } from "./track";
 
 /** Game configuration: DEFAULT_CONFIG plus the overrides applied in main.ts. */
 export type GameConfig = Config;
@@ -126,21 +127,12 @@ type ShapeOwner = Base | Track;
 
 /** A point where a returning track touches a foreign shape (see handleReturn). */
 interface TrackContact {
-  owner: ShapeOwner;
+  /** Null for an ownerless shape (e.g. the arena border polygon). */
+  owner: ShapeOwner | null;
   point: Vec2;
   segment: Segment;
   /** Index of the point along the track polyline. */
   index: number;
-}
-
-/**
- * One entry of Track.intersections[i].intersections (see Track.intersect).
- * TODO(types): should be exported from game/track.ts once Track.intersections is typed.
- */
-interface TrackIntersectionRecord {
-  intersection: Intersection;
-  base: ShapeOwner;
-  enter: boolean;
 }
 
 /** A foreign base cut by a returning track (see handleReturn). */
@@ -202,15 +194,18 @@ export type SpawnZone = "player" | "bounds" | "center" | "random";
 export type GameRenderer = (game: Game) => void;
 
 export class Game {
-    best: number;
-    isTest: boolean;
-    playerDeathCallback: () => void;
-    keyboard: { x: number; y: number; } | null;
+    /** Best score so far; assigned by api.start() right before spawnPlayer (read only for the player's result/HUD). */
+    best!: number;
+    isTest: boolean | undefined;
+    playerDeathCallback: (() => void) | undefined;
+    /** Mouse position when a key was last pressed; null once the mouse takes over, deleted in the constructor. */
+    keyboard?: { x: number; y: number; } | null;
     tailRecovered: boolean;
     topListChanged: boolean;
     /** Country -> city name lookup (flag mode only; never set in this build). */
-    citiesManager: { get(country: string): string; };
-    renderer: GameRenderer;
+    citiesManager: { get(country: string): string; } | undefined;
+    /** Assigned by api.ts. */
+    renderer: GameRenderer | undefined;
     rng: Rng;
     build: number;
     config: GameConfig;
@@ -259,14 +254,14 @@ export class Game {
     timings: GameTimings;
     events: GameEvents;
     updateParticlesId: number;
-    startTime: number;
-    /** Player heading quantized to 0..253 (see update). */
-    angle: number;
-    /** Smoothed camera center. */
-    origin: Vec2;
+    /** Assigned by spawnPlayer; only read in gameOver, which needs a spawned player. */
+    startTime!: number;
+    /** Player heading quantized to 0..253; assigned at the start of every update(), before any reader runs. */
+    angle!: number;
+    /** Smoothed camera center; undefined until the first getRenderContext(). */
+    origin: Vec2 | undefined;
 
   constructor(config: GameConfig, view: HTMLCanvasElement | null, space: SpatialGrid, border: Border, skinManager: SkinManager, gameOverCallback: ((result: GameResult) => void) | null, nameManager: NamePool, controller: Controller, language: LanguageStrings, schemesManager: SchemesManager, achievementsProfile: AchievementStore, seed: number) {
-    this.best = undefined;
     this.isTest = undefined;
     this.playerDeathCallback = undefined;
     this.keyboard = undefined;
@@ -321,8 +316,8 @@ export class Game {
     this.quality = 1;
     this.fpsSequence = [];
     if (view) {
-      const _0x3a5b55 = () => {};
-      window.addEventListener("resize", _0x3a5b55, false);
+      const onResize = () => {};
+      window.addEventListener("resize", onResize, false);
     }
     this.stats = {
       fps: 0,
@@ -387,16 +382,17 @@ export class Game {
       return;
     }
     baseRadius2 = baseRadius2 || baseRadius;
-    const _0x29c8d5 = this.player ? lerp(3, 1, this.player.percent) : 2;
-    var _0x4a6a2e = baseRadius2 + baseRadius * 2;
-    var _0x513981 = _0x4a6a2e * _0x4a6a2e;
-    var _0x27d25e = baseRadius2 + baseRadius * 2 * _0x29c8d5;
-    var _0x2b6b9f = _0x27d25e * _0x27d25e;
+    const trackClearanceScale = this.player ? lerp(3, 1, this.player.percent) : 2;
+    var baseClearance = baseRadius2 + baseRadius * 2;
+    var baseClearanceSq = baseClearance * baseClearance;
+    var trackClearance = baseRadius2 + baseRadius * 2 * trackClearanceScale;
+    var trackClearanceSq = trackClearance * trackClearance;
     let y;
     switch (zone) {
       case "player":
         y = lerp(baseRadius * 12, baseRadius * 16, Math.random());
-        center2 = this.player.position;
+        // zone "player" without a player returned above.
+        center2 = this.player!.position;
         break;
       case "bounds":
         y = lerp(Math.max(0, radius - (baseRadius2 + baseRadius * 10)), Math.max(0, radius - (baseRadius2 + baseRadius * 4)), Math.random());
@@ -408,9 +404,9 @@ export class Game {
         y = lerp(0, Math.max(0, radius - (baseRadius2 + baseRadius)), Math.random());
         break;
     }
-    var _0x78d0cb = Vec2.alloc(0, y).rotate(Math.random() * Math.PI * 2);
-    var point3 = center2.clone().add(_0x78d0cb);
-    _0x78d0cb.release();
+    var offset = Vec2.alloc(0, y).rotate(Math.random() * Math.PI * 2);
+    var point3 = center2.clone().add(offset);
+    offset.release();
     if (point3.distance(center) > radius - (baseRadius2 + baseRadius)) {
       return;
     }
@@ -420,12 +416,12 @@ export class Game {
         return;
       }
       if (unit.base.polygon.simplifiedPoints.some(function (item: Vec2) {
-        return point3.distance2(item) < _0x513981;
+        return point3.distance2(item) < baseClearanceSq;
       })) {
         return;
       }
       if (unit.track.simplifiedPoints.some(function (point: Vec2) {
-        return point3.distance2(point) < _0x2b6b9f;
+        return point3.distance2(point) < trackClearanceSq;
       })) {
         return;
       }
@@ -462,7 +458,8 @@ export class Game {
     const typeRotations = [[1, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0], [1, 1, 2, 2, 2, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0], [1, 1, 2, 2, 2, 2, 3, 3, 0, 0, 0, 0, 0, 0, 0], [1, 1, 1, 2, 2, 2, 2, 2, 3, 0, 0, 0, 0, 0, 0]];
     this.units.forEach(unit => {
       if (unit !== this.player) {
-        botCountsByType[unit.type]++;
+        // Every non-player unit is a Bot, and Bot always sets `type`.
+        botCountsByType[unit.type!]++;
       }
     });
     this.bots = Object.assign({}, botCountsByType);
@@ -513,9 +510,8 @@ export class Game {
     this.startTime = now();
   }
   gameOver(reason: DeathReason) {
-    const {
-      player
-    } = this;
+    // Callers (kill of the player, the win check in update) only run while a player exists.
+    const player = this.player!;
     if (!player.win) {
       let minX = Infinity;
       let maxX = 0;
@@ -538,12 +534,13 @@ export class Game {
       const imageSize = 500;
       const imageScale = imageSize * 0.95 / size;
       const depth = imageSize / 100;
-      let _0x149dc6;
+      let image;
       if (typeof document !== "undefined") {
         const canvas = document.createElement("canvas");
         canvas.width = imageSize;
         canvas.height = imageSize;
-        const ctx = canvas.getContext("2d");
+        // A fresh canvas always provides a 2D context.
+        const ctx = canvas.getContext("2d")!;
         ctx.scale(imageScale, imageScale);
         ctx.translate(imageSize / 2 / imageScale - vec2.x, imageSize / 2 / imageScale - vec2.y);
         ctx.translate(0, depth / imageScale);
@@ -552,7 +549,7 @@ export class Game {
         ctx.translate(0, depth * -2 / imageScale);
         ctx.fillStyle = player.skin.pattern && player.skin.pattern.pattern || player.skin.colors.main;
         ctx.fill(player.base.polygon.path);
-        _0x149dc6 = canvas.toDataURL("image/png");
+        image = canvas.toDataURL("image/png");
       }
       const result: GameResult = {
         build: this.build,
@@ -566,7 +563,7 @@ export class Game {
         bestPercent: player.bestPercent,
         time: now() - this.startTime,
         kills: player.statistics.kills,
-        image: _0x149dc6,
+        image: image,
         reason: reason
       };
       if (reason === DEATH_WIN) {
@@ -748,10 +745,11 @@ export class Game {
     } else if (this.controller.mouse) {
       if (!this.keyboard || this.keyboard.x !== this.controller.mouse.x && this.keyboard.y !== this.controller.mouse.y) {
         this.keyboard = null;
-        this.direction = new Vec2(this.controller.mouse.x, this.controller.mouse.y).sub(new Vec2(this.view.clientWidth / 2, this.view.clientHeight / 2)).normalize();
+        // A controller (and so mouse input) only exists for a game with a view (see api.ts).
+        this.direction = new Vec2(this.controller.mouse.x, this.controller.mouse.y).sub(new Vec2(this.view!.clientWidth / 2, this.view!.clientHeight / 2)).normalize();
       }
     } else if (!this.keyboard && this.controller.lastMouse) {
-      this.direction = new Vec2(this.controller.lastMouse.x, this.controller.lastMouse.y).sub(new Vec2(this.view.clientWidth / 2, this.view.clientHeight / 2)).normalize();
+      this.direction = new Vec2(this.controller.lastMouse.x, this.controller.lastMouse.y).sub(new Vec2(this.view!.clientWidth / 2, this.view!.clientHeight / 2)).normalize();
     }
   }
   prepareAndUpdate(dt: number) {
@@ -928,7 +926,8 @@ export class Game {
       this.player.achievements.update(this.player, dt, this);
     }
     if (player && player.track.length > this.config.botAttackTrackLength) {
-      let nearestBot: Bot | null = null;
+      // `as`: widens the initializer so TS doesn't narrow to null (it can't see the forEach assignment).
+      let nearestBot = null as Bot | null;
       let min = Infinity;
       this.units.forEach(unit => {
         if (unit instanceof Bot) {
@@ -980,7 +979,8 @@ export class Game {
     const {
       font
     } = this.config;
-    const ctx = view.getContext("2d");
+    // The game canvas is only ever used with a 2D context.
+    const ctx = view.getContext("2d")!;
     const clientWidth = view.clientWidth;
     const clientHeight = view.clientHeight;
     const viewWidth = ~~(clientWidth * this.quality);
@@ -1019,13 +1019,13 @@ export class Game {
     const pointInView = (point: Vec2, margin = 0) => inRange(left - margin, right + margin, point.x) && inRange(top - margin, bottom + margin, point.y);
     const boundsInView = (item: { bounds: Bounds; }, margin = 0) => rangeOverlap(item.bounds.left - margin, item.bounds.right + margin, left, right) > 0 && rangeOverlap(item.bounds.top - margin, item.bounds.bottom + margin, top, bottom) > 0;
     const calcMult = (landscape: number, portrait: number) => {
-      const _0x3475d4 = 16 / 9;
-      const _0x5e288c = 9 / 16;
-      const _0x158e1e = clamp(_0x5e288c, _0x3475d4, viewScreenWidth / viewScreenHeight);
-      const _0x174801 = landscape - portrait;
-      const _0x5bf426 = _0x5e288c - _0x3475d4;
-      const _0x531332 = -(_0x174801 * _0x3475d4 + _0x5bf426 * landscape);
-      return -(_0x531332 + _0x174801 * _0x158e1e) / _0x5bf426;
+      const landscapeAspect = 16 / 9;
+      const portraitAspect = 9 / 16;
+      const aspect = clamp(portraitAspect, landscapeAspect, viewScreenWidth / viewScreenHeight);
+      const multRange = landscape - portrait;
+      const aspectRange = portraitAspect - landscapeAspect;
+      const intercept = -(multRange * landscapeAspect + aspectRange * landscape);
+      return -(intercept + multRange * aspect) / aspectRange;
     };
     const fontSize = ~~(calcMult(20, 30) * scaler);
     const strokeWidth = this.config.platesStrokeWidth * scaler;
@@ -1084,24 +1084,24 @@ export class Game {
     stats.st = lerp(stats.st, timings.spawnEndTime - timings.spawnStartTime, smoothing);
     stats.rt = lerp(stats.rt, timings.renderEndTime - timings.renderStartTime, smoothing);
     this.fpsSequence.push(stats.fps);
-    const _0x2fbf93 = 25;
-    const _0x48c44b = 35;
-    const _0x2a54ee = 10;
-    const _0x293934 = 120;
-    const _0x3636ac = 0.5;
-    if (this.fpsSequence.length > _0x293934) {
+    const lowFps = 25;
+    const highFps = 35;
+    const veryLowFps = 10;
+    const fpsSampleCount = 120;
+    const minQuality = 0.5;
+    if (this.fpsSequence.length > fpsSampleCount) {
       this.fpsSequence.sort();
-      const medianFps = this.fpsSequence[~~(_0x293934 / 2)];
-      if (medianFps < _0x2fbf93) {
+      const medianFps = this.fpsSequence[~~(fpsSampleCount / 2)];
+      if (medianFps < lowFps) {
         this.quality -= 0.1;
       }
-      if (medianFps < _0x2a54ee) {
+      if (medianFps < veryLowFps) {
         this.quality -= 0.1;
       }
-      if (this.quality < _0x3636ac) {
-        this.quality = _0x3636ac;
+      if (this.quality < minQuality) {
+        this.quality = minQuality;
       }
-      if (medianFps > _0x48c44b) {
+      if (medianFps > highFps) {
         this.quality += 0.1;
       }
       if (this.quality > 1) {
@@ -1122,9 +1122,10 @@ export class Game {
     }
   }
   changeShields() {
+    // Only called by setLeaderboard right after it assigns a non-null leaderboard.
     const {
       countries: countries
-    } = this.leaderboard;
+    } = this.leaderboard!;
     if (countries) {
       const goldCountry = countries[0] && countries[0].country;
       const silverCountry = countries[1] && countries[1].country;
@@ -1149,7 +1150,7 @@ export class Game {
             // TODO(types): Skin has no removeAsset (flag/shield mode only, unreachable in this build)
             (unit.skin as Skin & { removeAsset(asset: Asset): void; }).removeAsset(asset);
             if ("shieldSkinAssets" in this.skinManager) {
-              unit.skin.addAsset((this.skinManager as SkinManager & FlagSkinManagerExtras).shieldSkinAssets.get(shieldName));
+              unit.skin.addAsset((this.skinManager as SkinManager & FlagSkinManagerExtras).shieldSkinAssets!.get(shieldName));
             }
           }
         }
@@ -1157,22 +1158,23 @@ export class Game {
     }
   }
   addCity(unit: Unit) {
-    const name = unit.skin.assets.find((asset: Asset) => asset.pool.name === "flags").name;
-    const city = new City(this.citiesManager.get(name), false, unit.position.clone(), unit);
+    // Flag mode only (dead in this build): flag skins always carry a "flags" asset and a citiesManager is set.
+    const name = unit.skin.assets.find((asset: Asset) => asset.pool.name === "flags")!.name;
+    const city = new City(this.citiesManager!.get(name), false, unit.position.clone(), unit);
     if ((this.skinManager as SkinManager & FlagSkinManagerExtras).isFlagSkinManager) {
       const citySkin = this.skinManager.getCitySkin(name);
       city.skin = citySkin;
     }
     unit.cities.push(city);
   }
-  checkSegments(_0x4d4a5b?: unknown) {
-    let _0x136bc7 = 0;
+  checkSegments(unusedArg?: unknown) {
+    let segmentCount = 0;
     this.units.forEach(unit => {
-      _0x136bc7 += unit.base.polygon.segments.length;
-      _0x136bc7 += unit.track.polyline.segments.length;
+      segmentCount += unit.base.polygon.segments.length;
+      segmentCount += unit.track.polyline.segments.length;
     });
-    const _0x33065f = this.grid.segmentsCount();
-    const count = Object.keys(_0x33065f).length;
+    const gridSegmentCounts = this.grid.segmentsCount();
+    const count = Object.keys(gridSegmentCounts).length;
   }
   handleReturn(returningUnit: Unit) {
     if (returningUnit.death) {
@@ -1227,10 +1229,11 @@ export class Game {
     const victims: CaptureVictim[] = [];
     for (let i = 0; i <= count; i++) {
       const point = i === count ? segments[i - 1].end : segments[i].start;
-      const segments2 = point.segments.filter(segment => segment.shape.owner !== returningUnit.track && segment.shape.owner !== returningUnit.base && segment.start === point);
+      // Segments held by a point are committed, so their shape is set.
+      const segments2 = point.segments.filter(segment => segment.shape!.owner !== returningUnit.track && segment.shape!.owner !== returningUnit.base && segment.start === point);
       if (segments2.length) {
         let contacts = segments2.map((item): TrackContact => ({
-          owner: item.shape.owner,
+          owner: item.shape!.owner,
           point: point,
           segment: item,
           index: i
@@ -1241,7 +1244,7 @@ export class Game {
             return false;
           }
           openContacts = contacts.filter(item => {
-            const intersections = intersection.intersections.filter((intersection: TrackIntersectionRecord) => intersection.base === item.owner);
+            const intersections = intersection.intersections.filter((intersection: TrackBaseCrossing) => intersection.base === item.owner);
             if (!intersections.length) {
               return false;
             }
@@ -1253,7 +1256,8 @@ export class Game {
           }));
           if (matching.length) {
             const entryContact = matching[0];
-            const exitContact = contacts.find(item => item.owner === entryContact.owner);
+            // `matching` only keeps open contacts whose owner also appears in `contacts`.
+            const exitContact = contacts.find(item => item.owner === entryContact.owner)!;
             const cutBase = (cut: BaseCut): void => {
               const {
                 owner,
@@ -1265,7 +1269,7 @@ export class Game {
               let {
                 enter,
                 leave
-              } = cut;
+              }: { enter: Segment | undefined; leave: Segment | undefined; } = cut;
               if (enter.shape !== owner.polygon) {
                 enter = owner.polygon.segments.find(segment => segment.start === startPoint);
               }
@@ -1291,7 +1295,8 @@ export class Game {
               const polygon = new Polygon(removed2);
               const polygon2 = new Polygon(points);
               let lost: Polygon;
-              if (owner.unit.insideBase === owner.unit.base && polygon.inside(owner.unit.position) || owner.unit.insideBase !== owner.unit.base && polygon.inside(owner.unit.track.polyline.start)) {
+              // A unit outside its own base has a started track, so polyline.start is set.
+              if (owner.unit.insideBase === owner.unit.base && polygon.inside(owner.unit.position) || owner.unit.insideBase !== owner.unit.base && polygon.inside(owner.unit.track.polyline.start!)) {
                 owner.polygon.right(removed, cutStart, cutEnd);
                 lost = polygon2;
               } else {
@@ -1323,7 +1328,8 @@ export class Game {
               endT: exitContact.index
             });
             const intersection = returningUnit.track.intersections.find(intersection => intersection.point.equal(point));
-            const intersections = intersection.intersections.filter((intersection: TrackIntersectionRecord) => intersection.base === entryContact.owner);
+            // Not guarded in the original either: throws if the track recorded no crossing at this point.
+            const intersections = intersection!.intersections.filter((intersection: TrackBaseCrossing) => intersection.base === entryContact.owner);
             if (intersections.length === 1 || intersections[intersections.length - 1].enter === false) {
               contacts = contacts.filter(item => item.owner !== entryContact.owner);
             }
@@ -1362,7 +1368,7 @@ export class Game {
         if (unit.death) {
           return;
         }
-        const step = movement.shift();
+        const step = movement.shift()!;
         const intersections = this.grid.intersections(step);
         const pointGroups: IntersectionGroup[] = [];
         intersections.forEach(intersection => {
@@ -1395,7 +1401,7 @@ export class Game {
         });
         intersections.sort((a, b) => a.distance - b.distance);
         const distanceGroups: Intersection[][] = [];
-        let currentGroup: Intersection[] = null;
+        let currentGroup: Intersection[] | null = null;
         let currentDistance = -1;
         intersections.forEach(intersection => {
           if (!nearlyEqual(intersection.distance, currentDistance)) {
@@ -1403,7 +1409,8 @@ export class Game {
             currentDistance = intersection.distance;
             distanceGroups.push(currentGroup);
           }
-          currentGroup.push(intersection);
+          // Distances are >= 0, so the first iteration never matches -1 and always creates a group.
+          currentGroup!.push(intersection);
         });
         distanceGroups.forEach(group => {
           const shapes: Shape[] = [];
@@ -1418,17 +1425,18 @@ export class Game {
           while (shapes.length) {
             const index = shapes.findIndex(shape => shape.owner === unit.insideBase);
             if (index > 0) {
-              const _0x277c6a = shapes[0];
+              const swapped = shapes[0];
               shapes[0] = shapes[index];
-              shapes[index] = _0x277c6a;
+              shapes[index] = swapped;
             }
-            const index2 = shapes.findIndex(shape => shape.owner.isTrack);
+            // Shapes in the grid are unit bases and tracks, which always have an owner.
+            const index2 = shapes.findIndex(shape => shape.owner!.isTrack);
             if (index2 > 0) {
-              const _0x88019d = shapes[0];
+              const swapped = shapes[0];
               shapes[0] = shapes[index2];
-              shapes[index2] = _0x88019d;
+              shapes[index2] = swapped;
             }
-            const currentShape = shapes.shift();
+            const currentShape = shapes.shift()!;
             const shapeIntersections: Intersection[] = [];
             group.forEach(intersection => {
               if (intersection.segment.shape === currentShape) {
@@ -1443,9 +1451,9 @@ export class Game {
                   return a.zn - b.zn;
                 }
               });
-              const nextIntersection = shapeIntersections.shift();
-              if (nextIntersection.segment.shape && !currentShape.owner.unit.death) {
-                currentShape.owner.handleIntersect(nextIntersection, unit, step);
+              const nextIntersection = shapeIntersections.shift()!;
+              if (nextIntersection.segment.shape && !currentShape.owner!.unit.death) {
+                currentShape.owner!.handleIntersect(nextIntersection, unit, step);
               }
             }
           }
@@ -1467,8 +1475,8 @@ export class Game {
       }
     });
   }
-  isPlayer(_0x5b5dbb: Unit) {
-    return _0x5b5dbb === this.player;
+  isPlayer(unit: Unit) {
+    return unit === this.player;
   }
   alert(text: string, color?: string) {
     this.labels.push(new FloatingLabel(text, color || "#000000", this.player));

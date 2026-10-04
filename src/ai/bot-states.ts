@@ -203,7 +203,8 @@ export var BOT_STATES: BotStates = {
       const dist32 = 25;
       const halfStep = dist32 / 2;
       const halfStepSq = halfStep * halfStep;
-      if (bot.position.distance2(bot.target) < halfStepSq && borderDistance > dist32) {
+      // exit/cut set bot.target before switching to capture.
+      if (bot.position.distance2(bot.target!) < halfStepSq && borderDistance > dist32) {
         return;
       }
       let loopArea = 0;
@@ -213,9 +214,10 @@ export var BOT_STATES: BotStates = {
         loopArea += (point.x + point2.x) * (point2.y - point.y);
       }
       let point = bot.track.simplifiedPoints[bot.track.simplifiedPoints.length - 1];
-      let baseNearestPoint = bot.baseNearestPoint;
+      // The bot is outside its base here, so Unit.update set the baseNearestPoint* fields.
+      let baseNearestPoint = bot.baseNearestPoint!;
       loopArea += (point.x + baseNearestPoint.x) * (baseNearestPoint.y - point.y);
-      point = bot.baseNearestPoint;
+      point = bot.baseNearestPoint!;
       baseNearestPoint = bot.track.simplifiedPoints[0];
       loopArea += (point.x + baseNearestPoint.x) * (baseNearestPoint.y - point.y);
       const sign = Math.sign(loopArea);
@@ -243,11 +245,11 @@ export var BOT_STATES: BotStates = {
       const dangerRange = bot.distanceDanger * 0.6 * defense;
       const farDistance = greedRange;
       const nearDistance = farDistance * 0.8;
-      const delta = bot.target.clone().sub(bot.position);
+      const delta = bot.target!.clone().sub(bot.position);
       let point2;
       if (bot.baseDistance > farDistance || returnUrge > 0.75) {
         bot.aspect = "приближение";
-        point2 = bot.baseNearestPointNormal.clone().mulScalar(dist32).rotate((Math.PI / 2 + Math.PI / 4) * sign);
+        point2 = bot.baseNearestPointNormal!.clone().mulScalar(dist32).rotate((Math.PI / 2 + Math.PI / 4) * sign);
       } else if (bot.baseDistance < nearDistance) {
         bot.aspect = "отдаление";
         let awayAngle = Math.PI / 4;
@@ -256,10 +258,10 @@ export var BOT_STATES: BotStates = {
           bot.aspect = "отстрел";
           awayAngle = lerp(Math.PI / 2 * greed, 0, trackRatio);
         }
-        point2 = bot.baseNearestPointNormal.clone().mulScalar(dist32).rotate((Math.PI / 2 - awayAngle) * sign);
+        point2 = bot.baseNearestPointNormal!.clone().mulScalar(dist32).rotate((Math.PI / 2 - awayAngle) * sign);
       } else {
         bot.aspect = "проход";
-        point2 = bot.baseNearestPointNormal.clone().mulScalar(dist32).rotate(Math.PI / 2 * sign);
+        point2 = bot.baseNearestPointNormal!.clone().mulScalar(dist32).rotate(Math.PI / 2 * sign);
         bot.smoothness = 1 + (1 - Math.min(1, bot.maxDanger)) * 3;
       }
       bot.smoothness = 1 + (1 - Math.min(1, bot.maxDanger)) * 1;

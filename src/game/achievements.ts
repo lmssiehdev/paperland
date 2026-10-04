@@ -45,7 +45,8 @@ export class Tip {
     state: number;
     current: number;
     states: number[];
-    image: HTMLImageElement;
+    /** Set once the icon at `url` has loaded. */
+    image: HTMLImageElement | null;
     ready: boolean;
 
   constructor(title: string, description: string, url: string) {
@@ -185,7 +186,12 @@ export class AchievementStore {
 }
 export class AchievementsProfile {
     profile: AchievementStore;
-    achievements: Achievement[];
+    /**
+     * Assigned in the constructor (it returns early only for a missing store, which Game.addPlayer never passes).
+     * Every entry has a non-null checker: the constructor sets it, and success() clears it only right before
+     * update() drops that entry.
+     */
+    achievements!: Achievement[];
 
   constructor(profile: AchievementStore, mode: string) {
     this.profile = profile;
@@ -202,11 +208,11 @@ export class AchievementsProfile {
   }
   update(player: Player, dt: number, game: Game) {
     this.achievements = this.achievements.filter(achievement => {
-      achievement.checker.update(player, dt, game);
-      if (achievement.checker.progress > achievement.best) {
-        achievement.best = achievement.checker.progress;
+      achievement.checker!.update(player, dt, game);
+      if (achievement.checker!.progress > achievement.best) {
+        achievement.best = achievement.checker!.progress;
       }
-      if (achievement.checker.check(player, dt, game)) {
+      if (achievement.checker!.check(player, dt, game)) {
         achievement.success(game);
         this.profile.save();
         return false;
@@ -220,12 +226,12 @@ export class AchievementsProfile {
   }
   onKill(unit: Unit) {
     this.achievements.forEach(achievement => {
-      achievement.checker.onKill(unit);
+      achievement.checker!.onKill(unit);
     });
   }
   onOut() {
     this.achievements.forEach(achievement => {
-      achievement.checker.onOut();
+      achievement.checker!.onOut();
     });
   }
 }

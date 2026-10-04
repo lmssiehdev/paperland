@@ -27,29 +27,37 @@ export interface UnitToTrackDistance {
   unit: Unit;
   /** Distance from `unit` to the nearest point of this bot's trail. */
   trackDistance: number;
-  trackPoint: Vec2;
+  /** Nearest trail point; null only if the trail has no points (never read). */
+  trackPoint: Vec2 | null;
   /** baseDistance / trackDistance: > 1 means the enemy reaches the trail before the bot gets home. */
   danger: number;
 }
 
 export class Unit {
-    killer: Unit;
-    achievements: AchievementsProfile;
-    skin: Skin;
-    death: boolean;
-    jitter: number;
-    smoothness: number;
+    /** Set by Game.kill; undefined while alive or when killed by the arena/system. */
+    killer: Unit | undefined;
+    /** Only the player gets a profile (Game.addPlayer). */
+    achievements: AchievementsProfile | undefined;
+    /** Assigned by setSkin(), which Game.spawnBot/spawnPlayer call right after construction. */
+    skin!: Skin;
+    death: boolean | undefined;
+    /** Per-bot difficulty jitter; unset for the player (Bot redeclares it as always set). */
+    jitter: number | undefined;
+    /** Turn-rate divisor; unset for the player (getMovement falls back to 1). */
+    smoothness: number | undefined;
     /** Bot difficulty tier (index into Game.bots); unset for the player. */
-    type: number;
-    fsm: StateMachine<Bot, BotStateName>;
+    type: number | undefined;
+    /** Bot AI; unset for the player. */
+    fsm: StateMachine<Bot, BotStateName> | undefined;
     game: Game;
     name: string;
     position: Vec2;
     base: Base;
     track: Track;
     lastArea: number;
-    insideBase: Base;
-    target: Vec2;
+    /** Base the unit is currently inside (its own or an enemy's); null while outside every base. */
+    insideBase: Base | null;
+    target: Vec2 | null;
     respawn: boolean;
     statistics: { kills: number; };
     positionLog: Vec2[];
@@ -65,14 +73,14 @@ export class Unit {
     scores: { accumulator: number; kills: number; };
     schemes: SchemeSet;
     baseDistance: number;
-    baseNearestPoint: Vec2;
-    baseNearestPointTangent: Vec2;
-    baseNearestPointNormal: Vec2;
+    /** The next three are null while the unit is inside its own base (see update). */
+    baseNearestPoint: Vec2 | null;
+    baseNearestPointTangent: Vec2 | null;
+    baseNearestPointNormal: Vec2 | null;
 
   constructor(game: Game, name: string, position: Vec2, basePoints: Vec2[], unusedArg: unknown, schemesManager: SchemesManager) {
     this.killer = undefined;
     this.achievements = undefined;
-    this.skin = undefined;
     this.death = undefined;
     this.jitter = undefined;
     this.smoothness = undefined;
@@ -128,8 +136,8 @@ export class Unit {
       this.scores.accumulator += this.percent * 100 * dt / 1000;
     }
     let nearestDistance = 0;
-    let nearestPoint: Vec2 = null;
-    let tangent: Vec2 = null;
+    let nearestPoint: Vec2 | null = null;
+    let tangent: Vec2 | null = null;
     if (this.insideBase !== this.base) {
       nearestDistance = Infinity;
       let nearestIndex = 0;
@@ -188,9 +196,15 @@ export class Bot extends Unit {
     defense: number;
     targets: Vec2[];
     maxDanger: number;
-    unitDanger: Unit;
-    unitToTrackDistances: UnitToTrackDistance[];
-    distanceDanger: number;
+    declare jitter: number;
+    declare smoothness: number;
+    declare type: number;
+    declare fsm: StateMachine<Bot, BotStateName>;
+    unitDanger: Unit | null;
+    /** Recomputed at the start of every update(), before the FSM (its only reader) runs. */
+    unitToTrackDistances!: UnitToTrackDistance[];
+    /** Recomputed in every update(), before the FSM (its only reader) runs. */
+    distanceDanger!: number;
     /** Area of the loop the current trail would close (set by the "capture" state). */
     declare captureArea: number;
     /** Debug label of the current capture maneuver (set by the "capture" state). */
@@ -215,7 +229,7 @@ export class Bot extends Unit {
     this.unitToTrackDistances = [];
     let maxDanger = 0;
     let dangerDistance = 0;
-    let dangerUnit: Unit = null;
+    let dangerUnit: Unit | null = null;
     if (this.insideBase !== this.base) {
       const {
         player
@@ -224,7 +238,7 @@ export class Bot extends Unit {
         const isFarPlayer = player === unit && this.position.distance(unit.position) > this.viewRange;
         if (unit !== this && !isFarPlayer) {
           let min = Infinity;
-          let nearestTrackPoint: Vec2 = null;
+          let nearestTrackPoint: Vec2 | null = null;
           this.track.simplifiedPoints.forEach(point => {
             const distSq = point.distance2(unit.position);
             if (distSq < min) {

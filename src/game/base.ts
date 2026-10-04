@@ -6,14 +6,15 @@ import type { Vec2 } from "../engine/vec2";
 export class Base {
     unit: Unit;
     /** Always unset for bases (Track sets it to true); used to tell segment owners apart. */
-    isTrack: boolean;
+    isTrack: undefined;
     merges: unknown[];
     polygon: Polygon;
-    path: Path2D;
-    area: number;
+    /** Only set by calcPath(), which nothing calls (the drawn path is polygon.path). */
+    path: Path2D | undefined;
+    /** Assigned by calcArea() in the constructor. */
+    area!: number;
 
   constructor(unit: Unit, points: Vec2[]) {
-    this.unit = undefined;
     this.isTrack = undefined;
     this.unit = unit;
     this.merges = [];

@@ -4,7 +4,8 @@ import type { Unit } from "./units";
 export class FloatingLabel {
     text: string;
     color: string;
-    unit: Unit;
+    /** Unit the label follows; without one it is drawn at `position` (Game.alert passes a possibly-null player). */
+    unit: Unit | null | undefined;
     position: Vec2;
     velocity: Vec2;
     acceleration: Vec2;
@@ -12,7 +13,7 @@ export class FloatingLabel {
     time: number;
     fading: boolean;
 
-  constructor(text: string, color: string, unit: Unit, position: Vec2 = new Vec2(0, 0), velocity = new Vec2(0, -50), duration = 2000, fading = true) {
+  constructor(text: string, color: string, unit: Unit | null | undefined, position: Vec2 = new Vec2(0, 0), velocity = new Vec2(0, -50), duration = 2000, fading = true) {
     this.text = text;
     this.color = color || "#000000";
     this.unit = unit;

@@ -107,9 +107,10 @@ export class Particle {
     const sideOffset = segment.vector.clone().rotate(Math.PI / 2).normalize().mulScalar(sign * Math.random() * trackWidthPx / 2);
     const forwardOffset = segment.vector.clone().normalize().mulScalar(trackWidthPx / 2);
     const acceleration = segment.vector.clone().normalize().mulScalar(unitSpeed * -6).rotate(sign * Math.random() * (Math.PI / 10));
+    // Game.handleUnitMovements only calls nom() while unit.insideBase is set.
     const {
       particles
-    } = unit.insideBase.unit.skin.colors;
+    } = unit.insideBase!.unit.skin.colors;
     const scale = 0.75 + Math.random() * 0.5;
     const particle = new Particle(null, particles[~~(Math.random() * particles.length)], segment.start.clone().add(sideOffset).add(forwardOffset).add(new Vec2(0, -baseHeight)), velocity, acceleration, Math.PI + Math.random() * Math.PI, scale, scale * -2, 300);
     return particle;
@@ -146,7 +147,8 @@ export function spawnDeathParticles(unit: Unit, collector: Unit | null, segments
             homing.acceleration = (1.5 + Math.random() * 0.5) * game.config.unitSpeed;
             homing.fn = () => {
               if (transferScore) {
-                collector.schemes.getScheme().accumulator += scorePerParticle;
+                // The manager's current scheme always exists (bug: its accumulator is never initialized, see FINDINGS #7).
+                collector.schemes.getScheme()!.accumulator += scorePerParticle;
               }
             };
             homing.vscale = 0;
