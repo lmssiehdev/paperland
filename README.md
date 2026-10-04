@@ -132,6 +132,8 @@ bun test                 # unit tests + headless golden (Bun and Chromium) + dep
 bun run golden           # browser: deterministic sim hash on the real page; must not change on refactors
 bun run parity 6         # browser: 1:1 vs the hosted game (original app2.js as https://paperio.site), 6 seeds
 bun run smoke            # browser: boots, starts a round, units move, no page errors
+bun run stress:teams     # headless Teams invariants, 5 seeds x 6000 ticks (core/test/teams-stress.ts);
+                         # browser version: packages/e2e/src/stress-teams.ts
 ```
 
 `parity` loads the captured original `app2.js` under the real hostname (Playwright route), so its

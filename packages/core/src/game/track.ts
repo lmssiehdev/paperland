@@ -21,6 +21,12 @@ export interface TrackIntersection {
   intersections: TrackBaseCrossing[];
 }
 
+/** A trail handed to Game.handleReturn: a unit's whole Track, or a slice of one (team modes, handleCross). */
+export interface ReturnTrail {
+  polyline: Polyline;
+  intersections: TrackIntersection[];
+}
+
 export class Track {
     polyline: Polyline;
     /** Coarse copy of the trail (points at least CELL_RADIUS apart), used by the AI. */
@@ -82,6 +88,51 @@ export class Track {
       });
     }
   }
+  /**
+   * Teammates sharing my base whose trails share a vertex with mine (I crossed theirs or they crossed mine).
+   * Always [] for a base with a single host, so classic never pays for it.
+   */
+  crossedTeammates(): Unit[] {
+    const result: Unit[] = [];
+    const { base } = this.unit;
+    if (base.hosts.length > 1) {
+      const collect = (point: Vec2) => {
+        point.segments.forEach(segment => {
+          const owner = segment.shape?.owner;
+          if (owner instanceof Track && owner.unit !== this.unit && base.hasHost(owner.unit) && !result.includes(owner.unit)) {
+            result.push(owner.unit);
+          }
+        });
+      };
+      this.polyline.points().forEach(collect);
+    }
+    return result;
+  }
+  /** Cuts the trail back so it starts at its last point that lies on my base outline (team modes). */
+  truncateToBase() {
+    const { polygon } = this.unit.base;
+    const lastBaseContact = this.polyline.segments.reduce((acc, segment, index) => segment.start.segments.some(segment2 => segment2.shape === polygon) ? index : acc, -1);
+    if (lastBaseContact <= 0) {
+      return;
+    }
+    this.polyline.truncate(lastBaseContact);
+    const points = this.polyline.points();
+    this.length = 0;
+    this.polyline.segments.forEach(segment => {
+      this.length += segment.start.distance(segment.end);
+    });
+    this.simplifiedPoints = [];
+    points.forEach(point => {
+      const { simplifiedPoints } = this;
+      const { length } = simplifiedPoints;
+      if (length > 2 && point.distance2(simplifiedPoints[length - 2]) < CELL_RADIUS_SQ) {
+        simplifiedPoints[length - 1] = point;
+      } else {
+        simplifiedPoints.push(point);
+      }
+    });
+    this.intersections = this.intersections.filter(intersection => points.includes(intersection.point));
+  }
   remove() {
     this.polyline.remove();
     this.polyline = new Polyline(this);
@@ -100,6 +151,14 @@ export class Track {
       }
     } else if (!areAllies(unit, this.unit)) {
       game.kill(this.unit, unit, DEATH_TRACK_CROSSED);
+    } else {
+      // A teammate crossed this trail: both trails get the same vertex, so a later capture by either one can
+      // find the other (see Game.handleCross).
+      this.polyline.insert(intersection.segment, intersection.point);
+      game.teamEvents.injects++;
+      if (unit.insideBase !== unit.base) {
+        unit.track.add(intersection.point);
+      }
     }
   }
 }

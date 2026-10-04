@@ -6,7 +6,7 @@ import { Vec2 } from "./engine/vec2";
 import { AchievementStore } from "./game/achievements";
 import { Game } from "./game/game";
 import { BOT_NAMES, NamePool } from "./game/names";
-import { ClassicScoreScheme, SchemesManager } from "./game/scoring";
+import { ClassicScoreScheme, SchemesManager, TeamScoreScheme } from "./game/scoring";
 import type { LanguageStrings } from "./language";
 import { createMode } from "./modes/index";
 import type { ModeId } from "./modes/index";
@@ -36,6 +36,9 @@ export interface HeadlessGameOptions {
 export function createHeadlessGame(options: HeadlessGameOptions): Game {
   const config = options.config ?? { ...DEFAULT_CONFIG };
   const gameMode = createMode(options.mode ?? "classic");
+  // As main.ts + api.create(): every scheme registered, the mode's selected.
+  const schemesManager = new SchemesManager(ClassicScoreScheme, TeamScoreScheme);
+  schemesManager.select(gameMode.scoreScheme);
   const gameConfig = { ...config, ...gameMode.config };
   const {
     arenaSize,
@@ -60,7 +63,7 @@ export function createHeadlessGame(options: HeadlessGameOptions): Game {
   const achievements = new AchievementStore([]);
   // No local input device: readInput() is a no-op without game.input.
   const noController = {};
-  const game = new Game(gameConfig, null, spatialGrid, border, skinManager, null, nameManager, noController, options.language, new SchemesManager(ClassicScoreScheme), achievements, options.seed ?? Math.random());
+  const game = new Game(gameConfig, null, spatialGrid, border, skinManager, null, nameManager, noController, options.language, schemesManager, achievements, options.seed ?? Math.random());
   game.mode = gameMode;
   return game;
 }

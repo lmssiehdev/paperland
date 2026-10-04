@@ -28,6 +28,7 @@
     "parity": "bun packages/e2e/src/parity.ts",
     "smoke": "bun packages/e2e/src/smoke.ts",
     "autopilot": "bun packages/e2e/src/autopilot.ts",
+    "stress:teams": "bun packages/core/test/teams-stress.ts 5 6000",
     "extract": "bun scripts/extract-har.ts && bun scripts/fetch-missing-assets.ts",
     "deob": "bun scripts/decode-strings.ts && webcrack deob/stage1.js -o deob/stage2 -f && bun scripts/rename.ts && bun scripts/rename-locals.ts",
     "survey": "bun scripts/survey.ts deob/game.js"

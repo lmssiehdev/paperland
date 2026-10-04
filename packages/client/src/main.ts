@@ -10,7 +10,7 @@ import { Vec2 } from "@paperio/core/engine/vec2";
 import { AchievementStore } from "@paperio/core/game/achievements";
 import { Game } from "@paperio/core/game/game";
 import { BOT_NAMES, NamePool } from "@paperio/core/game/names";
-import { ClassicScoreScheme, SchemesManager } from "@paperio/core/game/scoring";
+import { ClassicScoreScheme, SchemesManager, TeamScoreScheme } from "@paperio/core/game/scoring";
 import { Bot, Player, Unit } from "@paperio/core/game/units";
 import { setPlatform } from "@paperio/core/platform";
 import Cookies from "js-cookie";
@@ -57,7 +57,7 @@ Promise.all([languagesRequest, skinsRequest]).then(([languagesFile, skinsList]) 
     const skinManager = new SkinManager(coloredPool, classicSkinPool, 1);
     return skinManager;
   };
-  const schemesManager = new SchemesManager(ClassicScoreScheme);
+  const schemesManager = new SchemesManager(ClassicScoreScheme, TeamScoreScheme);
   const achievementStore = new AchievementStore([]);
   achievementStore.load();
   const api = createApi(CONFIG, initialLanguage, createSkinManager, new NamePool(BOT_NAMES, Math.random()), schemesManager, achievementStore);

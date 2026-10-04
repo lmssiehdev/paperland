@@ -6,3 +6,6 @@ deob/stage1.js
 deob/stage2
 modes/*/deob/stage-*.js
 modes/battleroyale/deob/pass2
+
+# regenerable intermediates of modes/*/readable/build.sh
+modes/*/readable/stage*.js

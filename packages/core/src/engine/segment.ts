@@ -149,6 +149,10 @@ export class Segment {
     }
     return null;
   }
+  /** True if `point` lies on this segment (on its line, within its extent). */
+  contains(point: Vec2): boolean {
+    return isZero(this.normalX * point.x + this.normalY * point.y + this.lineOffset) && inRange(this.start.x, this.end.x, point.x) && inRange(this.start.y, this.end.y, point.y);
+  }
   has(point: Vec2): boolean {
     return this.start === point || this.end === point;
   }

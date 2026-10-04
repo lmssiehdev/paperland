@@ -94,6 +94,54 @@ export class Polyline {
     this.path.moveTo(x, y);
     return true;
   }
+  /** Splits `segment` at `point` (team modes: a teammate crossed this trail there). No-op on an endpoint. */
+  insert(segment: Segment, point: Vec2): void {
+    if (segment.has(point) || segment.start.equal(point) || segment.end.equal(point)) {
+      return;
+    }
+    const index = this.segments.indexOf(segment);
+    if (index === -1) {
+      return;
+    }
+    const head = new Segment(segment.start, point).commit(this);
+    const tail = new Segment(point, segment.end).commit(this);
+    segment.remove();
+    this.segments.splice(index, 1, head, tail);
+  }
+  /** Drops (and uncommits) the first `count` segments, then rebuilds bounds and path. */
+  truncate(count: number): void {
+    if (count <= 0) {
+      return;
+    }
+    this.segments.splice(0, count).forEach(segment => segment.remove());
+    const first = this.segments[0];
+    if (first) {
+      this.start = first.start;
+    } else {
+      this.start = null;
+      this.end = null;
+    }
+    this.rebuild();
+  }
+  /** Recomputes bounds and the Path2D from the segments. */
+  rebuild(): void {
+    this.bounds = {
+      left: Infinity,
+      right: -Infinity,
+      top: Infinity,
+      bottom: -Infinity
+    };
+    this.path = platform.createPath();
+    if (!this.start) {
+      return;
+    }
+    this.updateBounds(this.start);
+    this.path.moveTo(this.start.x, this.start.y);
+    this.segments.forEach(segment => {
+      this.updateBounds(segment.end);
+      this.path.lineTo(segment.end.x, segment.end.y);
+    });
+  }
   points(): Vec2[] {
     const segments = this.segments.map(segment => segment.start);
     if (this.end) {

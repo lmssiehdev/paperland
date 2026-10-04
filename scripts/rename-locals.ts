@@ -19,7 +19,17 @@ import * as t from "@babel/types";
 const traverse = (_traverse as any).default ?? _traverse;
 const generate = (_generate as any).default ?? _generate;
 
-const file = process.argv[2] ?? "deob/game.js";
+// usage: bun scripts/rename-locals.ts [in.js] [out.js] [--params params.json] [--teams]
+//   default: rewrites deob/game.js in place with the classic PARAMS below (classic pipeline unchanged).
+//   --params: replaces the hand-confirmed PARAMS table (JSON {"Class.method": [names]}, or a rename-map
+//             file with a "$params" key), for other builds whose signatures differ.
+//   --teams:  extra usage-shape rules for the teams build (676 engine: hosts, simplyline, in, square).
+const argv = process.argv.slice(2);
+const flag = (k: string) => { const i = argv.indexOf(k); if (i < 0) return null; const v = argv[i + 1]; argv.splice(i, v && !v.startsWith("--") ? 2 : 1); return v ?? ""; };
+const paramsFile = flag("--params");
+const TEAMS = flag("--teams") !== null;
+const file = argv[0] ?? "deob/game.js";
+const outFile = argv[1] ?? file;
 const ast = parse(await Bun.file(file).text(), { sourceType: "script" });
 const OBF = /^_0x[0-9a-f]+$/;
 const RESERVED = new Set(["arguments", "eval", "undefined", "NaN", "Infinity", "let", "static", "yield", "await", "enum"]);
@@ -86,6 +96,23 @@ function guess(binding: any, loopDepth: Map<any, number>): string | null {
 
   if (p.isVariableDeclarator()) {
     const init = p.node.init;
+    // teams: a var whose value ends up in `this.prop = v` or `{ key: v }` (one distinct name) takes that name
+    if (TEAMS) {
+      const sinks = new Set<string>();
+      for (const ref of binding.referencePaths) {
+        const a = ref.parentPath;
+        if (a.isAssignmentExpression({ operator: "=" }) && a.node.right === ref.node && t.isMemberExpression(a.node.left) &&
+            t.isThisExpression(a.node.left.object) && !a.node.left.computed && t.isIdentifier(a.node.left.property)) sinks.add(a.node.left.property.name);
+        if (a.isObjectProperty() && a.node.value === ref.node && !a.node.computed && t.isIdentifier(a.node.key)) sinks.add(a.node.key.name);
+      }
+      if (sinks.size === 1) { const [n] = sinks; if (!OBF.test(n!)) return n!; }
+    }
+    // teams (Babel ES5): `var _this = this` -> name of the enclosing class (game, base, track...)
+    if (TEAMS && t.isThisExpression(init)) {
+      const m = p.findParent((x: any) => x.isClassMethod());
+      const cls = m?.parentPath.parentPath.node.id?.name;
+      return cls && !OBF.test(cls) ? lcfirst(cls) : "self";
+    }
     // for (let i = 0; ...)
     const loop = p.parentPath.parentPath;
     if (loop.isForStatement() && t.isNumericLiteral(init)) {
@@ -96,6 +123,7 @@ function guess(binding: any, loopDepth: Map<any, number>): string | null {
     if (!init) return argGuess(binding) ?? shapeGuess(binding);
     if (t.isNewExpression(init) && t.isIdentifier(init.callee)) {
       const n = init.callee.name;
+      if (OBF.test(n)) return null;
       return n === "Path2D" ? "path" : n === "Promise" ? "promise" : lcfirst(n);
     }
     if (t.isIdentifier(init, { name: "arguments" })) return "args";
@@ -252,6 +280,12 @@ function shapeGuess(binding: any): string | null {
     if (m.isMemberExpression() && m.node.object === ref.node && !m.node.computed) props.add(m.node.property.name);
   }
   const has = (...k: string[]) => k.every((x) => props.has(x));
+  if (TEAMS) {
+    if (props.has("hosts") || props.has("hasHost") || has("polygon", "team")) return "base";
+    if (props.has("simplyline") || props.has("crossedUnits") || props.has("inject")) return "track";
+    if (has("units", "bases")) return "team";
+    if (props.has("personalPercent")) return "scheme";
+  }
   if (has("game") && (props.has("position") || props.has("base"))) return "unit";
   if (has("position") && (props.has("base") || props.has("track") || props.has("in"))) return "unit";
   if (has("position") && (props.has("direction") || props.has("smoothness") || props.has("movement"))) return "unit";
@@ -285,7 +319,7 @@ function safeName(scope: any, base: string): string | null {
 }
 
 // Hand-confirmed parameter names for key methods ("Class.method" -> params). Applied first.
-const PARAMS: Record<string, (string | null)[]> = {
+let PARAMS: Record<string, (string | null)[]> = {
   "Game.kill": ["unit", "killer", "reason"],
   "Game.spawnPlayer": ["name", "skin", "extraLife"],
   "Game.gameOver": ["reason"],
@@ -294,6 +328,10 @@ const PARAMS: Record<string, (string | null)[]> = {
   "Bot.constructor": ["game", "type", "name", "position", "basePoints", "unusedArg", "schemesManager"],
   "Base.constructor": ["unit", "points"],
 };
+if (paramsFile) {
+  const j = await Bun.file(paramsFile).json();
+  PARAMS = j.$params ?? j;
+}
 traverse(ast, {
   ClassMethod(p: any) {
     const key = `${p.parentPath.parentPath.node.id?.name}.${p.node.key.name}`;
@@ -344,6 +382,6 @@ for (let pass = 0; pass < 4; pass++) {
   });
 }
 
-await Bun.write(file, generate(ast, { jsescOption: { minimal: true } }).code);
+await Bun.write(outFile, generate(ast, { jsescOption: { minimal: true } }).code);
 const top = Object.entries(stats).sort((a, b) => b[1] - a[1]).slice(0, 25).map(([k, v]) => `${k}:${v}`).join(" ");
-console.log(`renamed ${renamed}/${total} local bindings in ${file}\n  top: ${top}`);
+console.log(`renamed ${renamed}/${total} local bindings in ${file} -> ${outFile}\n  top: ${top}`);

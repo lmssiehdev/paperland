@@ -4,6 +4,12 @@ import type { Unit } from "./units";
 /** A side in team modes. Members share one skin (so one colour) and never hurt each other. */
 export class Team {
   readonly units: Unit[] = [];
+  /** ms until the next member may spawn (counted down by the mode). */
+  suspendSpawn = -1;
+  /** Summed area of the team's distinct bases (refreshed every tick by the mode). */
+  area = 0;
+  /** 1 = largest team by area; 0 until first ranked. */
+  rank = 0;
 
   constructor(readonly skin: Skin) {}
 
