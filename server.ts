@@ -1,5 +1,6 @@
 // Local mirror of paperio.site. Third-party ads/analytics are stripped.
 //   /                classic mode; GAME_JS=src|game|deob|original picks which app2.js is served
+//                    (GAME_JS_PATH=<file> overrides it, e.g. a build from a git worktree)
 //   /teams/          teams mode       (MODE_JS=deob|original, default deob)
 //   /battleroyale/   battle royale    (MODE_JS=deob|original, default deob)
 // Game-over POSTs (results.php) are swallowed. Recorded responses (lb.php, token.php) are replayed.
@@ -56,7 +57,7 @@ const server = Bun.serve({
     }
 
     if (pathname === "/") return html(classicHtml);
-    if (pathname === "/app2.js") return new Response(Bun.file(JS_PATHS[GAME_JS]!));
+    if (pathname === "/app2.js") return new Response(Bun.file(process.env.GAME_JS_PATH ?? JS_PATHS[GAME_JS]!));
     const file = Bun.file(`original${pathname}`);
     if (await file.exists()) return new Response(file);
     console.log("[404]", pathname);
