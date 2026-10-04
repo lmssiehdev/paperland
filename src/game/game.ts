@@ -1328,9 +1328,9 @@ export class Game {
               endT: exitContact.index
             });
             const intersection = returningUnit.track.intersections.find(intersection => intersection.point.equal(point));
-            // Not guarded in the original either: throws if the track recorded no crossing at this point.
-            const intersections = intersection!.intersections.filter((intersection: TrackBaseCrossing) => intersection.base === entryContact.owner);
-            if (intersections.length === 1 || intersections[intersections.length - 1].enter === false) {
+            // The original assumed a crossing is always recorded here and threw otherwise.
+            const intersections = intersection ? intersection.intersections.filter((intersection: TrackBaseCrossing) => intersection.base === entryContact.owner) : [];
+            if (intersections.length === 1 || intersections.at(-1)?.enter === false) {
               contacts = contacts.filter(item => item.owner !== entryContact.owner);
             }
           }
