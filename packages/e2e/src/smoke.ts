@@ -1,4 +1,5 @@
-// Headless smoke test: boot the game, start a round, screenshot, report errors.
+// Headless smoke test: boot the game, start a round, screenshot, check units move, report errors.
+// Exits 1 on page errors or if nothing moves.
 // usage: [BASE_URL=http://localhost:3000/] bun packages/e2e/src/smoke.ts [url] [label]
 import { chromium } from "playwright";
 const SHOTS = new URL("../../../shots", import.meta.url).pathname;
@@ -24,5 +25,14 @@ await page.evaluate(() => (window as any).paperio2api.startGame());
 await page.waitForTimeout(4000);
 await page.screenshot({ path: `${SHOTS}/${label}-ingame.png` });
 
-console.log(JSON.stringify({ label, apiKeys, errors, logs: logs.slice(0, 15) }, null, 2));
+// Unit positions by name, 1 s apart, while the real rAF loop runs.
+const positions = () => page.evaluate(() => Object.fromEntries((window as any).paperio2api.game.units.map((u: any) => [u.name, [u.position.x, u.position.y]])) as Record<string, [number, number]>);
+const before = await positions();
+await page.waitForTimeout(1000);
+const after = await positions();
+const unitsMoved = Object.keys(after).filter(name => before[name] && Math.hypot(after[name]![0] - before[name]![0], after[name]![1] - before[name]![1]) > 1).length;
+const hasPlayer = await page.evaluate(() => !!(window as any).paperio2api.game.player);
+
+console.log(JSON.stringify({ label, apiKeys, hasPlayer, units: Object.keys(after).length, unitsMoved, errors, logs: logs.slice(0, 15) }, null, 2));
 await browser.close();
+if (errors.length || !unitsMoved || !hasPlayer) process.exit(1);

@@ -4,6 +4,9 @@
 //   /teams/          teams mode       (MODE_JS=deob|original, default deob)
 //   /battleroyale/   battle royale    (MODE_JS=deob|original, default deob)
 // Game-over POSTs (results.php) are swallowed. Recorded responses (lb.php, token.php) are replayed.
+// Mounted as the catch-all route of the Elysia app (app.ts); was the root server.ts.
+import { Elysia } from "elysia";
+
 // Paths are relative to the repo root, whatever the cwd.
 const ROOT = new URL("../../../", import.meta.url).pathname;
 const file = (path: string) => Bun.file(path.startsWith("/") ? path : ROOT + path);
@@ -35,36 +38,37 @@ const cleanHtml = (html: string) =>
 const classicHtml = cleanHtml(await file("original/index.html").text());
 const html = (body: string) => new Response(body, { headers: { "content-type": "text/html" } });
 
-const server = Bun.serve({
-  port: Number(process.env.PORT ?? 3000),
-  async fetch(req) {
-    const { pathname } = new URL(req.url);
-    if (pathname.endsWith("results.php")) {
-      console.log(`[${pathname}]`, (await req.text()).length, "bytes (not forwarded)");
-      return new Response("ok");
-    }
+export async function siteFetch(req: Request): Promise<Response> {
+  const { pathname } = new URL(req.url);
+  if (pathname.endsWith("results.php")) {
+    console.log(`[${pathname}]`, (await req.text()).length, "bytes (not forwarded)");
+    return new Response("ok");
+  }
 
-    const prefix = Object.keys(MODES).find((p) => pathname === p.slice(0, -1) || pathname.startsWith(p));
-    if (prefix) {
-      const mode = MODES[prefix]!;
-      const rel = pathname.slice(prefix.length) || "index.html";
-      if (rel === "index.html") return html(cleanHtml(await file(`${mode.dir}/index.html`).text()));
-      if (rel === "app.js" && MODE_JS === "deob") return new Response(file(mode.deob), { headers: { "content-type": "text/javascript" } });
-      const modeFile = file(`${mode.dir}/${rel}`);
-      if (await modeFile.exists()) return new Response(modeFile);
-      // shared root assets (icons etc.)
-      const shared = file(`original/${rel}`);
-      if (await shared.exists()) return new Response(shared);
-      console.log("[404]", pathname);
-      return new Response("not found", { status: 404 });
-    }
-
-    if (pathname === "/") return html(classicHtml);
-    if (pathname === "/app2.js") return new Response(file(process.env.GAME_JS_PATH ?? JS_PATHS[GAME_JS]!));
-    const asset = file(`original${pathname}`);
-    if (await asset.exists()) return new Response(asset);
+  const prefix = Object.keys(MODES).find((p) => pathname === p.slice(0, -1) || pathname.startsWith(p));
+  if (prefix) {
+    const mode = MODES[prefix]!;
+    const rel = pathname.slice(prefix.length) || "index.html";
+    if (rel === "index.html") return html(cleanHtml(await file(`${mode.dir}/index.html`).text()));
+    if (rel === "app.js" && MODE_JS === "deob") return new Response(file(mode.deob), { headers: { "content-type": "text/javascript" } });
+    const modeFile = file(`${mode.dir}/${rel}`);
+    if (await modeFile.exists()) return new Response(modeFile);
+    // shared root assets (icons etc.)
+    const shared = file(`original/${rel}`);
+    if (await shared.exists()) return new Response(shared);
     console.log("[404]", pathname);
     return new Response("not found", { status: 404 });
-  },
-});
-console.log(`serving classic=${GAME_JS}, modes=${MODE_JS} on ${server.url}`);
+  }
+
+  if (pathname === "/") return html(classicHtml);
+  if (pathname === "/app2.js") return new Response(file(process.env.GAME_JS_PATH ?? JS_PATHS[GAME_JS]!));
+  const asset = file(`original${pathname}`);
+  if (await asset.exists()) return new Response(asset);
+  console.log("[404]", pathname);
+  return new Response("not found", { status: 404 });
+}
+
+export const siteDescription = `classic=${GAME_JS}, modes=${MODE_JS}`;
+
+/** Everything not matched by /api or /play: the page, app2.js and the captured assets. */
+export const site = new Elysia({ name: "site" }).all("/*", ({ request }) => siteFetch(request));

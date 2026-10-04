@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
+    "@elysiajs/eden": "1.4.9",
     "playwright": "^1.63.0"
   },
   "scripts": {

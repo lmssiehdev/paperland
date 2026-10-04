@@ -5,11 +5,15 @@
   "private": true,
   "dependencies": {
     "@paperio/core": "workspace:*",
-    "@paperio/protocol": "workspace:*"
+    "@paperio/protocol": "workspace:*",
+    "elysia": "1.4.30"
   },
   "scripts": {
     "start": "bun src/index.ts",
     "dev": "bun --watch src/index.ts",
     "typecheck": "tsc --noEmit -p ."
+  },
+  "devDependencies": {
+    "@elysiajs/eden": "1.4.9"
   }
 }
