@@ -9,16 +9,15 @@ const vecPool = Array.from<Vec2>({
 let vecPoolSize = 0;
 /** Mutable, pooled 2D vector/point; as a territory or trail vertex it also tracks its grid cell and the segments using it. */
 export class Vec2 {
-    x: number;
-    y: number;
+    // Both assigned by this.set() in the constructor (TS can't see through the call).
+    x!: number;
+    y!: number;
     cell: GridCell | null;
     segments: Segment[];
     /** Grid that committed points register into; set by SpatialGrid's constructor. */
     static grid: SpatialGrid | undefined;
 
   constructor(x?: number, y?: number) {
-    this.x = undefined;
-    this.y = undefined;
     this.cell = null;
     this.segments = [];
     this.set(x, y);
@@ -33,8 +32,9 @@ export class Vec2 {
       this.segments.push(segment);
     }
     if (!this.cell) {
-      const _0x19525f = Vec2.grid.cell(this);
-      _0x19525f.commit(this);
+      // Points are only committed once the Game has built its SpatialGrid (which sets Vec2.grid).
+      const cell = Vec2.grid!.cell(this);
+      cell.commit(this);
     }
   }
   remove(segment: Segment): void {

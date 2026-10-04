@@ -42,20 +42,20 @@ interface RegisteredAsset {
   tag: string;
 }
 
-var _0x3028d1 = Object.assign;
+var assign = Object.assign;
 export class Skin {
     config: unknown;
-    user: Unit;
-    name: string;
+    /** Set by Unit.setSkin, which every caller of SkinManager.get runs on the new skin. */
+    user!: Unit;
+    /** Set by SkinManager.get right after construction. */
+    name!: string;
     assets: Asset[];
     colors: SkinColors;
-    pattern: SkinPattern;
+    pattern: SkinPattern | null;
     container: SkinDisplay;
 
   constructor() {
     this.config = undefined;
-    this.user = undefined;
-    this.name = undefined;
     this.assets = [];
     this.colors = {
       main: "black",
@@ -81,14 +81,14 @@ export class Skin {
   }
 }
 export class Asset {
-    pool: AssetPool;
+    /** Set by the subclass constructors (ColorAsset, ImageAsset); Asset itself is never instantiated. */
+    pool!: AssetPool;
     loadingStarted: boolean;
     name: string;
     content: AssetContent;
     ready: boolean;
 
   constructor(name: string) {
-    this.pool = undefined;
     this.loadingStarted = false;
     this.name = name;
     this.content = {};
@@ -121,13 +121,14 @@ export class ImageAsset extends Asset {
     }
     this.loadingStarted = true;
     const updateReady = () => {
-      this.ready = this.content.display.ready && (this.content.pattern ? this.content.pattern.ready : true);
+      // Every skins.json entry has an avatar, so `display` is set below before any layer/pattern finishes loading.
+      this.ready = this.content.display!.ready && (this.content.pattern ? this.content.pattern.ready : true);
     };
     const {
       source
     } = this;
     if (source.colors) {
-      this.content.colors = _0x3028d1({
+      this.content.colors = assign({
         main: "#000000",
         back: "#000000",
         nick: "#000000",
@@ -144,17 +145,17 @@ export class ImageAsset extends Asset {
   }
 }
 class AssetPool {
-    config: Config;
+    /** Set by every subclass constructor right after super(). */
+    config!: Config;
     name: string;
     assets: Asset[];
 
   constructor(name: string) {
-    this.config = undefined;
     this.name = name;
     this.assets = [];
   }
   get(name: string, onlyReady?: boolean) {
-    let found: Asset;
+    let found: Asset | undefined;
     found = this.assets.find(asset => asset.name === name && (onlyReady ? asset.ready === true : true));
     if (!found) {
       return null;
@@ -236,7 +237,8 @@ function makeColorCanvas(innerColor: string, borderColor: string) {
   const canvas = document.createElement("canvas");
   canvas.width = 100;
   canvas.height = 100;
-  const ctx = canvas.getContext("2d");
+  // A fresh canvas always provides a 2d context.
+  const ctx = canvas.getContext("2d")!;
   ctx.fillStyle = borderColor;
   ctx.fillRect(0, 0, 100, 100);
   ctx.fillStyle = innerColor;
@@ -291,7 +293,7 @@ class SkinManagerBase {
     return result;
   }
   /** Creates a Skin from the named asset (random one with `tag` if no name) and marks it used. */
-  get(name?: string, tag?: string) {
+  get(name?: string | null, tag?: string) {
     if (!name) {
       name = this.randomAssetName(tag);
     }
@@ -322,7 +324,7 @@ class SkinManagerBase {
     }
   }
   /** Flag mode only; stub in this build (always undefined). */
-  getCitySkin(name: string): Skin {
+  getCitySkin(name: string): Skin | undefined {
     debugger;
     return undefined;
   }

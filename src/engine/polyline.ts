@@ -65,8 +65,8 @@ export class Polyline {
     this.bounds.bottom = Math.max(this.bounds.bottom, y);
   }
   addPoint(end: Vec2): boolean {
-    const _0x2b66d7 = this.end || this.start;
-    if (_0x2b66d7 && _0x2b66d7.equal(end)) {
+    const last = this.end || this.start;
+    if (last && last.equal(end)) {
       return false;
     }
     const {

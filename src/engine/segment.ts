@@ -22,20 +22,17 @@ export interface Intersection {
 
 /** Directed line segment between two Vec2 points, with cached direction vector and normalized line equation ax + by + c = 0. */
 export class Segment {
-    vector: Vec2;
-    normalX: number;
-    normalY: number;
-    lineOffset: number;
+    // These four are assigned by this.calc() in the constructor (TS can't see through the call).
+    vector!: Vec2;
+    normalX!: number;
+    normalY!: number;
+    lineOffset!: number;
     mark: number;
     shape: Shape | null;
     start: Vec2;
     end: Vec2;
 
   constructor(start: Vec2, end: Vec2) {
-    this.vector = undefined;
-    this.normalX = undefined;
-    this.normalY = undefined;
-    this.lineOffset = undefined;
     if (start.equal(end)) {}
     this.mark = 0;
     this.shape = null;
@@ -85,9 +82,9 @@ export class Segment {
   length(): number {
     return this.vector.magnitude();
   }
-  zn(_0xc6e8f: Segment): number {
-    const a2 = _0xc6e8f.normalX;
-    const b2 = _0xc6e8f.normalY;
+  zn(other: Segment): number {
+    const a2 = other.normalX;
+    const b2 = other.normalY;
     const {
       normalX,
       normalY
@@ -123,29 +120,29 @@ export class Segment {
         zn: Math.sign(distance)
       };
     }
-    const _0x4d2c22 = rangeOverlap(start2.x, end2.x, start.x, end.x);
-    const _0x599176 = rangeOverlap(start2.y, end2.y, start.y, end.y);
-    if (isZero(cross2d(a2, c2, normalX, lineOffset)) && isZero(cross2d(b2, c2, normalY, lineOffset)) && _0x4d2c22 >= -EPSILON && _0x599176 >= -EPSILON) {
-      if (_0x4d2c22 >= EPSILON || _0x599176 >= EPSILON) {
-        let _0x357b15;
+    const overlapX = rangeOverlap(start2.x, end2.x, start.x, end.x);
+    const overlapY = rangeOverlap(start2.y, end2.y, start.y, end.y);
+    if (isZero(cross2d(a2, c2, normalX, lineOffset)) && isZero(cross2d(b2, c2, normalY, lineOffset)) && overlapX >= -EPSILON && overlapY >= -EPSILON) {
+      if (overlapX >= EPSILON || overlapY >= EPSILON) {
+        let overlapPoint;
         if (inRange(start.x, end.x, start2.x) && inRange(start.y, end.y, start2.y)) {
-          _0x357b15 = start.equal(start2) && start || end.equal(start2) && end || start2;
+          overlapPoint = start.equal(start2) && start || end.equal(start2) && end || start2;
         } else {
-          _0x357b15 = start2.distance2(start) >= start2.distance2(end) ? end : start;
+          overlapPoint = start2.distance2(start) >= start2.distance2(end) ? end : start;
         }
         return {
-          point: _0x357b15,
+          point: overlapPoint,
           segment: this,
-          distance: _0x357b15.distance2(start2),
+          distance: overlapPoint.distance2(start2),
           overlay: true,
           zn: 0
         };
       }
-      const _0x447570 = start.equal(start2) || start.equal(end2) ? start : end;
+      const touchPoint = start.equal(start2) || start.equal(end2) ? start : end;
       return {
-        point: _0x447570,
+        point: touchPoint,
         segment: this,
-        distance: _0x447570.distance2(start2),
+        distance: touchPoint.distance2(start2),
         overlay: false,
         zn: 0
       };

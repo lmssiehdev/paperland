@@ -36,7 +36,7 @@ export interface SkinDisplayLayer {
   layer: SkinLayer;
 }
 
-var _0x577878 = Object.assign;
+var assign = Object.assign;
 export class SkinLayer {
     level: number;
     scale: number;
@@ -45,8 +45,10 @@ export class SkinLayer {
     direction: string;
     rotation: number;
     url: string;
-    src: SkinImageSource;
-    image: HTMLCanvasElement;
+    /** Null until loaded, unless the layer config supplied `src` directly. */
+    src: SkinImageSource | null;
+    /** Rescaled copy of `src`; null until the source has loaded. */
+    image: HTMLCanvasElement | null;
     config: Config;
     pivot: { x: number; y: number };
 
@@ -66,7 +68,7 @@ export class SkinLayer {
       x: 0.5,
       y: 0.5
     }, layerConfig.pivot);
-    let sourcePromise: Promise<SkinImageSource> = this.url ? loadImage(this.url) : this.src ? Promise.resolve(this.src) : null;
+    let sourcePromise: Promise<SkinImageSource> | null = this.url ? loadImage(this.url) : this.src ? Promise.resolve(this.src) : null;
     if (sourcePromise) {
       sourcePromise.then(src => {
         this.src = src;
@@ -83,7 +85,8 @@ export class SkinLayer {
       maxScale
     } = this.config;
     const maxPixelWidth = trackWidth * maxScale;
-    const src = this.src;
+    // Only called once the source has loaded (from the load callback and SkinAvatar's onLayerLoad).
+    const src = this.src!;
     const srcWidth = (src as HTMLImageElement).naturalWidth || src.width;
     const srcHeight = (src as HTMLImageElement).naturalHeight || src.height;
     const factor = maxPixelWidth * scale * this.scale / srcWidth;
@@ -94,7 +97,8 @@ export class SkinLayer {
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
-    const ctx = canvas.getContext("2d");
+    // A fresh canvas always provides a 2d context.
+    const ctx = canvas.getContext("2d")!;
     ctx.scale(scaleX, scaleY);
     ctx.drawImage(src, 0, 0);
     this.image = canvas;
@@ -104,9 +108,10 @@ let matrixSvg: SVGSVGElement;
 export class SkinPattern {
     url: string;
     scale: number;
-    src: HTMLImageElement;
+    src: HTMLImageElement | null;
     ready: boolean;
-    pattern: CanvasPattern;
+    /** Undefined until the image has loaded (renderers fall back to the skin's main color). */
+    pattern: CanvasPattern | undefined;
 
   constructor(config: Config, view: HTMLCanvasElement, path: string, pattern: SkinPatternConfig = {} as SkinPatternConfig, onReady?: () => void) {
     this.url = path + pattern.url;
@@ -132,8 +137,10 @@ export class SkinPattern {
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
-      canvas.getContext("2d").drawImage(src, 0, 0, width + 1, height + 1);
-      this.pattern = view.getContext("2d").createPattern(canvas, "repeat");
+      // Both are 2d canvases; createPattern only returns null for an image that isn't fully decoded,
+      // and this canvas source is at least 1x1.
+      canvas.getContext("2d")!.drawImage(src, 0, 0, width + 1, height + 1);
+      this.pattern = view.getContext("2d")!.createPattern(canvas, "repeat")!;
       const invScale = 1 / maxScale;
       if (!matrixSvg) {
         matrixSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -176,8 +183,9 @@ export class SkinAvatar {
       }
     };
     // Object.assign above copied the raw layer configs; they are replaced by SkinLayer instances here.
-    const layerConfigs: SkinLayerConfig[] = this.layers || [];
-    this.layers = layerConfigs.map(item => new SkinLayer(config, _0x577878(_0x577878({}, item), {
+    // Cast: at this point `this.layers` still holds those configs, not SkinLayer instances.
+    const layerConfigs = (this.layers as SkinLayerConfig[]) || [];
+    this.layers = layerConfigs.map(item => new SkinLayer(config, assign(assign({}, item), {
       url: item.url && "" + path + item.url
     }), onLayerLoad));
     this.frontLayers = this.layers.filter(layer => layer.level >= 1).sort((a, b) => a.level - b.level);

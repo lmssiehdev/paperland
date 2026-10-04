@@ -36,14 +36,15 @@ export class Polygon {
     /** Outline vertices thinned to roughly CELL_RADIUS spacing; used for bounds. */
     simplifiedPoints: Vec2[];
     owner: Base | null;
-    bounds: Bounds | null;
-    path: Path2D;
+    /** Assigned by this.updateBounds() in the constructor (TS can't see through the call). */
+    bounds!: Bounds;
+    /** Assigned by calcPath(), which Base and Game call right after building every polygon that gets drawn. */
+    path!: Path2D;
 
   constructor(points: Vec2[]) {
     this.segments = [];
     this.simplifiedPoints = [];
     this.owner = null;
-    this.bounds = null;
     const {
       length
     } = points;
@@ -69,10 +70,10 @@ export class Polygon {
   insert(segment: Segment, end: Vec2): void {
     if (!segment.has(end)) {
       const index = this.segments.findIndex(segment2 => segment2 === segment);
-      const _0x55e498 = new Segment(segment.start, end).commit(this);
-      const _0x121664 = new Segment(end, segment.end).commit(this);
+      const firstHalf = new Segment(segment.start, end).commit(this);
+      const secondHalf = new Segment(end, segment.end).commit(this);
       segment.remove();
-      this.segments.splice(index, 1, _0x55e498, _0x121664);
+      this.segments.splice(index, 1, firstHalf, secondHalf);
     }
   }
   hasPoint(point: Vec2): boolean {
@@ -82,46 +83,46 @@ export class Polygon {
     const index = this.segments.findIndex(segment => segment.start === point);
     return index;
   }
-  splice(_0x4ff73a: Polyline, _0x2e9f8f: number, _0x198893: number): void {
-    const removed = this.segments.splice(_0x2e9f8f, _0x198893 - _0x2e9f8f, ..._0x4ff73a.segments);
+  splice(polyline: Polyline, startIndex: number, endIndex: number): void {
+    const removed = this.segments.splice(startIndex, endIndex - startIndex, ...polyline.segments);
     removed.forEach(item => item.remove());
-    _0x4ff73a.commit(this);
+    polyline.commit(this);
   }
-  unsplice(polylineCopy: Polyline, _0x35431a: number, _0x11653f: number): void {
-    const removed = this.segments.splice(_0x35431a, _0x11653f - _0x35431a);
+  unsplice(polylineCopy: Polyline, startIndex: number, endIndex: number): void {
+    const removed = this.segments.splice(startIndex, endIndex - startIndex);
     this.remove();
     this.segments = removed.concat(polylineCopy.reverse().segments);
     polylineCopy.commit(this);
   }
-  left(removed2: Vec2[], _0x2a2bca: number, _0x48f39f: number): void {
-    const _0x18a162: Segment[] = [];
+  left(removed2: Vec2[], startIndex: number, endIndex: number): void {
+    const newSegments: Segment[] = [];
     for (let i = 0; i < removed2.length - 1; i++) {
-      _0x18a162.push(new Segment(removed2[i], removed2[i + 1]));
+      newSegments.push(new Segment(removed2[i], removed2[i + 1]));
     }
-    const removed = this.segments.splice(_0x2a2bca, _0x48f39f - _0x2a2bca, ..._0x18a162);
-    _0x18a162.forEach(item => item.commit(this));
+    const removed = this.segments.splice(startIndex, endIndex - startIndex, ...newSegments);
+    newSegments.forEach(item => item.commit(this));
     removed.forEach(item => item.remove());
   }
-  right(removed2: Vec2[], _0x4ab91c: number, _0x458307: number): void {
-    const _0x9feb94: Segment[] = [];
+  right(removed2: Vec2[], startIndex: number, endIndex: number): void {
+    const newSegments: Segment[] = [];
     for (let i = 0; i < removed2.length - 1; i++) {
-      _0x9feb94.push(new Segment(removed2[i], removed2[i + 1]));
+      newSegments.push(new Segment(removed2[i], removed2[i + 1]));
     }
-    const removed = this.segments.splice(_0x4ab91c, _0x458307 - _0x4ab91c);
+    const removed = this.segments.splice(startIndex, endIndex - startIndex);
     this.remove();
-    _0x9feb94.reverse().forEach(item => item.reverse().commit(this));
-    this.segments = removed.concat(_0x9feb94);
+    newSegments.reverse().forEach(item => item.reverse().commit(this));
+    this.segments = removed.concat(newSegments);
   }
   points(): Vec2[] {
     return this.segments.map(segment => segment.start);
   }
-  intersections(_0x5d6a44: Segment): Intersection[] {
+  intersections(querySegment: Segment): Intersection[] {
     let result: Intersection[] = [];
     if (this.segments.length > 1) {
       this.segments.forEach(segment => {
-        const _0x3c561e = segment.intersect(_0x5d6a44);
-        if (_0x3c561e) {
-          result.push(_0x3c561e);
+        const intersection = segment.intersect(querySegment);
+        if (intersection) {
+          result.push(intersection);
         }
       });
     }
@@ -137,33 +138,33 @@ export class Polygon {
     const {
       length
     } = this.segments;
-    let _0x50b175 = 1;
+    let crossingSign = 1;
     for (let i = 0; i < length; i++) {
       const {
         start,
         end
       } = this.segments[i];
-      const _0x4985c4 = rayCrossingSign(start, end, point3);
-      if (_0x4985c4 === 0) {
+      const crossing = rayCrossingSign(start, end, point3);
+      if (crossing === 0) {
         return true;
       }
-      _0x50b175 *= _0x4985c4;
+      crossingSign *= crossing;
     }
-    return _0x50b175 !== 1;
+    return crossingSign !== 1;
   }
   insideNew(point: Vec2): boolean {
     return !!pointInPolygon(this.segments.map(segment => [segment.start.x, segment.start.y]), point.x, point.y);
   }
   signedArea(): number {
-    let _0x3e0443 = 0;
+    let sum = 0;
     this.segments.forEach(segment => {
       const {
         start,
         end
       } = segment;
-      _0x3e0443 += (start.x + end.x) * (end.y - start.y);
+      sum += (start.x + end.x) * (end.y - start.y);
     });
-    return _0x3e0443 / 2;
+    return sum / 2;
   }
   area(): number {
     let result = this.signedArea();
@@ -198,21 +199,21 @@ export class Polygon {
   }
   calcSimplify(): void {
     this.simplifiedPoints = [];
-    let _0x3ed40b = 0;
+    let count = 0;
     this.segments.forEach(segment => {
       const {
         start
       } = segment;
-      if (_0x3ed40b < 2) {
+      if (count < 2) {
         this.simplifiedPoints.push(start);
-        _0x3ed40b++;
+        count++;
       } else {
-        const point = this.simplifiedPoints[_0x3ed40b - 2];
+        const point = this.simplifiedPoints[count - 2];
         if (start.distance2(point) < CELL_RADIUS_SQ) {
-          this.simplifiedPoints[_0x3ed40b - 1] = start;
+          this.simplifiedPoints[count - 1] = start;
         } else {
           this.simplifiedPoints.push(start);
-          _0x3ed40b++;
+          count++;
         }
       }
     });
@@ -249,10 +250,10 @@ export const circlePoints = (point: Vec2, baseCount: number, baseRadius: number)
   if (typeof point.x !== "number") {
     throw Error("circle");
   }
-  const _0x25a8fb = Math.PI * 2;
-  const _0x2d7adf = _0x25a8fb / baseCount;
+  const fullTurn = Math.PI * 2;
+  const step = fullTurn / baseCount;
   const result: Vec2[] = [];
-  for (let i = 0; i < _0x25a8fb - EPSILON; i += _0x2d7adf) {
+  for (let i = 0; i < fullTurn - EPSILON; i += step) {
     result.push(new Vec2(point.x + Math.cos(i) * baseRadius, point.y + Math.sin(i) * baseRadius));
   }
   return result;

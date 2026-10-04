@@ -1,4 +1,4 @@
-import { _0xd09b08 } from "../engine/math";
+import { METRICS_HISTORY_LENGTH } from "../engine/math";
 import type { Game } from "../game/game";
 
 export function renderDebugOverlay(game: Game) {
@@ -11,7 +11,8 @@ export function renderDebugOverlay(game: Game) {
   const {
     font
   } = game.config;
-  const ctx = view.getContext("2d");
+  // The game view is a 2d canvas.
+  const ctx = view.getContext("2d")!;
   ctx.fillStyle = "#000000";
   ctx.strokeStyle = "#ffffff";
   ctx.textAlign = "left";
@@ -55,7 +56,7 @@ export function renderDebugOverlay(game: Game) {
       maxFrameTime = Math.max(maxFrameTime, metric.frameTime);
     });
     maxFrameTime *= 1.1;
-    const stepX = graphWidth / (_0xd09b08 - 1);
+    const stepX = graphWidth / (METRICS_HISTORY_LENGTH - 1);
     const scaleY = graphHeight / maxFrameTime;
     ctx.save();
     ctx.translate((view.width - graphWidth) / 2, graphHeight);

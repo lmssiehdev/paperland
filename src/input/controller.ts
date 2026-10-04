@@ -33,8 +33,9 @@ export class Controller {
     left: boolean;
     right: boolean;
     modifiers: { shift: boolean; ctrl: boolean; alt: boolean; meta: boolean; };
-    mouse: PointerPosition;
-    lastMouse: PointerPosition;
+    /** Null while the pointer is outside the view (or before it first moves in). */
+    mouse: PointerPosition | null;
+    lastMouse: PointerPosition | null;
     buttons: { left: boolean; middle: boolean; right: boolean; };
     codes: KeyBinding[];
     sets: KeyChord[];

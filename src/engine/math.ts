@@ -2,63 +2,63 @@ import { Vec2 } from "./vec2";
 
 export const EPSILON = Math.pow(2, -26);
 export const isZero = (distance: number): boolean => Math.abs(distance) <= EPSILON;
-export const nearlyEqual = (_0x2bc84b: number, _0x422639: number): boolean => Math.abs(_0x2bc84b - _0x422639) <= EPSILON;
-export const lerp = (_0x497e73: number, _0x1215fd: number, _0xc805ba: number): number => _0x497e73 + (_0x1215fd - _0x497e73) * _0xc805ba;
-export const easeOutCubic = (_0x570a19: number): number => --_0x570a19 * _0x570a19 * _0x570a19 + 1;
-export const clamp = (_0x2cbd0e: number, _0x349ac0: number, _0x26617c: number): number => {
-  if (_0x26617c < _0x2cbd0e) {
-    return _0x2cbd0e;
+export const nearlyEqual = (a: number, b: number): boolean => Math.abs(a - b) <= EPSILON;
+export const lerp = (from: number, to: number, t: number): number => from + (to - from) * t;
+export const easeOutCubic = (t: number): number => --t * t * t + 1;
+export const clamp = (min: number, max: number, value: number): number => {
+  if (value < min) {
+    return min;
   }
-  if (_0x26617c > _0x349ac0) {
-    return _0x349ac0;
+  if (value > max) {
+    return max;
   }
-  return _0x26617c;
+  return value;
 };
-export const cross2d = (_0x485df3: number, _0x2a85fc: number, _0x18d0a3: number, _0x4b57d3: number): number => _0x485df3 * _0x4b57d3 - _0x2a85fc * _0x18d0a3;
-export const inRange = (_0x50b329: number, _0x1b8016: number, _0x13f44a: number): boolean => Math.min(_0x50b329, _0x1b8016) - EPSILON <= _0x13f44a && _0x13f44a <= Math.max(_0x50b329, _0x1b8016) + EPSILON;
-export const rangeOverlap = (_0x398a2a: number, _0x88af21: number, _0x9eb278: number, _0x369d4a: number): number => {
-  if (_0x398a2a > _0x88af21) {
-    [_0x398a2a, _0x88af21] = [_0x88af21, _0x398a2a];
+export const cross2d = (ax: number, ay: number, bx: number, by: number): number => ax * by - ay * bx;
+export const inRange = (a: number, b: number, value: number): boolean => Math.min(a, b) - EPSILON <= value && value <= Math.max(a, b) + EPSILON;
+export const rangeOverlap = (a1: number, a2: number, b1: number, b2: number): number => {
+  if (a1 > a2) {
+    [a1, a2] = [a2, a1];
   }
-  if (_0x9eb278 > _0x369d4a) {
-    [_0x9eb278, _0x369d4a] = [_0x369d4a, _0x9eb278];
+  if (b1 > b2) {
+    [b1, b2] = [b2, b1];
   }
-  return Math.min(_0x88af21, _0x369d4a) - Math.max(_0x398a2a, _0x9eb278);
+  return Math.min(a2, b2) - Math.max(a1, b1);
 };
-/** Even-odd test; returns 0 outside, 1 on an edge, 2 inside. `_0x29a68f` is a list of [x, y] vertices. */
-export function pointInPolygon(_0x29a68f: ArrayLike<ArrayLike<number>>, x: number, y: number): 0 | 1 | 2 {
-  let _0x562c11 = false;
-  let count = _0x29a68f.length;
-  for (let i = 0, _0xea5051 = count - 1; i < count; _0xea5051 = i++) {
-    let _0x3205eb = _0x29a68f[i][0];
-    let _0x194c24 = _0x29a68f[i][1];
-    let _0xdffee9 = _0x29a68f[_0xea5051][0];
-    let _0x7ab471 = _0x29a68f[_0xea5051][1];
-    if (pointOnSegment(x, y, _0x3205eb, _0x194c24, _0xdffee9, _0x7ab471)) {
+/** Even-odd test; returns 0 outside, 1 on an edge, 2 inside. `vertices` is a list of [x, y] vertices. */
+export function pointInPolygon(vertices: ArrayLike<ArrayLike<number>>, x: number, y: number): 0 | 1 | 2 {
+  let inside = false;
+  let count = vertices.length;
+  for (let i = 0, j = count - 1; i < count; j = i++) {
+    let xi = vertices[i][0];
+    let yi = vertices[i][1];
+    let xj = vertices[j][0];
+    let yj = vertices[j][1];
+    if (pointOnSegment(x, y, xi, yi, xj, yj)) {
       return 1;
     }
-    var _0x5ac99c = _0x194c24 > y != _0x7ab471 > y && x < (_0xdffee9 - _0x3205eb) * (y - _0x194c24) / (_0x7ab471 - _0x194c24) + _0x3205eb;
-    if (_0x5ac99c) {
-      _0x562c11 = !_0x562c11;
+    var crosses = yi > y != yj > y && x < (xj - xi) * (y - yi) / (yj - yi) + xi;
+    if (crosses) {
+      inside = !inside;
     }
   }
-  if (_0x562c11) {
+  if (inside) {
     return 2;
   } else {
     return 0;
   }
 }
-function pointOnSegment(x: number, y: number, _0x546daf: number, _0x21e81c: number, _0x3d49bc: number, _0x3776c9: number): boolean {
-  let _0x539722 = _0x546daf - x;
-  let _0x4520c5 = _0x21e81c - y;
-  let _0xbbd220 = _0x3d49bc - x;
-  let _0x59c1e4 = _0x3776c9 - y;
-  let _0x3d83e6 = _0x539722 * _0x59c1e4 - _0x4520c5 * _0xbbd220;
-  let _0x10959f = _0x539722 * _0xbbd220 + _0x4520c5 * _0x59c1e4;
-  return _0x3d83e6 == 0 && _0x10959f <= 0;
+function pointOnSegment(x: number, y: number, x1: number, y1: number, x2: number, y2: number): boolean {
+  let dx1 = x1 - x;
+  let dy1 = y1 - y;
+  let dx2 = x2 - x;
+  let dy2 = y2 - y;
+  let cross = dx1 * dy2 - dy1 * dx2;
+  let dot = dx1 * dx2 + dy1 * dy2;
+  return cross == 0 && dot <= 0;
 }
-let _0x5e2101 = 1;
-export const nextId = (): number => _0x5e2101++;
+let idCounter = 1;
+export const nextId = (): number => idCounter++;
 const clock = typeof performance !== "undefined" ? performance : Date;
 export const now = clock.now.bind(clock);
 /** Seeded LCG. rng() returns a float in [0, 1); rng(n) returns an integer in [0, n). */
@@ -68,24 +68,25 @@ export function createRng(seed: number): Rng {
   if (seed > 0 && seed < 1) {
     seed = Math.floor(seed * 1000000000);
   }
-  let _0x449b8e = (_0x51efea: number): number => {
+  let nextInt = (modulus: number): number => {
     seed = (seed * 69069 + 1) % 2147483648;
-    return seed % _0x51efea;
+    return seed % modulus;
   };
-  let result = (_0x1dfc31?: number): number => _0x1dfc31 == null ? _0x449b8e(1000000000) / 1000000000 : _0x449b8e(_0x1dfc31);
+  let result = (max?: number): number => max == null ? nextInt(1000000000) / 1000000000 : nextInt(max);
   return result;
 }
-export function fmt2(_0x2134de: number): string {
-  return _0x2134de.toFixed(2);
+export function fmt2(value: number): string {
+  return value.toFixed(2);
 }
 export const TAU = Math.PI * 2;
-const _0x1b92c1 = Math.cos(0);
-const _0x55d618 = Math.sin(0);
-export const _0xd09b08 = 240;
+const BASE_ANGLE_COS = Math.cos(0);
+const BASE_ANGLE_SIN = Math.sin(0);
+/** Number of per-frame metrics kept for the debug graph (Game.metrics). */
+export const METRICS_HISTORY_LENGTH = 240;
 export const vecFromAngle = (direction: number): Vec2 => {
   const cos = Math.cos(direction);
   const sin = Math.sin(direction);
-  const x = _0x1b92c1 * cos - _0x55d618 * sin;
-  const y = _0x1b92c1 * sin + _0x55d618 * cos;
+  const x = BASE_ANGLE_COS * cos - BASE_ANGLE_SIN * sin;
+  const y = BASE_ANGLE_COS * sin + BASE_ANGLE_SIN * cos;
   return Vec2.alloc(x, y);
 };

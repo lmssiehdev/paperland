@@ -12,13 +12,13 @@ export interface HSV {
 }
 
 export const hexToRgb = (item: string): RGB => {
-  const _0xb42ed3 = parseInt(item.substring(1, 3), 16);
-  const _0x4c451e = parseInt(item.substring(3, 5), 16);
-  const _0x900965 = parseInt(item.substring(5, 7), 16);
+  const red = parseInt(item.substring(1, 3), 16);
+  const green = parseInt(item.substring(3, 5), 16);
+  const blue = parseInt(item.substring(5, 7), 16);
   return {
-    r: _0xb42ed3,
-    g: _0x4c451e,
-    b: _0x900965
+    r: red,
+    g: green,
+    b: blue
   };
 };
 export const rgbToHsv = ({
@@ -26,49 +26,50 @@ export const rgbToHsv = ({
   g,
   b
 }: RGB): HSV => {
-  let _0x41c2d1;
-  let _0x3e79c6;
-  let _0x1e228e;
-  let _0x5d8573;
-  let _0x1dd657;
-  let _0xa339c4;
-  let _0x2b6087;
-  let _0x51507f;
-  let _0x42049b;
-  let _0x1c52d9;
-  let _0x13db08;
-  let _0x146af6;
-  _0x41c2d1 = r / 255;
-  _0x3e79c6 = g / 255;
-  _0x1e228e = b / 255;
-  _0x42049b = Math.max(_0x41c2d1, _0x3e79c6, _0x1e228e);
-  _0x1c52d9 = _0x42049b - Math.min(_0x41c2d1, _0x3e79c6, _0x1e228e);
-  _0x13db08 = (_0x1e65f9: number): number => (_0x42049b - _0x1e65f9) / 6 / _0x1c52d9 + 1 / 2;
-  _0x146af6 = (_0x2ed2f4: number): number => Math.round(_0x2ed2f4 * 100) / 100;
-  if (_0x1c52d9 == 0) {
-    _0x2b6087 = _0x51507f = 0;
+  let rNorm;
+  let gNorm;
+  let bNorm;
+  let rDiff;
+  let gDiff;
+  let bDiff;
+  // One of the three branches below always assigns: `max` is one of rNorm/gNorm/bNorm.
+  let hue!: number;
+  let saturation;
+  let max;
+  let delta;
+  let channelDiff;
+  let round2;
+  rNorm = r / 255;
+  gNorm = g / 255;
+  bNorm = b / 255;
+  max = Math.max(rNorm, gNorm, bNorm);
+  delta = max - Math.min(rNorm, gNorm, bNorm);
+  channelDiff = (channel: number): number => (max - channel) / 6 / delta + 1 / 2;
+  round2 = (value: number): number => Math.round(value * 100) / 100;
+  if (delta == 0) {
+    hue = saturation = 0;
   } else {
-    _0x51507f = _0x1c52d9 / _0x42049b;
-    _0x5d8573 = _0x13db08(_0x41c2d1);
-    _0x1dd657 = _0x13db08(_0x3e79c6);
-    _0xa339c4 = _0x13db08(_0x1e228e);
-    if (_0x41c2d1 === _0x42049b) {
-      _0x2b6087 = _0xa339c4 - _0x1dd657;
-    } else if (_0x3e79c6 === _0x42049b) {
-      _0x2b6087 = 1 / 3 + _0x5d8573 - _0xa339c4;
-    } else if (_0x1e228e === _0x42049b) {
-      _0x2b6087 = 2 / 3 + _0x1dd657 - _0x5d8573;
+    saturation = delta / max;
+    rDiff = channelDiff(rNorm);
+    gDiff = channelDiff(gNorm);
+    bDiff = channelDiff(bNorm);
+    if (rNorm === max) {
+      hue = bDiff - gDiff;
+    } else if (gNorm === max) {
+      hue = 1 / 3 + rDiff - bDiff;
+    } else if (bNorm === max) {
+      hue = 2 / 3 + gDiff - rDiff;
     }
-    if (_0x2b6087 < 0) {
-      _0x2b6087 += 1;
-    } else if (_0x2b6087 > 1) {
-      _0x2b6087 -= 1;
+    if (hue < 0) {
+      hue += 1;
+    } else if (hue > 1) {
+      hue -= 1;
     }
   }
   return {
-    h: Math.round(_0x2b6087 * 360),
-    s: _0x146af6(_0x51507f * 100),
-    v: _0x146af6(_0x42049b * 100)
+    h: Math.round(hue * 360),
+    s: round2(saturation * 100),
+    v: round2(max * 100)
   };
 };
 const rgbToHex = ({
@@ -76,120 +77,120 @@ const rgbToHex = ({
   g,
   b
 }: RGB): string => {
-  const _0x76d75 = (_0x42cf50: number): string => {
-    const result = _0x42cf50.toString(16);
+  const toHexByte = (byte: number): string => {
+    const result = byte.toString(16);
     if (result.length < 2) {
       return "0" + result;
     } else {
       return result;
     }
   };
-  return "#" + _0x76d75(r) + _0x76d75(g) + _0x76d75(b);
+  return "#" + toHexByte(r) + toHexByte(g) + toHexByte(b);
 };
 const hsvToRgb = ({
   h,
   s,
   v
 }: HSV): RGB => {
-  var _0x18605b;
-  var _0x1af8eb;
-  var _0xd7fdbe;
-  var _0x3ece4f;
-  var _0xb9da1b;
-  var _0x4d9923;
-  var _0x42369d;
-  var _0x5970af;
+  var red;
+  var green;
+  var blue;
+  var sector;
+  var fraction;
+  var p;
+  var q;
+  var t;
   h = Math.max(0, Math.min(360, h));
   s = Math.max(0, Math.min(100, s));
   v = Math.max(0, Math.min(100, v));
   s /= 100;
   v /= 100;
   if (s == 0) {
-    _0x18605b = _0x1af8eb = _0xd7fdbe = v;
+    red = green = blue = v;
     return {
-      r: Math.round(_0x18605b * 255),
-      g: Math.round(_0x1af8eb * 255),
-      b: Math.round(_0xd7fdbe * 255)
+      r: Math.round(red * 255),
+      g: Math.round(green * 255),
+      b: Math.round(blue * 255)
     };
   }
   h /= 60;
-  _0x3ece4f = Math.floor(h);
-  _0xb9da1b = h - _0x3ece4f;
-  _0x4d9923 = v * (1 - s);
-  _0x42369d = v * (1 - s * _0xb9da1b);
-  _0x5970af = v * (1 - s * (1 - _0xb9da1b));
-  switch (_0x3ece4f) {
+  sector = Math.floor(h);
+  fraction = h - sector;
+  p = v * (1 - s);
+  q = v * (1 - s * fraction);
+  t = v * (1 - s * (1 - fraction));
+  switch (sector) {
     case 0:
-      _0x18605b = v;
-      _0x1af8eb = _0x5970af;
-      _0xd7fdbe = _0x4d9923;
+      red = v;
+      green = t;
+      blue = p;
       break;
     case 1:
-      _0x18605b = _0x42369d;
-      _0x1af8eb = v;
-      _0xd7fdbe = _0x4d9923;
+      red = q;
+      green = v;
+      blue = p;
       break;
     case 2:
-      _0x18605b = _0x4d9923;
-      _0x1af8eb = v;
-      _0xd7fdbe = _0x5970af;
+      red = p;
+      green = v;
+      blue = t;
       break;
     case 3:
-      _0x18605b = _0x4d9923;
-      _0x1af8eb = _0x42369d;
-      _0xd7fdbe = v;
+      red = p;
+      green = q;
+      blue = v;
       break;
     case 4:
-      _0x18605b = _0x5970af;
-      _0x1af8eb = _0x4d9923;
-      _0xd7fdbe = v;
+      red = t;
+      green = p;
+      blue = v;
       break;
     default:
-      _0x18605b = v;
-      _0x1af8eb = _0x4d9923;
-      _0xd7fdbe = _0x42369d;
+      red = v;
+      green = p;
+      blue = q;
   }
   return {
-    r: Math.round(_0x18605b * 255),
-    g: Math.round(_0x1af8eb * 255),
-    b: Math.round(_0xd7fdbe * 255)
+    r: Math.round(red * 255),
+    g: Math.round(green * 255),
+    b: Math.round(blue * 255)
   };
 };
-export const hsvToHex = (_0x8d0fc2: HSV): string => rgbToHex(hsvToRgb(_0x8d0fc2));
-export function hsvMulValue(_0x25a581: HSV, _0x474ff8: number): HSV {
+export const hsvToHex = (hsv: HSV): string => rgbToHex(hsvToRgb(hsv));
+export function hsvMulValue(hsv: HSV, factor: number): HSV {
   let {
     h,
     s,
     v
-  } = _0x25a581;
-  v *= _0x474ff8;
+  } = hsv;
+  v *= factor;
   return {
     h: h,
     s: s,
     v: v
   };
 }
-export function hsvLighten(_0xf88f07: HSV, _0x5301b4: number): HSV {
+export function hsvLighten(hsv: HSV, amount: number): HSV {
   let {
     h,
     s,
     v
-  } = _0xf88f07;
-  const _0x7e5e36 = 100 - v;
-  v = Math.max(v * _0x5301b4, v + _0x5301b4 * _0x7e5e36 / 4);
+  } = hsv;
+  const headroom = 100 - v;
+  v = Math.max(v * amount, v + amount * headroom / 4);
   return {
     h: h,
     s: s,
     v: v
   };
 }
-export function hsvSetValue(_0x4e37c0: HSV, _0x5b933a: number): HSV {
+export function hsvSetValue(hsv: HSV, value: number): HSV {
   let {
     h,
     s,
     v
-  } = _0x4e37c0;
-  v = _0x5b933a;
+  } = hsv;
+  v = value;
   return {
     h: h,
     s: s,

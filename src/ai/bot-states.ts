@@ -90,7 +90,8 @@ export var BOT_STATES: BotStates = {
       }
       const dist = bot.position.distance(bot.game.grid.center);
       const borderDistance = bot.game.border.radius - dist;
-      bot.target = ctx.point;
+      // ORIGINAL: nothing sets ctx.point and this state is never entered (FINDINGS #30); it would assign undefined.
+      bot.target = ctx.point!;
     }
   },
   cut: {
@@ -124,7 +125,7 @@ export var BOT_STATES: BotStates = {
     enter: function (bot: Bot) {
       const result = {} as ExitContext;
       let min = Infinity;
-      let exitIndex: number;
+      let exitIndex: number | undefined;
       const {
         length
       } = bot.base.polygon.segments;
@@ -230,7 +231,8 @@ export var BOT_STATES: BotStates = {
       const maxCapSquare = Math.min(bot.base.area, Math.PI * bot.viewRange * bot.viewRange) * greed;
       const capSquareRatio = bot.captureArea / maxCapSquare;
       const maxStartDistance = bot.viewRange * lerp(3, 0.7, safety);
-      const startDistanceRatio = bot.position.distance(bot.track.polyline.start) / maxStartDistance;
+      // The bot is outside its base here, so its trail has been started (polyline.start is set).
+      const startDistanceRatio = bot.position.distance(bot.track.polyline.start!) / maxStartDistance;
       const safeBaseDistance = bot.unitToTrackDistances.reduce((acc, unitToTrackDistance) => Math.min(unitToTrackDistance.trackDistance, acc), Infinity) * 0.8 * defense;
       const dangerRatio = bot.baseDistance / safeBaseDistance;
       const returnUrge = Math.max(trackLengthRatio, capSquareRatio, startDistanceRatio, dangerRatio);

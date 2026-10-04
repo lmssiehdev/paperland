@@ -12,9 +12,9 @@ type FillStyle = string | CanvasGradient | CanvasPattern;
 
 // Cache keys for the background gradient. Never assigned, so the gradient is rebuilt every frame (see report).
 let cachedGradient: CanvasGradient;
-let cachedTopColor: string;
-let cachedBottomColor: string;
-let cachedGradientCtx: CanvasRenderingContext2D;
+let cachedTopColor: string | undefined;
+let cachedBottomColor: string | undefined;
+let cachedGradientCtx: CanvasRenderingContext2D | undefined;
 const getBackgroundGradient = (ctx: CanvasRenderingContext2D, space: { width: number; height: number; }, backgroundTopColor: string, backgroundBottomColor: string) => {
   if (cachedGradientCtx !== ctx || cachedTopColor !== backgroundTopColor || cachedBottomColor !== backgroundBottomColor) {
     cachedGradient = ctx.createLinearGradient(space.width / 2, 0, space.width / 2, space.height);
@@ -69,7 +69,8 @@ const drawUnitName = (ctx: CanvasRenderingContext2D, unit: Unit, scale: number, 
   let textColor = "#dddddd";
   const asset = unit.skin.assets.find((asset: Asset) => asset.pool.name === "shields");
   if (asset) {
-    textColor = asset.content.color;
+    // Shield assets always carry a nickname color (the shields pool isn't in this build).
+    textColor = asset.content.color!;
   }
   ctx.fillStyle = textColor;
   ctx.shadowColor = textColor;
@@ -400,6 +401,7 @@ const drawLeaderCrown = (renderContext: RenderContext) => {
   }
 };
 const drawMinimap = (renderContext: RenderContext) => {
+  // Only called from renderGame when game.player is set.
   const {
     game: game,
     ctx,
@@ -415,19 +417,19 @@ const drawMinimap = (renderContext: RenderContext) => {
   ctx.translate(viewScreenWidth - padding - minimapSize, viewScreenHeight - padding - minimapSize);
   ctx.scale(minimapSize / game.grid.width, minimapSize / game.grid.height);
   fillPath(ctx, game.border.polygon.path, "#c2d6cdaa");
-  fillPath(ctx, game.player.base.polygon.path, game.player.skin.colors.main);
-  strokePath(ctx, game.player.base.polygon.path, game.player.skin.colors.back, markerSize / 2);
-  drawTrack(ctx, game.player.skin.colors.back, game.player.track, game.player.position, markerSize / 2);
-  const borderStyle = game.units.some(unit => !game.isPlayer(unit) && unit.insideBase === game.player.base) ? "#ff0000" : "#00000099";
+  fillPath(ctx, game.player!.base.polygon.path, game.player!.skin.colors.main);
+  strokePath(ctx, game.player!.base.polygon.path, game.player!.skin.colors.back, markerSize / 2);
+  drawTrack(ctx, game.player!.skin.colors.back, game.player!.track, game.player!.position, markerSize / 2);
+  const borderStyle = game.units.some(unit => !game.isPlayer(unit) && unit.insideBase === game.player!.base) ? "#ff0000" : "#00000099";
   strokePath(ctx, game.border.polygon.path, borderStyle, markerSize);
   ctx.beginPath();
-  ctx.arc(game.player.position.x, game.player.position.y, markerSize, 0, Math.PI * 2);
-  ctx.fillStyle = game.player.skin.colors.nick;
+  ctx.arc(game.player!.position.x, game.player!.position.y, markerSize, 0, Math.PI * 2);
+  ctx.fillStyle = game.player!.skin.colors.nick;
   ctx.fill();
-  const asset = game.player.skin.assets.find((asset: Asset) => asset.pool && asset.pool.name === "flags");
+  const asset = game.player!.skin.assets.find((asset: Asset) => asset.pool && asset.pool.name === "flags");
   const roundedFlag = asset && asset.content.roundedFlag;
-  if (roundedFlag && game.player.cities) {
-    game.player.cities.forEach((city: { position: Vec2; }) => {
+  if (roundedFlag && game.player!.cities) {
+    game.player!.cities.forEach((city: { position: Vec2; }) => {
       ctx.save();
       ctx.translate(city.position.x, city.position.y);
       ctx.scale(2, 2);
@@ -437,7 +439,7 @@ const drawMinimap = (renderContext: RenderContext) => {
   }
   ctx.restore();
 };
-let leaderboardCanvas: HTMLCanvasElement;
+let leaderboardCanvas: HTMLCanvasElement | null;
 window.addEventListener("resize", () => leaderboardCanvas = null, false);
 const drawLeaderboard = (renderContext: RenderContext) => {
   let {
@@ -451,7 +453,8 @@ const drawLeaderboard = (renderContext: RenderContext) => {
   }
   if (renderContext.game.topListChanged) {
     renderContext.game.topListChanged = false;
-    let ctx2 = leaderboardCanvas.getContext("2d");
+    // A canvas always provides a 2d context.
+    let ctx2 = leaderboardCanvas.getContext("2d")!;
     ctx2.save();
     ctx2.clearRect(0, 0, leaderboardCanvas.width, leaderboardCanvas.height);
     ctx2.translate(-ctx.canvas.width + leaderboardCanvas.width, 0);
@@ -532,6 +535,7 @@ const renderLeaderboard = (ctx: CanvasRenderingContext2D, renderContext: RenderC
   }
 };
 const drawScoreBar = (renderContext: RenderContext) => {
+  // Only called from renderGame when game.player is set.
   const {
     game: game,
     ctx,
@@ -548,19 +552,20 @@ const drawScoreBar = (renderContext: RenderContext) => {
   } = game;
   ctx.fillStyle = "#00000022";
   fillRoundedRect(ctx, 0, padding, barWidth, barHeight + backHeight, [0, (barHeight + backHeight) / 2, (barHeight + backHeight) / 2, 0]);
-  const bestRatio = game.best ? Math.min(1, player.schemes.scores() / game.best) : 1;
+  const bestRatio = game.best ? Math.min(1, player!.schemes.scores() / game.best) : 1;
   const barWidth2 = barWidth * (0.25 + bestRatio * 0.75);
-  ctx.fillStyle = player.skin.colors.back;
+  ctx.fillStyle = player!.skin.colors.back;
   fillRoundedRect(ctx, 0, padding + backHeight, barWidth2, barHeight, [0, halfBarHeight, halfBarHeight, 0], strokeWidth);
-  ctx.fillStyle = player.skin.colors.main;
+  ctx.fillStyle = player!.skin.colors.main;
   fillRoundedRect(ctx, 0, padding, barWidth2, barHeight, [0, halfBarHeight, halfBarHeight, 0], strokeWidth);
-  ctx.fillStyle = player.skin.colors.plate;
+  ctx.fillStyle = player!.skin.colors.plate;
   ctx.font = uiFont;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText(player.schemes.print(), halfBarHeight, padding + halfBarHeight * 1.1);
+  ctx.fillText(player!.schemes.print(), halfBarHeight, padding + halfBarHeight * 1.1);
 };
 const drawBestScore = (renderContext: RenderContext) => {
+  // Only called from renderGame when game.player is set.
   const {
     game: game,
     ctx,
@@ -572,11 +577,12 @@ const drawBestScore = (renderContext: RenderContext) => {
   ctx.font = uiFont;
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
-  let text = game.language.bestTxt + " " + game.player.schemes.print(game.best);
+  let text = game.language.bestTxt + " " + game.player!.schemes.print(game.best);
   ctx.fillStyle = "#00000066";
   ctx.fillText(text, padding / 2, padding + barHeight + backHeight + padding / 2);
 };
 const drawKillCounter = (renderContext: RenderContext) => {
+  // Only called from renderGame when game.player is set.
   const {
     game: game,
     ctx,
@@ -592,7 +598,7 @@ const drawKillCounter = (renderContext: RenderContext) => {
   ctx.font = uiFont;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  let text = "x" + game.player.statistics.kills;
+  let text = "x" + game.player!.statistics.kills;
   ctx.fillStyle = "#00000088";
   fillRoundedRect(ctx, 0, padding2, barHeight * 1.5 + ctx.measureText(text).width, barHeight, [0, halfBarHeight, halfBarHeight, 0]);
   drawSkullIcon(ctx, barHeight * 1.4 / 2, padding2 + barHeight / 2, scaler);
