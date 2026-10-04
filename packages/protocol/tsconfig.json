@@ -1,5 +1,6 @@
 {
+  // Same host rules as core (no DOM, no Bun): only ES2022 + core's host.d.ts.
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "lib": ["ES2022"], "types": [] },
-  "include": ["src"]
+  "include": ["src", "../core/src/host.d.ts"]
 }
