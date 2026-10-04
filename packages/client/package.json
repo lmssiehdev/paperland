@@ -13,7 +13,8 @@
     "@types/js-cookie": "2"
   },
   "scripts": {
-    "build": "bun build src/main.ts --format=iife --outfile dist/app2.js",
-    "typecheck": "tsgo --noEmit -p ."
+    "build": "bun build src/main.ts --format=iife --define __DEV__=false --outfile dist/app2.js",
+    "typecheck": "tsgo --noEmit -p .",
+    "build:dev": "bun build src/main.ts --format=iife --define __DEV__=true --outfile dist/app2.js"
   }
 }

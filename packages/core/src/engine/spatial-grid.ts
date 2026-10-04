@@ -64,9 +64,6 @@ export class SpatialGrid {
   }
   getCell(j: number, i: number): GridCell {
     const cell = this.cells[j + i * this.w];
-    if (!cell) {
-      debugger;
-    }
     return cell;
   }
   checkPoint(point: Vec2): Vec2 {

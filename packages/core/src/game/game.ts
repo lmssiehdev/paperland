@@ -213,6 +213,14 @@ export type TerritoryImager = (player: Player) => string;
 /** Schedules the next loop() call (client: requestAnimationFrame). */
 export type FrameScheduler = (callback: () => void) => void;
 
+/** Browser hooks, passed to createGame() (client: session.ts). Headless games have none. */
+export interface GameHooks {
+  renderer?: GameRenderer;
+  input?: InputSource;
+  territoryImage?: TerritoryImager;
+  requestFrame?: FrameScheduler;
+}
+
 /** Counters of the shared-territory rule paths (team modes only; all stay 0 in classic). */
 export interface TeamEvents {
   /** A unit crossed a teammate's trail (vertex shared by both trails). */
@@ -266,7 +274,8 @@ export class Game {
   build: number;
   config: GameConfig;
   language: LanguageStrings;
-  controller: ControllerHandle;
+  /** Local input device; null headless. */
+  controller: ControllerHandle | null;
   skinManager: SkinManager;
   nameManager: NamePool;
   achievementsProfile: AchievementStore;
@@ -338,7 +347,7 @@ export class Game {
     skinManager: SkinManager,
     gameOverCallback: ((result: GameResult) => void) | null,
     nameManager: NamePool,
-    controller: ControllerHandle,
+    controller: ControllerHandle | null,
     language: LanguageStrings,
     schemesManager: SchemesManager,
     achievementsProfile: AchievementStore,

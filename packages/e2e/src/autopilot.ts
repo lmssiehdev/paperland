@@ -25,7 +25,7 @@ async function runTrial(mode: "straight" | "autopilot") {
   page.on("console", () => {}); // game logs dt every frame in some paths; ignore
   await page.goto(process.env.BASE_URL ?? "http://localhost:3000/");
   await page.waitForFunction(() => (window as any).paperio2api?.game && (window as any).__paperio);
-  await page.evaluate(() => (window as any).paperio2api.startGame());
+  await page.click("#play");
   await page.waitForFunction(() => (window as any).paperio2api.game.player);
 
   return page.evaluate(

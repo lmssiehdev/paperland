@@ -9,9 +9,6 @@ export class Border {
   center: Vec2;
 
   constructor(polygon: Polygon, center: Vec2, radius: number) {
-    if (!(polygon instanceof Polygon)) {
-      debugger;
-    }
     this.polygon = polygon;
     this.radius = radius;
     this.center = center;

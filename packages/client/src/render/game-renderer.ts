@@ -694,7 +694,7 @@ export function renderGame(game: Game) {
     drawMinimap(renderContext);
     drawNotification(renderContext);
   }
-  if (game.debug || game.recording || game.replaying) {
+  if (__DEV__ && (game.debug || game.recording || game.replaying)) {
     renderDebugOverlay(game);
   }
 }

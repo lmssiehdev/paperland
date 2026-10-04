@@ -136,9 +136,6 @@ export class Vec2 {
   static release(point: Vec2): void {
     if (vecPoolSize < VEC_POOL_MAX) {
       point.set();
-      if (point.cell || point.segments.length) {
-        debugger;
-      }
       vecPool[vecPoolSize++] = point;
     }
   }

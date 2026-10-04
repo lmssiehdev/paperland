@@ -1,11 +1,11 @@
 import type { TargetedEvent } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { StateUpdater, Dispatch } from "preact/hooks";
-import type { PaperioApi } from "../api";
 import type { GameResult } from "@paperio/core/game/game";
 import { MODES } from "@paperio/core/modes/index";
 import type { ModeId } from "@paperio/core/modes/index";
 import { useI18n } from "./i18n";
+import { useGameSession } from "./session-context";
 
 /** Screens the root App can show. */
 export type Route = "menu" | "game" | "results" | "skins";
@@ -66,20 +66,16 @@ interface MainMenuProps {
   setNickName: Setter<string>;
   start: () => void;
   route: Setter<Route>;
-  api: PaperioApi | null;
   skin: string;
   mode: ModeId;
   setMode: Setter<ModeId>;
 }
-const MainMenu = ({ nickName, setNickName, start, route, api, skin, mode, setMode }: MainMenuProps) => {
+const MainMenu = ({ nickName, setNickName, start, route, skin, mode, setMode }: MainMenuProps) => {
   const { t } = useI18n();
-  const supported = !!api;
   const onNickInput = (event: TargetedEvent<HTMLInputElement, Event>) => setNickName(event.currentTarget.value);
   const onPlayClick = (event: TargetedEvent<HTMLButtonElement, MouseEvent>) => {
     event.preventDefault();
-    if (supported) {
-      start();
-    }
+    start();
   };
   return (
     <>
@@ -100,7 +96,7 @@ const MainMenu = ({ nickName, setNickName, start, route, api, skin, mode, setMod
             maxlength={12}
             onInput={onNickInput}
           />
-          <button id="play" name="play" class={"yellow" + (supported ? "" : " disabled")} onClick={onPlayClick}>
+          <button id="play" name="play" class="yellow" onClick={onPlayClick}>
             {t.btnPlay}
           </button>
           <button id="skins" name="skins" class="orange noPadding" onClick={() => route("skins")}>
@@ -124,7 +120,6 @@ const MainMenu = ({ nickName, setNickName, start, route, api, skin, mode, setMod
             </button>
           ))}
         </div>
-        {!supported && <p class="notsupported">{t.nosupport}</p>}
       </div>
       <div id="right_side" />
     </>
@@ -135,8 +130,6 @@ interface GameScreenProps {
   bestScore: number;
   setBestScore: Setter<number>;
   setResults: Setter<GameResult | null>;
-  setPreparing: Setter<boolean>;
-  api: PaperioApi;
   route: Setter<Route>;
   skin: string;
   /** Extra-life base size (percent); App never passes it. */
@@ -149,13 +142,12 @@ const GameScreen = ({
   bestScore,
   setBestScore,
   setResults,
-  setPreparing,
-  api,
   route,
   skin,
   lastPercent,
   mode
 }: GameScreenProps): null => {
+  const session = useGameSession();
   useEffect(() => {
     const onGameOver = (results: GameResult) => {
       if (results.newBest) {
@@ -168,8 +160,8 @@ const GameScreen = ({
     if (skin2 === "default" || skin2 === "No skin") {
       skin2 = "";
     }
-    api.start(nickName, skin2, bestScore, onGameOver, lastPercent, mode);
-    setPreparing(false);
+    session.setMode(mode);
+    session.start({ name: nickName, skin: skin2, best: bestScore, onGameOver, extraLife: lastPercent });
   }, []);
   return null;
 };
@@ -297,21 +289,24 @@ const SkinsScreen = ({ skins, skin, route, setSkin }: SkinsScreenProps) => {
   );
 };
 export interface AppProps {
-  api: PaperioApi | null;
   storage: CookieStorage;
   skins: SkinInfo[];
+  /** Mode preselected in the menu (dev: ?mode=); default classic. */
+  initialMode?: ModeId;
 }
-export const App = ({ api, storage, skins }: AppProps) => {
+export const App = ({ storage, skins, initialMode = "classic" }: AppProps) => {
+  const session = useGameSession();
   const viewRef = useRef<HTMLCanvasElement>(null);
   const [route, setRoute] = useState<Route>("menu");
-  const [preparing, setPreparing] = useState(true);
+  const [sessionState, setSessionState] = useState(session.state);
+  const preparing = sessionState === "preparing";
   const [results, setResults] = useState<GameResult | null>(null);
   const storageKey = "paper.io.storage";
   const stored: StoredProfile = storage.getJSON<StoredProfile>(storageKey) || {};
   const [nickName, setNickName] = useState(stored.nickName || "");
   const [bestScore, setBestScore] = useState(stored.bestScore || 0);
   const [skin, setSkin] = useState(stored.skin || "");
-  const [mode, setMode] = useState<ModeId>("classic");
+  const [mode, setMode] = useState<ModeId>(initialMode);
   const cookieOptions = {
     expires: 365
   };
@@ -327,22 +322,16 @@ export const App = ({ api, storage, skins }: AppProps) => {
     );
   }
   useEffect(() => {
-    if (api) {
-      // The canvas is mounted by this render, so the ref is set when the effect runs.
-      api.create(viewRef.current!);
-      api.prepare(() => setPreparing(false));
-    }
+    const unsubscribe = session.subscribe(setSessionState);
+    // The canvas is mounted by this render, so the ref is set when the effect runs.
+    session.attach(viewRef.current!);
+    return unsubscribe;
   }, []);
   /** Starts a round (Play button). */
   const startGame = () => {
-    if (api && api.game) {
-      api.game.visible = true;
-    }
+    session.showGame();
     setRoute("game");
   };
-  if (api) {
-    api.startGame = startGame;
-  }
   return (
     <>
       <canvas class={route === "game" || preparing ? "" : "fadein"} id="view" ref={viewRef} />
@@ -354,20 +343,17 @@ export const App = ({ api, storage, skins }: AppProps) => {
             setNickName={setNickName}
             start={startGame}
             route={setRoute}
-            api={api}
             skin={skin}
             mode={mode}
             setMode={setMode}
           />
         )}
-        {route === "game" && api && (
+        {route === "game" && (
           <GameScreen
             nickName={nickName}
             bestScore={bestScore}
             setBestScore={setBestScore}
             setResults={setResults}
-            setPreparing={setPreparing}
-            api={api}
             route={setRoute}
             skin={skin}
             mode={mode}

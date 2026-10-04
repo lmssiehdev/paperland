@@ -272,7 +272,8 @@ const switchLog = await page.evaluate(async () => {
   const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
   const log: string[] = [];
   for (const mode of ["classic", "teams", "classic", "teams", "classic"]) {
-    api.start("switch", "", 0, () => {}, 0, mode);
+    api.setMode(mode);
+    api.start({ name: "switch", skin: "", best: 0, onGameOver: () => {} });
     await wait(1500);
     const g = api.game;
     log.push(

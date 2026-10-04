@@ -256,7 +256,6 @@ class SkinManagerBase {
   }
   /** Flag mode only; stub in this build (always undefined). */
   getCitySkin(name: string): Skin | undefined {
-    debugger;
     return undefined;
   }
 }

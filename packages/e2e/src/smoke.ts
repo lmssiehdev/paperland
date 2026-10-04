@@ -66,7 +66,7 @@ const hasPlayer = await page.evaluate(() => !!(window as any).paperio2api.game.p
 // Extra-life popup: a continue-style start must label the player in the current language (was always Russian).
 const extraLife = await page.evaluate(() => {
   const api = (window as any).paperio2api;
-  api.start("again", "", 0, undefined, 0.01);
+  api.start({ name: "again", skin: "", best: 0, extraLife: 0.01 });
   return api.game.player.labels.map((label: { text: string }) => label.text).join("|");
 });
 
