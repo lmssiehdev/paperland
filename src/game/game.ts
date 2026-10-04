@@ -1,4 +1,4 @@
-import { TAU, _0xd09b08, clamp, createRng, easeOutCubic, inRange, isZero, lerp, nearlyEqual, now, rangeOverlap, vecFromAngle } from "../engine/math";
+import { TAU, METRICS_HISTORY_LENGTH, clamp, createRng, easeOutCubic, inRange, isZero, lerp, nearlyEqual, now, rangeOverlap, vecFromAngle } from "../engine/math";
 import { Polygon, circlePoints } from "../engine/polygon";
 import { Segment } from "../engine/segment";
 import { Vec2 } from "../engine/vec2";
@@ -6,7 +6,6 @@ import { AchievementsProfile, AchievementStore } from "./achievements";
 import { Base } from "./base";
 import { City } from "./city";
 import { DEATH_CAPITAL_SURROUNDED, DEATH_EXIT_CAPTURED, DEATH_REMOVED, DEATH_SURROUNDED, DEATH_TRACK_CROSSED, DEATH_WIN, TICK_MS, TICK_MS_X2 } from "./constants";
-import { _0x24884b } from "./domain-lock";
 import { FloatingLabel } from "./floating-label";
 import { Particle, spawnDeathParticles } from "./particles";
 import { Bot, Player } from "./units";
@@ -25,23 +24,6 @@ import type { Asset, Skin } from "../skins/skin";
 import { NamePool } from "./names";
 import { SchemesManager } from "./scoring";
 import { Track } from "./track";
-
-/** Legacy / analytics globals touched by the game. */
-declare global {
-  interface Window {
-    /** Google Analytics command queue (also declared, identically, in game/achievements.ts). */
-    ga?: (...args: unknown[]) => void;
-    /** Last results set by the host page, consumed by Game.post(). */
-    paper2_results?: Paper2Results;
-    playerId?: number | string;
-  }
-  interface Navigator {
-    /** Legacy IE. */
-    userLanguage?: string;
-    /** Legacy IE. */
-    browserLanguage?: string;
-  }
-}
 
 /** Game configuration: DEFAULT_CONFIG plus the overrides applied in main.ts. */
 export type GameConfig = Config;
@@ -64,18 +46,6 @@ export interface GameResult {
   /** PNG data URL of the player's territory, when a DOM is available. */
   image: string | undefined;
   reason: DeathReason;
-}
-
-/** Shape of window.paper2_results read by Game.post(). */
-export interface Paper2Results {
-  build?: number;
-  top?: number;
-  score: number;
-  bestPercent?: number;
-  time: number;
-  kills: number;
-  reason?: number;
-  scores?: { accumulator?: number; kills?: number; };
 }
 
 /** Recorder hooked into the update loop (not present in this build). */
@@ -149,11 +119,6 @@ export interface Leaderboard {
 interface FlagSkinManagerExtras {
   isFlagSkinManager?: boolean;
   shieldSkinAssets?: { get(name: string): Asset; };
-}
-
-/** Debug/autopilot hook checked on the player; never declared on Unit (always undefined in this build). */
-interface DebugMoveTo {
-  moveTo?: unknown;
 }
 
 /** Owner of a shape that a returning track passes through. */
@@ -290,8 +255,6 @@ export class Game {
     looped: boolean;
     quality: number;
     fpsSequence: number[];
-    /** Quality levels already reported to analytics, keyed "q5".."q9". */
-    qualityEventsPending: Record<string, boolean>;
     stats: GameStats;
     timings: GameTimings;
     events: GameEvents;
@@ -357,13 +320,6 @@ export class Game {
     this.border.polygon.calcPath();
     this.quality = 1;
     this.fpsSequence = [];
-    this.qualityEventsPending = {
-      q9: true,
-      q8: true,
-      q7: true,
-      q6: true,
-      q5: true
-    };
     if (view) {
       const _0x3a5b55 = () => {};
       window.addEventListener("resize", _0x3a5b55, false);
@@ -408,12 +364,9 @@ export class Game {
     }
     this.addUnit(player);
     this.player = player;
-    {
-      setTimeout(() => {
-        const img = document.createElement("img");
-        img.src = "https://gameads.io/adspixel.png";
-      }, (2 + Math.random()) * 60000);
-    }
+    // The original scheduled an ad-tracking pixel here with a random delay. The pixel is gone, but its
+    // Math.random() draw is kept so the RNG stream (and the golden sim hash) stays identical.
+    Math.random();
     this.debug = player.name === "dratest";
   }
   addUnit(unit: Unit) {
@@ -512,7 +465,7 @@ export class Game {
         botCountsByType[unit.type]++;
       }
     });
-    this.bots = _0x24884b({}, botCountsByType);
+    this.bots = Object.assign({}, botCountsByType);
     const typeRotation = typeRotations[Math.round(this.level * (typeRotations.length - 1))];
     let rotationIndex = -1;
     while (botCountsByType[typeRotation[++rotationIndex]] > 0) {
@@ -828,11 +781,6 @@ export class Game {
   recoverTail() {
     let player = this.player;
     if (player && player.insideBase == player.base && !player.base.polygon.inside(player.position)) {
-      {
-        if (!(player as Player & DebugMoveTo).moveTo) {
-          return;
-        }
-      }
       let nearestSegment = player.base.polygon.segments.reduce((acc, segment) => acc.start.distance2(player.position) < segment.start.distance2(player.position) ? acc : segment);
       let delta = nearestSegment.start.clone().sub(player.position);
       let len = delta.magnitude();
@@ -842,8 +790,6 @@ export class Game {
         player.game.alert("Tail is recovered");
         console.log("Recovering tail, cycle: " + this.cycle);
         this.tailRecovered = true;
-      } else if (window.ga) {
-        window.ga("send", "event", "error", "tailRecovered");
       }
     }
   }
@@ -1128,7 +1074,7 @@ export class Game {
       events: this.events
     };
     this.metrics.push(metric);
-    if (this.metrics.length > _0xd09b08) {
+    if (this.metrics.length > METRICS_HISTORY_LENGTH) {
       this.metrics.shift();
     }
     const smoothing = 0.05;
@@ -1161,17 +1107,7 @@ export class Game {
       if (this.quality > 1) {
         this.quality = 1;
       }
-      const qualityLevel = Math.round(this.quality * 10);
-      this.quality = qualityLevel / 10;
-      if (qualityLevel < 10) {
-        const qualityKey = "q" + qualityLevel;
-        if (this.qualityEventsPending[qualityKey]) {
-          this.qualityEventsPending[qualityKey] = false;
-          if (window.ga) {
-            window.ga("send", "event", "fps", qualityKey);
-          }
-        }
-      }
+      this.quality = Math.round(this.quality * 10) / 10;
       this.fpsSequence = [];
     }
     this.events = {
@@ -1219,45 +1155,6 @@ export class Game {
         }
       });
     }
-  }
-  post() {
-    var paper2_results = window.paper2_results;
-    var scores = paper2_results.scores;
-    function getBrowserLanguage() {
-      return (navigator.languages && navigator.languages[0] || navigator.userLanguage || navigator.language || navigator.browserLanguage || "en").substr(0, 2).toUpperCase();
-    }
-    var payload = {
-      build: paper2_results.build || 0,
-      player: window.playerId || 0,
-      lng: getBrowserLanguage(),
-      name: this.player.name,
-      top: paper2_results.top || 0,
-      persent: Math.round(paper2_results.score * 100),
-      best: paper2_results.bestPercent && Math.round(paper2_results.bestPercent * 10000) || 0,
-      time: Math.round(paper2_results.time / 1000),
-      kills: paper2_results.kills,
-      scores: {
-        accumulator: scores && scores.accumulator || 0,
-        kills: scores && scores.kills || 0
-      },
-      reason: paper2_results.reason || 0
-    };
-    function xorEncode(text: string) {
-      var result = "";
-      for (var i = 0; i < text.length; i++) {
-        var _0xa11e69 = text.charCodeAt(i);
-        var _0x267820 = _0xa11e69 ^ 42;
-        result = result + String.fromCharCode(_0x267820);
-      }
-      return result;
-    }
-    fetch("/newpaperio/ajax/results.php", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: xorEncode(escape(JSON.stringify(payload)))
-    });
   }
   addCity(unit: Unit) {
     const name = unit.skin.assets.find((asset: Asset) => asset.pool.name === "flags").name;
@@ -1461,11 +1358,6 @@ export class Game {
         return;
       }
       let movement = this.getMovement(dt, unit);
-      {
-        if (unit === this.player && !(this.player as Player & DebugMoveTo).moveTo && unit.insideBase === null && Math.random() < 0.0005) {
-          unit.insideBase = unit.base;
-        }
-      }
       while (movement.length) {
         if (unit.death) {
           return;

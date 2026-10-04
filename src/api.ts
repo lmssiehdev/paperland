@@ -33,7 +33,7 @@ export interface PaperioApi {
    * @param extraLife fraction of the arena to start with (continue after death); falsy for a normal start
    */
   start(name: string, skinName: string, best: number, onGameOver?: (result: GameResult) => void, extraLife?: number): void;
-  /** Installed by the UI (App); called by the host page once the preroll ad ends. */
+  /** Installed by the UI (App): same as pressing Play. Used by the headless scripts. */
   startGame?: () => void;
 }
 

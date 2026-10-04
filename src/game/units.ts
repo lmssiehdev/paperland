@@ -166,8 +166,6 @@ export class Unit {
 }
 export class Player extends Unit {
     win: boolean;
-    /** Set on the prototype by domain-lock.ts (true only on the licensed host in the original). */
-    declare moveTo: boolean;
 
   get isPlayer() {
     return true;

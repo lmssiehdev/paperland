@@ -3,17 +3,6 @@ import Cookies from "js-cookie";
 import type { Game } from "./game";
 import type { Player, Unit } from "./units";
 
-declare global {
-  interface Window {
-    /** Google Analytics command queue (absent when GA isn't loaded). */
-    ga?: (...args: unknown[]) => void;
-    /** Challenge flags mirrored from the "paperio_challenges" cookie. */
-    paperio_challenges?: ChallengeFlags;
-    /** Host page skin shop, if present. */
-    shop?: { autoCheckUnlock(): void };
-  }
-}
-
 /** Cookie map of completed challenge ids ("c13", "geraldquest1", ...). */
 export type ChallengeFlags = Record<string, boolean>;
 
@@ -125,9 +114,6 @@ export class Achievement {
   }
   success(game: Game) {
     this.earned = true;
-    if (window.ga) {
-      window.ga("send", "event", "skins_unlock", this.name);
-    }
     this.checker = null;
     if (this.onEarned) {
       this.onEarned(game, this);
@@ -195,12 +181,6 @@ export class AchievementStore {
     saveChallenge("doctorquest", "doctor");
     saveChallenge("covidquest", "covid");
     Cookies.set("paperio_challenges", challenges, cookieOptions);
-    window.paperio_challenges = challenges;
-    if (window.shop) {
-      window.shop.autoCheckUnlock();
-    } else {
-      console.log("window.shop unavaliable");
-    }
   }
 }
 export class AchievementsProfile {

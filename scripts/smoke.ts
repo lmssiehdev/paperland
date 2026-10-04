@@ -19,7 +19,7 @@ await page.waitForFunction(() => (window as any).paperio2api, null, { timeout: 1
 const apiKeys = await page.evaluate(() => Object.keys((window as any).paperio2api));
 await page.screenshot({ path: `shots/${label}-menu.png` });
 
-await page.evaluate(() => (window as any).StartGame());
+await page.evaluate(() => (window as any).paperio2api.startGame());
 await page.waitForTimeout(4000);
 await page.screenshot({ path: `shots/${label}-ingame.png` });
 

@@ -41,7 +41,7 @@ export interface PaperioApi {
   create(view: HTMLCanvasElement): void;
   prepare(onReady: () => void): void;
   start(name: string, skin: string, bestScore: number, onGameOver: (results: GameResults) => void, extraLife?: number): void;
-  /** Installed by App; called by the page's preroll-ad script (original/index.html) once the ad ends. */
+  /** Installed by App: same as pressing Play (used by the headless scripts). */
   startGame?: () => void;
 }
 
@@ -62,18 +62,6 @@ interface StoredProfile {
 export interface SkinInfo {
   name: string;
 }
-
-/** Globals provided by the hosting page (ads SDK, GTM). */
-type HostWindow = Window & {
-  ads?: {
-    showAds?: () => void;
-    hideAds?: () => void;
-  };
-  dataLayer?: Record<string, unknown>[];
-  /** Defined by the host page (original/index.html); assumed present. */
-  ShowPreroll?: () => void;
-};
-const hostWindow = window as HostWindow;
 
 type Setter<T> = Dispatch<StateUpdater<T>>;
 
@@ -194,8 +182,6 @@ interface MainMenuProps {
   preparing?: boolean;
   start: () => void;
   route: Setter<Route>;
-  /** Unused by the menu. */
-  provider?: unknown;
   setLanguage: Setter<Language>;
   api: PaperioApi | null;
   /** Passed by App but unused by the menu. */
@@ -211,7 +197,6 @@ const MainMenu = ({
   preparing,
   start,
   route,
-  provider,
   setLanguage,
   api,
   skin
@@ -229,11 +214,6 @@ const MainMenu = ({
       start();
     }
   };
-  useEffect(() => {
-    if (hostWindow.ads && hostWindow.ads.showAds) {
-      hostWindow.ads.showAds();
-    }
-  }, []);
   return createElement(Fragment, null, createElement("div", {
     id: "left_side"
   }), createElement("div", {
@@ -308,25 +288,12 @@ const GameScreen = ({
       setResults(results);
       route("results");
     };
-    if (hostWindow.ads && hostWindow.ads.hideAds) {
-      hostWindow.ads.hideAds();
-    }
     api.game.language = language.lng;
     let skin2 = skin;
     if (skin2 === "default" || skin2 === "No skin") {
       skin2 = "";
     }
     api.start(nickName, skin2, bestScore, onGameOver, lastPercent);
-    const {
-      dataLayer
-    } = hostWindow;
-    if (dataLayer) {
-      dataLayer.push({
-        event: "levelStart",
-        publisher: "CONNECT2MEDIA",
-        productKey: "paper2IO"
-      });
-    }
     setPreparing(false);
   }, []);
   return null;
@@ -337,38 +304,17 @@ interface ResultsProps {
   /** Unused by the results screen. */
   start?: () => void;
   route: Setter<Route>;
-  /** Unused by the results screen. */
-  provider?: unknown;
-  /** Unused by the results screen. */
-  country?: unknown;
 }
 const Results = ({
   bestScore,
   results,
   start,
-  route,
-  provider,
-  country = undefined
+  route
 }: ResultsProps) => {
   const goToMenu = () => route("menu");
   const {
     lng
   } = useContext(LanguageContext);
-  const {
-    dataLayer
-  } = hostWindow;
-  if (dataLayer) {
-    dataLayer.push({
-      event: "levelCompletion",
-      publisher: "CONNECT2MEDIA",
-      productKey: "paper2IO"
-    });
-  }
-  useEffect(() => {
-    if (hostWindow.ads && hostWindow.ads.showAds) {
-      hostWindow.ads.showAds();
-    }
-  }, []);
   return createElement(Fragment, null, createElement("div", {
     id: "left_side"
   }), createElement("div", {
@@ -409,9 +355,7 @@ const Results = ({
     class: "slider-3"
   }, new Date(results.time).toISOString().slice(14, -5)), createElement("div", {
     class: "slider-4"
-  }, results.kills)))), createElement("div", {
-    id: "yandex_rtb"
-  })), createElement("div", {
+  }, results.kills))))), createElement("div", {
     id: "right_side"
   }));
 };
@@ -486,12 +430,6 @@ const SkinsScreen = ({
   setSkin
 }: SkinsScreenProps) => {
   const goToMenu = () => route("menu");
-  useEffect(() => {
-    const elementById = document.getElementById("paperio-site_multisize");
-    if (elementById) {
-      elementById.style.display = "none";
-    }
-  }, []);
   return createElement(Fragment, null, createElement("div", {
     id: "left_side"
   }), createElement("div", {
@@ -514,10 +452,6 @@ const SkinsScreen = ({
 export interface AppProps {
   api: PaperioApi | null;
   storage: CookieStorage;
-  /** Unused. */
-  ads?: unknown;
-  /** Unused. */
-  provider?: unknown;
   skins: SkinInfo[];
   /** Unused. */
   mode?: string;
@@ -525,8 +459,6 @@ export interface AppProps {
 export const App = ({
   api,
   storage,
-  ads,
-  provider,
   skins,
   mode = "common"
 }: AppProps) => {
@@ -558,28 +490,14 @@ export const App = ({
       setPlayable(true);
     }
   }, []);
-  api.startGame = () => {
-    const elementById = document.getElementById("overlay");
-    if (elementById) {
-      elementById.style.display = "none";
-    }
+  /** Starts a round (Play button). */
+  const startGame = () => {
     if (api && api.game) {
       api.game.visible = true;
     }
     setRoute("game");
   };
-  /** Shows the overlay and hands off to the page's preroll ad, which calls api.startGame(). */
-  const showPreroll = () => {
-    const elementById = document.getElementById("overlay");
-    if (elementById) {
-      elementById.style.display = "block";
-      elementById.style.animation = "fadein 500ms";
-    }
-    if (api && api.game) {
-      api.game.visible = false;
-    }
-    hostWindow.ShowPreroll();
-  };
+  api.startGame = startGame;
   return createElement(Fragment, null, createElement("canvas", {
     class: route === "game" || preparing ? "" : "fadein",
     id: "view",
@@ -596,9 +514,8 @@ export const App = ({
     setNickName: setNickName,
     playable: playable,
     preparing: preparing,
-    start: showPreroll,
+    start: startGame,
     route: setRoute,
-    provider: provider,
     setLanguage: setLanguage,
     api: api,
     setState: setRoute,
@@ -616,9 +533,8 @@ export const App = ({
   }), route === "results" && createElement(Results, {
     bestScore: bestScore,
     results: results,
-    start: showPreroll,
-    route: setRoute,
-    provider: provider
+    start: startGame,
+    route: setRoute
   }), route === "config" && createElement(ConfigScreen, {
     api: api,
     view: viewRef,
@@ -631,7 +547,5 @@ export const App = ({
     setSkin: setSkin
   })), route !== "game" && createElement(LanguageFooter, {
     setLanguage: setLanguage
-  })), createElement("div", {
-    id: "overlay"
-  }));
+  })));
 };

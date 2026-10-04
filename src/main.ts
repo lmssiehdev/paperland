@@ -39,7 +39,6 @@ import "./game/achievements";
 import "./game/city";
 import "./game/units";
 import "./game/floating-label";
-import "./game/domain-lock";
 import "./game/names";
 import "./game/game";
 import "./input/controller";
