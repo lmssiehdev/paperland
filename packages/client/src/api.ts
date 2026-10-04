@@ -12,10 +12,9 @@ import { readControllerInput } from "./input/read-input";
 import { renderGame } from "./render/game-renderer";
 import { renderTerritoryImage } from "./render/territory-image";
 import { SkinManager } from "@paperio/core/skins/skin";
-import { LANG_RU } from "./ui/i18n";
 import { createMode } from "@paperio/core/modes/index";
 import type { ModeId } from "@paperio/core/modes/index";
-import type { Language } from "./ui/i18n";
+import type { Language, LanguageStrings } from "./ui/i18n";
 
 /** Builds the SkinManager for a new game (see main.ts). */
 export type SkinManagerFactory = (config: GameConfig, view: HTMLCanvasElement) => SkinManager;
@@ -38,6 +37,11 @@ export interface PaperioApi {
    * @param mode game mode; if it differs from the current game's, a fresh game is created first
    */
   start(name: string, skinName: string, best: number, onGameOver?: (result: GameResult) => void, extraLife?: number, mode?: ModeId): void;
+  /**
+   * Strings the game shows or uses (default player name, kill labels, HUD, extra-life popup). Applied to
+   * the current game and every game created later. Called by the UI's I18nProvider on a language switch.
+   */
+  setLanguage(strings: LanguageStrings): void;
   /** Installed by the UI (App): same as pressing Play. Used by the headless scripts. */
   startGame?: () => void;
 }
@@ -50,6 +54,14 @@ export const createApi = (config: GameConfig, language: Language, createSkinMana
   const result = {} as PaperioApi;
   // Remembered so start() can recreate the game in another mode.
   let currentView: HTMLCanvasElement;
+  // Current language strings; set by setLanguage().
+  let strings = language.lng;
+  result.setLanguage = (next: LanguageStrings): void => {
+    strings = next;
+    if (result.game) {
+      result.game.language = next;
+    }
+  };
   result.create = (view: HTMLCanvasElement, mode: ModeId = "classic"): void => {
     currentView = view;
     const gameMode = createMode(mode);
@@ -65,7 +77,7 @@ export const createApi = (config: GameConfig, language: Language, createSkinMana
     const baseRadius = Math.min(vec2.x, vec2.y) * 0.95;
     const border = Border.circular(vec2, borderPoints, baseRadius);
     const skinManager = createSkinManager(gameConfig, view);
-    const game = new Game(gameConfig, view, spatialGrid, border, skinManager, null, nameManager, new Controller(view, new KeyboardModeSwitch()), language.lng, schemesManager, achievementsProfile, Math.random());
+    const game = new Game(gameConfig, view, spatialGrid, border, skinManager, null, nameManager, new Controller(view, new KeyboardModeSwitch()), strings, schemesManager, achievementsProfile, Math.random());
     game.renderer = renderGame;
     game.input = readControllerInput;
     game.territoryImage = renderTerritoryImage;
@@ -143,7 +155,7 @@ export const createApi = (config: GameConfig, language: Language, createSkinMana
     if (extraLife) {
       // spawnPlayer always sets game.player via addPlayer.
       game.player!.addLabel({
-        text: LANG_RU.lng.extraLife,
+        text: strings.extraLife,
         time: 5000,
         color: "#7fed4c"
       });

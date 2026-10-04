@@ -1,13 +1,11 @@
-import { createContext } from "preact";
 import type { TargetedEvent } from "preact";
-import { useContext, useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type { StateUpdater, Dispatch } from "preact/hooks";
 import type { PaperioApi } from "../api";
 import type { GameResult } from "@paperio/core/game/game";
 import { MODES } from "@paperio/core/modes/index";
 import type { ModeId } from "@paperio/core/modes/index";
-import { LANGUAGES, getLanguage } from "./i18n";
-import type { Language } from "./i18n";
+import { useI18n } from "./i18n";
 
 /** Screens the root App can show. */
 export type Route = "menu" | "game" | "results" | "skins";
@@ -32,18 +30,6 @@ export interface SkinInfo {
 
 type Setter<T> = Dispatch<StateUpdater<T>>;
 
-/** Current UI language; App always provides it. */
-const LanguageContext = createContext<Language | null>(null);
-
-/** Reads LanguageContext; every screen is rendered under App's Provider. */
-const useLanguage = (): Language => {
-  const language = useContext(LanguageContext);
-  if (!language) {
-    throw new Error("LanguageContext used outside App's Provider");
-  }
-  return language;
-};
-
 interface TipsProps {
   messages: string[];
 }
@@ -62,15 +48,14 @@ const Tips = ({
   );
 };
 
-interface LanguageFooterProps {
-  setLanguage: Setter<Language>;
-}
-const LanguageFooter = ({
-  setLanguage
-}: LanguageFooterProps) => {
-  const currentLanguage = useLanguage();
-  const languageItems = LANGUAGES.map((item, index) => (
-    <li class={item === currentLanguage ? "active" : ""} onClick={() => setLanguage(LANGUAGES[index])}>{item.name.toUpperCase()}</li>
+const LanguageFooter = () => {
+  const {
+    language: currentLanguage,
+    languages,
+    setLanguage
+  } = useI18n();
+  const languageItems = languages.map((item, index) => (
+    <li class={item === currentLanguage ? "active" : ""} onClick={() => setLanguage(languages[index])}>{item.name.toUpperCase()}</li>
   ));
   return (
     <div id="footer">
@@ -83,7 +68,6 @@ interface MainMenuProps {
   setNickName: Setter<string>;
   start: () => void;
   route: Setter<Route>;
-  setLanguage: Setter<Language>;
   api: PaperioApi | null;
   skin: string;
   mode: ModeId;
@@ -94,15 +78,14 @@ const MainMenu = ({
   setNickName,
   start,
   route,
-  setLanguage,
   api,
   skin,
   mode,
   setMode
 }: MainMenuProps) => {
   const {
-    lng
-  } = useLanguage();
+    t
+  } = useI18n();
   const supported = !!api;
   const onNickInput = (event: TargetedEvent<HTMLInputElement, Event>) => setNickName(event.currentTarget.value);
   const onPlayClick = (event: TargetedEvent<HTMLButtonElement, MouseEvent>) => {
@@ -118,10 +101,10 @@ const MainMenu = ({
         <div class="logo">
           <img src="assets/images/logo.png" />
         </div>
-        <Tips messages={lng.messages} />
+        <Tips messages={t.messages} />
         <div class="play">
-          <input type="text" id="nick" name="nick" value={nickName} autocomplete="off" placeholder={lng.placeholderText} maxlength={12} onInput={onNickInput} />
-          <button id="play" name="play" class={"yellow" + (supported ? "" : " disabled")} onClick={onPlayClick}>{lng.btnPlay}</button>
+          <input type="text" id="nick" name="nick" value={nickName} autocomplete="off" placeholder={t.placeholderText} maxlength={12} onInput={onNickInput} />
+          <button id="play" name="play" class={"yellow" + (supported ? "" : " disabled")} onClick={onPlayClick}>{t.btnPlay}</button>
           <button id="skins" name="skins" class="orange noPadding" onClick={() => route("skins")}>
             <img width="30" height="30" src={"assets/skins/select/" + (skin || "noskin").toLowerCase().replace(/\s+/g, "") + ".png"} />
           </button>
@@ -131,7 +114,7 @@ const MainMenu = ({
             <button key={item.id} id={"mode-" + item.id} class={item.id === mode ? "green" : "orange"} style={{ margin: "8px 4px 0" }} onClick={() => setMode(item.id)}>{item.label}</button>
           ))}
         </div>
-        {!supported && <p class="notsupported">{lng.nosupport}</p>}
+        {!supported && <p class="notsupported">{t.nosupport}</p>}
       </div>
       <div id="right_side" />
     </>
@@ -163,7 +146,6 @@ const GameScreen = ({
   lastPercent,
   mode
 }: GameScreenProps): null => {
-  const language = useLanguage();
   useEffect(() => {
     const onGameOver = (results: GameResult) => {
       if (results.newBest) {
@@ -172,7 +154,6 @@ const GameScreen = ({
       setResults(results);
       route("results");
     };
-    api.game.language = language.lng;
     let skin2 = skin;
     if (skin2 === "default" || skin2 === "No skin") {
       skin2 = "";
@@ -194,8 +175,8 @@ const Results = ({
 }: ResultsProps) => {
   const goToMenu = () => route("menu");
   const {
-    lng
-  } = useLanguage();
+    t
+  } = useI18n();
   return (
     <>
       <div id="left_side" />
@@ -204,15 +185,15 @@ const Results = ({
           <img src="assets/images/logo.png" />
         </div>
         <div class="nav">
-          <button class="yellow slider-5" id="menu" onClick={goToMenu}>{lng.btnContinue}</button>
+          <button class="yellow slider-5" id="menu" onClick={goToMenu}>{t.btnContinue}</button>
         </div>
         <div class="resultbox">
           <div class="results">
             <div class="left">
-              <div class="slider-1">{lng.yourScore}{":"}</div>
-              <div class="slider-2">{results.newBest && <span class="newScore">{lng.newText}{" "}</span>}{lng.bestScore}{":"}</div>
-              <div class="slider-3">{lng.timePlayed}{":"}</div>
-              <div class="slider-4">{lng.playersKilled}{":"}</div>
+              <div class="slider-1">{t.yourScore}{":"}</div>
+              <div class="slider-2">{results.newBest && <span class="newScore">{t.newText}{" "}</span>}{t.bestScore}{":"}</div>
+              <div class="slider-3">{t.timePlayed}{":"}</div>
+              <div class="slider-4">{t.playersKilled}{":"}</div>
             </div>
             <div class="right">
               <div class="slider-1">{results.score.toFixed(2) + "%"}</div>
@@ -255,8 +236,8 @@ const SkinPicker = ({
   setSkin
 }: SkinPickerProps) => {
   const {
-    lng
-  } = useLanguage();
+    t
+  } = useI18n();
   const index = skins.findIndex(skin2 => skin2.name === skin);
   const [selectedIndex, setSelectedIndex] = useState(index > 0 ? index : 0);
   const selectSkin = (nextIndex: number) => {
@@ -273,7 +254,7 @@ const SkinPicker = ({
         <button name="right" class="orange" onClick={() => selectSkin(selectedIndex + 1)}>{">"}</button>
       </div>
       <div class="nav">
-        <button class="green" onClick={menu}>{lng.btnSelect}</button>
+        <button class="green" onClick={menu}>{t.btnSelect}</button>
       </div>
     </div>
   );
@@ -317,7 +298,6 @@ export const App = ({
   const viewRef = useRef<HTMLCanvasElement>(null);
   const [route, setRoute] = useState<Route>("menu");
   const [preparing, setPreparing] = useState(true);
-  const [language, setLanguage] = useState(getLanguage());
   const [results, setResults] = useState<GameResult | null>(null);
   const storageKey = "paper.io.storage";
   const stored: StoredProfile = (storage.getJSON(storageKey) as StoredProfile) || {};
@@ -356,15 +336,13 @@ export const App = ({
     <>
       <canvas class={route === "game" || preparing ? "" : "fadein"} id="view" ref={viewRef} />
       {route !== "game" && <div id="ui_overlay" />}
-      <LanguageContext.Provider value={language}>
-        <div id="ui" class={route === "game" ? "hide" : ""}>
-          {route === "menu" && <MainMenu nickName={nickName} setNickName={setNickName} start={startGame} route={setRoute} setLanguage={setLanguage} api={api} skin={skin} mode={mode} setMode={setMode} />}
-          {route === "game" && api && <GameScreen nickName={nickName} bestScore={bestScore} setBestScore={setBestScore} setResults={setResults} setPreparing={setPreparing} api={api} route={setRoute} skin={skin} mode={mode} />}
-          {route === "results" && results && <Results bestScore={bestScore} results={results} route={setRoute} />}
-          {route === "skins" && <SkinsScreen skins={skins} skin={skin} route={setRoute} setSkin={setSkin} />}
-        </div>
-        {route !== "game" && <LanguageFooter setLanguage={setLanguage} />}
-      </LanguageContext.Provider>
+      <div id="ui" class={route === "game" ? "hide" : ""}>
+        {route === "menu" && <MainMenu nickName={nickName} setNickName={setNickName} start={startGame} route={setRoute} api={api} skin={skin} mode={mode} setMode={setMode} />}
+        {route === "game" && api && <GameScreen nickName={nickName} bestScore={bestScore} setBestScore={setBestScore} setResults={setResults} setPreparing={setPreparing} api={api} route={setRoute} skin={skin} mode={mode} />}
+        {route === "results" && results && <Results bestScore={bestScore} results={results} route={setRoute} />}
+        {route === "skins" && <SkinsScreen skins={skins} skin={skin} route={setRoute} setSkin={setSkin} />}
+      </div>
+      {route !== "game" && <LanguageFooter />}
     </>
   );
 };

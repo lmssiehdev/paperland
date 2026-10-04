@@ -1,5 +1,7 @@
 // Headless smoke test: boot, check the menu (nick, Play, mode buttons), start a round with the Play
 // button, screenshot, check units move, report errors. Exits 1 on any failed check or page error.
+// Also switches the language (RU and back): a menu string and the game's strings must follow, and the
+// extra-life popup must use the current language.
 // usage: [BASE_URL=http://localhost:3000/] bun packages/e2e/src/smoke.ts [url] [label]
 import { chromium } from "playwright";
 const SHOTS = new URL("../../../shots", import.meta.url).pathname;
@@ -27,6 +29,16 @@ const menu = await page.evaluate(() => ({
 }));
 await page.screenshot({ path: `${SHOTS}/${label}-menu.png` });
 
+// Language switch through the footer (I18nProvider) -> menu text and game strings (api.setLanguage).
+const playText = () => page.evaluate(() => document.getElementById("play")!.textContent);
+const gameStrings = () => page.evaluate(() => (window as any).paperio2api.game.language.btnPlay as string);
+const clickLanguage = (code: string) => page.locator("#lng li", { hasText: new RegExp(`^${code}$`) }).click();
+await clickLanguage("RU");
+const switched = { menu: await playText(), game: await gameStrings() };
+await clickLanguage("EN");
+const switchedBack = { menu: await playText(), game: await gameStrings() };
+const languageOk = switched.menu === "ИГРАТЬ" && switched.game === "ИГРАТЬ" && switchedBack.menu === menu.play && switchedBack.game === menu.play;
+
 await page.click("#play");
 await page.waitForFunction(() => !!(window as any).paperio2api.game.player, null, { timeout: 10000 });
 await page.waitForTimeout(4000);
@@ -39,8 +51,15 @@ await page.waitForTimeout(1000);
 const after = await positions();
 const unitsMoved = Object.keys(after).filter(name => before[name] && Math.hypot(after[name]![0] - before[name]![0], after[name]![1] - before[name]![1]) > 1).length;
 const hasPlayer = await page.evaluate(() => !!(window as any).paperio2api.game.player);
+// Extra-life popup: a continue-style start must label the player in the current language (was always Russian).
+const extraLife = await page.evaluate(() => {
+  const api = (window as any).paperio2api;
+  api.start("again", "", 0, undefined, 0.01);
+  return api.game.player.labels.map((label: { text: string }) => label.text).join("|");
+});
 
 const menuOk = menu.nick && !!menu.play && menu.modeButtons.includes("mode-classic");
-console.log(JSON.stringify({ label, apiKeys, menu, hasPlayer, units: Object.keys(after).length, unitsMoved, errors, logs: logs.slice(0, 15) }, null, 2));
+const extraLifeOk = extraLife === "EXTRA LIFE!";
+console.log(JSON.stringify({ label, apiKeys, menu, switched, switchedBack, extraLife, hasPlayer, units: Object.keys(after).length, unitsMoved, errors, logs: logs.slice(0, 15) }, null, 2));
 await browser.close();
-if (errors.length || !menuOk || !unitsMoved || !hasPlayer) process.exit(1);
+if (errors.length || !menuOk || !languageOk || !extraLifeOk || !unitsMoved || !hasPlayer) process.exit(1);

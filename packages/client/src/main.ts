@@ -18,7 +18,7 @@ import { createElement, render } from "preact";
 import { ColoredPool, SkinManager } from "@paperio/core/skins/skin";
 import { ClassicSkinPool, createColorAvatar } from "./skins/image-skins";
 import { App } from "./ui/components";
-import { getLanguage, setLanguages } from "./ui/i18n";
+import { I18nProvider, buildLanguages, pickLanguage } from "./ui/i18n";
 import type { LanguagesFile } from "./ui/i18n";
 import type { SkinConfig } from "./skins/image-skins";
 
@@ -48,8 +48,9 @@ setPlatform({
 const CONFIG: Config = { ...DEFAULT_CONFIG };
 const languagesRequest = fetch("assets/languages.json").then((result): Promise<LanguagesFile> => result.json());
 const skinsRequest = fetch("assets/skins/skins.json").then((result): Promise<SkinConfig[]> => result.json());
-Promise.all([languagesRequest, skinsRequest]).then(([languages, skinsList]) => {
-  setLanguages(languages);
+Promise.all([languagesRequest, skinsRequest]).then(([languagesFile, skinsList]) => {
+  const languages = buildLanguages(languagesFile);
+  const initialLanguage = pickLanguage(languages);
   const createSkinManager = (config: Config, view: HTMLCanvasElement): SkinManager => {
     let coloredPool = new ColoredPool(config, createColorAvatar);
     let classicSkinPool = new ClassicSkinPool(config, view, "assets/skins/", skinsList);
@@ -59,17 +60,22 @@ Promise.all([languagesRequest, skinsRequest]).then(([languages, skinsList]) => {
   const schemesManager = new SchemesManager(ClassicScoreScheme);
   const achievementStore = new AchievementStore([]);
   achievementStore.load();
-  const api = createApi(CONFIG, getLanguage(), createSkinManager, new NamePool(BOT_NAMES, Math.random()), schemesManager, achievementStore);
+  const api = createApi(CONFIG, initialLanguage, createSkinManager, new NamePool(BOT_NAMES, Math.random()), schemesManager, achievementStore);
   window.paperio2api = api;
   const root = document.getElementById("game");
   if (!root) {
     throw new Error("index.html has no #game element");
   }
-  render(createElement(App, {
+  render(createElement(I18nProvider, {
+    languages: languages,
+    initial: initialLanguage,
+    // The game keeps plain strings (core never sees the UI context): forward every switch.
+    onChange: language => api?.setLanguage(language.lng)
+  }, createElement(App, {
     api: api,
     storage: Cookies,
     skins: skinsList
-  }), root);
+  })), root);
 });
 window.__paperio = {
   Game,

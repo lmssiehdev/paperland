@@ -31,7 +31,8 @@ packages/
              skins/skin (skin pools + manager, by name), handles.ts, platform.ts, headless.ts
   protocol/  wire format shared by client + server: bit-stream.ts (BitStream), messages.ts (MsgType,
              Join/Joined/Input/Update/Died, encode/decode), api.ts (HTTP JSON shapes)
-  client/    browser: main.ts (boot), api.ts (window.paperio2api), render/ (canvas), ui/ (Preact),
+  client/    browser: main.ts (boot), api.ts (window.paperio2api), render/ (canvas), ui/ (Preact JSX;
+             i18n.tsx = I18nProvider + useI18n),
              input/ (mouse/keyboard), skins/ (artwork: display, image-skins), core-handles.ts
   server/    Bun + Elysia: index.ts (entry), app.ts, site.ts (page + assets), api.ts (POST /api/find),
              play.ts (ws /play), room.ts/rooms.ts (headless rooms ticking at 20 Hz)
@@ -86,6 +87,16 @@ Core was cut from the browser code with the smallest seams that work; gameplay c
 - Moved to core: `SkinDisplay` (`skins/skin-display.ts`), `LanguageStrings` (`language.ts`).
 - `core/src/headless.ts`: `createHeadlessGame()` = the client's `api.create()` minus view, input,
   renderer and images. Used by tests and server rooms.
+
+## UI language (i18n)
+
+`original/assets/languages.json` has 9 languages (en ru tr sp fr nl pt de it), each merged over English.
+`main.ts` loads it once, picks the browser's language (else English) and renders
+`<I18nProvider languages initial onChange>` around `App`; components read strings with
+`const { t } = useI18n()` and the footer switches with `setLanguage`. Core never sees the UI context: it
+keeps plain `LanguageStrings` on `game.language`, and the provider's `onChange` forwards each switch via
+`api.setLanguage(strings)` (also used for the extra-life popup, which used to be hardcoded Russian).
+`extraLife` was added to the en and ru entries of languages.json (the only edit to a captured file).
 
 ## Server and protocol
 

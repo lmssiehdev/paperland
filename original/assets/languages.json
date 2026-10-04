@@ -20,6 +20,7 @@
         "bestTxt": "BEST",
         "killText": "Kill",
         "btnContinue": "CONTINUE",
+        "extraLife": "EXTRA LIFE!",
         "btnSelect": "SELECT"
     },
     "ru": {
@@ -43,6 +44,7 @@
         "bestTxt": "ЛУЧШИЙ",
         "killText": "Убит",
         "btnContinue": "ПРОДОЛЖИТЬ",
+        "extraLife": "ДОПОЛНИТЕЛЬНАЯ ЖИЗНЬ!",
         "btnSelect": "ВЫБРАТЬ"
     },
     "tr": {

@@ -15,7 +15,7 @@ export interface LanguageStrings {
   bestTxt: string;
   killText: string;
   btnContinue: string;
-  /** Only present in the built-in Russian fallback, not in languages.json. */
-  extraLife?: string;
+  /** "Extra life" popup when continuing after death (in languages.json for en and ru; others fall back to en). */
+  extraLife: string;
   btnSelect: string;
 }
