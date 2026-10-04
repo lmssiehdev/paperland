@@ -1,4 +1,4 @@
-export let DEFAULT_CONFIG = {
+export const DEFAULT_CONFIG = {
   arenaSize: 2000,
   quadSize: 20,
   borderPoints: 300,
@@ -41,3 +41,6 @@ export let DEFAULT_CONFIG = {
   font: "PT Sans Caption"
 };
 export var PALETTE = ["#3b5998", "#8b9dc3", "#2a4d69", "#4b86b4", "#8dbdff", "#64a1f4", "#3b7dd8", "#843b62", "#8874a3", "#8d5524", "#c68642", "#f1c27d", "#f77f00", "#fcbf49", "#ffe066", "#65737e", "#a7adba", "#4a7c59", "#1a936f", "#88d498", "#2a9d8f", "#68b0ab", "#99e550", "#6abe30", "#4b692f", "#8f974a", "#8a6f30", "#524b24", "#d62828", "#fe4a49", "#ed6a5a", "#ff3377", "#ff77aa", "#ff99cc", "#b23a48", "#fcb9b2"];
+
+/** Shape of the game config (DEFAULT_CONFIG plus the overrides applied in main.ts). */
+export type Config = typeof DEFAULT_CONFIG;
