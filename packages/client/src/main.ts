@@ -10,7 +10,7 @@ import { Game } from "@paperio/core/game/game";
 import { BOT_NAMES, NamePool } from "@paperio/core/game/names";
 import { ClassicScoreScheme, SchemesManager, TeamScoreScheme } from "@paperio/core/game/scoring";
 import { Bot, Player, Unit } from "@paperio/core/game/units";
-import type { ModeId } from "@paperio/core/modes/index";
+import { MODES } from "@paperio/core/modes/index";
 import { setPlatform } from "@paperio/core/platform";
 import { createElement, render } from "preact";
 import { ColoredPool, SkinManager } from "@paperio/core/skins/skin";
@@ -104,7 +104,7 @@ Promise.all([languagesRequest, skinsRequest]).then(([languagesFile, skinsList]) 
         createElement(App, {
           storage: localStorageJSON,
           skins: skinsList,
-          initialMode: modeParam === "teams" || modeParam === "classic" ? (modeParam satisfies ModeId) : undefined
+          initialMode: MODES.find(mode => mode.id === modeParam)?.id
         })
       )
     ),
