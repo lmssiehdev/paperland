@@ -472,28 +472,28 @@ export class Game {
     const baseClearanceSq = baseClearance * baseClearance;
     const trackClearance = spawnRadius + baseRadius * 2 * trackClearanceScale;
     const trackClearanceSq = trackClearance * trackClearance;
-    let y;
+    let spawnDistance;
     switch (zone) {
       case "near":
-        y = lerp(baseRadius * 12, baseRadius * 16, Math.random());
+        spawnDistance = lerp(baseRadius * 12, baseRadius * 16, Math.random());
         // zone "near" without an anchor returned above.
         origin = near!.position;
         break;
       case "bounds":
-        y = lerp(
+        spawnDistance = lerp(
           Math.max(0, radius - (spawnRadius + baseRadius * 10)),
           Math.max(0, radius - (spawnRadius + baseRadius * 4)),
           Math.random()
         );
         break;
       case "center":
-        y = lerp(0, radius / 3, Math.random());
+        spawnDistance = lerp(0, radius / 3, Math.random());
         break;
       default:
-        y = lerp(0, Math.max(0, radius - (spawnRadius + baseRadius)), Math.random());
+        spawnDistance = lerp(0, Math.max(0, radius - (spawnRadius + baseRadius)), Math.random());
         break;
     }
-    const offset = Vec2.alloc(0, y).rotate(Math.random() * Math.PI * 2);
+    const offset = Vec2.alloc(0, spawnDistance).rotate(Math.random() * Math.PI * 2);
     const candidate = origin.clone().add(offset);
     offset.release();
     if (candidate.distance(center) > radius - (spawnRadius + baseRadius)) {

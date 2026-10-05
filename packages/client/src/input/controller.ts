@@ -17,13 +17,13 @@ export interface KeyChord {
 }
 
 export class KeyboardModeSwitch {
-  mode2: boolean;
+  relativeSteering: boolean;
 
   constructor() {
-    this.mode2 = false;
+    this.relativeSteering = false;
   }
   get() {
-    return this.mode2;
+    return this.relativeSteering;
   }
   switch() {}
 }

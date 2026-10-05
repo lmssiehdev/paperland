@@ -10,7 +10,7 @@ export const readControllerInput: InputSource = (game, dt) => {
   if (game.controller.pressed()) {
     game.keyboard = { ...game.controller.mouse };
     const maxTurn = (TAU * dt) / 1000;
-    if (game.controller.keyboardModeSwitch.mode2) {
+    if (game.controller.keyboardModeSwitch.relativeSteering) {
       let turn = 0;
       if (game.controller.left) {
         turn = -1;
@@ -22,23 +22,23 @@ export const readControllerInput: InputSource = (game, dt) => {
         game.direction.rotate(turn * maxTurn);
       }
     } else {
-      const vec2 = new Vec2();
+      const keyDirection = new Vec2();
       if (game.controller.up) {
-        vec2.add(new Vec2(0, -1));
+        keyDirection.add(new Vec2(0, -1));
       }
       if (game.controller.down) {
-        vec2.add(new Vec2(0, 1));
+        keyDirection.add(new Vec2(0, 1));
       }
       if (game.controller.left) {
-        vec2.add(new Vec2(-1, 0));
+        keyDirection.add(new Vec2(-1, 0));
       }
       if (game.controller.right) {
-        vec2.add(new Vec2(1, 0));
+        keyDirection.add(new Vec2(1, 0));
       }
-      if (vec2.magnitude()) {
+      if (keyDirection.magnitude()) {
         let angle = Math.atan2(
-          game.direction.x * vec2.y - vec2.x * game.direction.y,
-          game.direction.x * vec2.x + game.direction.y * vec2.y
+          game.direction.x * keyDirection.y - keyDirection.x * game.direction.y,
+          game.direction.x * keyDirection.x + game.direction.y * keyDirection.y
         );
         if (Math.abs(angle) > maxTurn) {
           angle = Math.sign(angle) * maxTurn;

@@ -17,7 +17,7 @@ export const renderTerritoryImage: TerritoryImager = player => {
   const width = maxX - minX;
   const height = maxY - minY;
   const size = Math.max(width, height);
-  const vec2 = new Vec2(minX + width / 2, minY + height / 2);
+  const center = new Vec2(minX + width / 2, minY + height / 2);
   const imageSize = 500;
   const imageScale = (imageSize * 0.95) / size;
   const depth = imageSize / 100;
@@ -27,7 +27,7 @@ export const renderTerritoryImage: TerritoryImager = player => {
   // A fresh canvas always provides a 2D context.
   const ctx = canvas.getContext("2d")!;
   ctx.scale(imageScale, imageScale);
-  ctx.translate(imageSize / 2 / imageScale - vec2.x, imageSize / 2 / imageScale - vec2.y);
+  ctx.translate(imageSize / 2 / imageScale - center.x, imageSize / 2 / imageScale - center.y);
   ctx.translate(0, depth / imageScale);
   ctx.fillStyle = player.skin.colors.back;
   ctx.fill(player.base.polygon.path);

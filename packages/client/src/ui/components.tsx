@@ -156,12 +156,12 @@ const GameScreen = ({
       setResults(results);
       route("results");
     };
-    let skin2 = skin;
-    if (skin2 === "default" || skin2 === "No skin") {
-      skin2 = "";
+    let skinName = skin;
+    if (skinName === "default" || skinName === "No skin") {
+      skinName = "";
     }
     session.setMode(mode);
-    session.start({ name: nickName, skin: skin2, best: bestScore, onGameOver, extraLife: lastPercent });
+    session.start({ name: nickName, skin: skinName, best: bestScore, onGameOver, extraLife: lastPercent });
   }, []);
   return null;
 };
@@ -240,7 +240,7 @@ interface SkinPickerProps {
 }
 const SkinPicker = ({ skins, skin, menu, setSkin }: SkinPickerProps) => {
   const { t } = useI18n();
-  const index = skins.findIndex(skin2 => skin2.name === skin);
+  const index = skins.findIndex(candidate => candidate.name === skin);
   const [selectedIndex, setSelectedIndex] = useState(index > 0 ? index : 0);
   const selectSkin = (nextIndex: number) => {
     if (nextIndex >= 0 && nextIndex < skins.length) {

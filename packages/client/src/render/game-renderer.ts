@@ -97,14 +97,14 @@ const drawUnitName = (ctx: CanvasRenderingContext2D, unit: Unit, scale: number, 
 };
 const createCrownPath = () => {
   const path = new Path2D();
-  const k = 5;
-  path.moveTo(k * -3, k * -3);
-  path.lineTo(k * -1, k * -1);
-  path.lineTo(k * 0, k * -3);
-  path.lineTo(k * 1, k * -1);
-  path.lineTo(k * 3, k * -3);
-  path.lineTo(k * 2, k * 1);
-  path.lineTo(k * -2, k * 1);
+  const scale = 5;
+  path.moveTo(scale * -3, scale * -3);
+  path.lineTo(scale * -1, scale * -1);
+  path.lineTo(scale * 0, scale * -3);
+  path.lineTo(scale * 1, scale * -1);
+  path.lineTo(scale * 3, scale * -3);
+  path.lineTo(scale * 2, scale * 1);
+  path.lineTo(scale * -2, scale * 1);
   path.closePath();
   return path;
 };
@@ -130,28 +130,28 @@ const drawCrown = (ctx: CanvasRenderingContext2D, unit: Unit, scale: number, sca
 };
 const createSkullPath = () => {
   const path = new Path2D();
-  const k = 1.6;
-  path.moveTo(k * 0, k * -7);
-  path.lineTo(k * 5, k * -6);
-  path.lineTo(k * 7, k * -3);
-  path.lineTo(k * 6, k * 2);
-  path.lineTo(k * 4, k * 3);
-  path.lineTo(k * 3, k * 6);
-  path.lineTo(k * 0, k * 7);
-  path.lineTo(k * -3, k * 6);
-  path.lineTo(k * -4, k * 3);
-  path.lineTo(k * -6, k * 2);
-  path.lineTo(k * -7, k * -3);
-  path.lineTo(k * -5, k * -6);
+  const scale = 1.6;
+  path.moveTo(scale * 0, scale * -7);
+  path.lineTo(scale * 5, scale * -6);
+  path.lineTo(scale * 7, scale * -3);
+  path.lineTo(scale * 6, scale * 2);
+  path.lineTo(scale * 4, scale * 3);
+  path.lineTo(scale * 3, scale * 6);
+  path.lineTo(scale * 0, scale * 7);
+  path.lineTo(scale * -3, scale * 6);
+  path.lineTo(scale * -4, scale * 3);
+  path.lineTo(scale * -6, scale * 2);
+  path.lineTo(scale * -7, scale * -3);
+  path.lineTo(scale * -5, scale * -6);
   path.closePath();
-  path.arc(k * -3, k * -1, k * 2, 0, Math.PI * 2, true);
+  path.arc(scale * -3, scale * -1, scale * 2, 0, Math.PI * 2, true);
   path.closePath();
-  path.arc(k * 3, k * -1, k * 2, 0, Math.PI * 2, true);
+  path.arc(scale * 3, scale * -1, scale * 2, 0, Math.PI * 2, true);
   path.closePath();
-  path.moveTo(k * 0, k * 1);
-  path.lineTo(k * -2, k * 3);
-  path.lineTo(k * 0, k * 4);
-  path.lineTo(k * 2, k * 3);
+  path.moveTo(scale * 0, scale * 1);
+  path.lineTo(scale * -2, scale * 3);
+  path.lineTo(scale * 0, scale * 4);
+  path.lineTo(scale * 2, scale * 3);
   path.closePath();
   return path;
 };
@@ -435,13 +435,13 @@ const drawLeaderboard = (renderContext: RenderContext) => {
   if (renderContext.game.topListChanged) {
     renderContext.game.topListChanged = false;
     // A canvas always provides a 2d context.
-    const ctx2 = leaderboardCanvas.getContext("2d")!;
-    ctx2.save();
-    ctx2.clearRect(0, 0, leaderboardCanvas.width, leaderboardCanvas.height);
-    ctx2.translate(-ctx.canvas.width + leaderboardCanvas.width, 0);
-    ctx2.scale(1 / devicePixelRatio, 1 / devicePixelRatio);
-    renderLeaderboard(ctx2, renderContext);
-    ctx2.restore();
+    const leaderboardCtx = leaderboardCanvas.getContext("2d")!;
+    leaderboardCtx.save();
+    leaderboardCtx.clearRect(0, 0, leaderboardCanvas.width, leaderboardCanvas.height);
+    leaderboardCtx.translate(-ctx.canvas.width + leaderboardCanvas.width, 0);
+    leaderboardCtx.scale(1 / devicePixelRatio, 1 / devicePixelRatio);
+    renderLeaderboard(leaderboardCtx, renderContext);
+    leaderboardCtx.restore();
   }
   ctx.save();
   ctx.resetTransform();
@@ -463,7 +463,7 @@ const renderLeaderboard = (ctx: CanvasRenderingContext2D, renderContext: RenderC
   } = renderContext;
   let prevScoreWidth: number;
   const drawLeaderboardRow = (player: Unit, rank: string | number, i: number, topScore: number) => {
-    const padding2 = padding + i * (barHeight * 1.3);
+    const rowTop = padding + i * (barHeight * 1.3);
     const score = player.schemes.scores();
     let scoreWidth = halfBarWidth * (score / topScore);
     if (prevScoreWidth && scoreWidth > prevScoreWidth - halfBarWidth * 0.05) {
@@ -474,11 +474,11 @@ const renderLeaderboard = (ctx: CanvasRenderingContext2D, renderContext: RenderC
     let x = viewScreenWidth - rowWidth;
     const radii = [halfBarHeight, 0, 0, halfBarHeight];
     ctx.fillStyle = "#00000022";
-    fillRoundedRect(ctx, x + backHeight, padding2 + backHeight * 3, barWidth, barHeight, radii);
+    fillRoundedRect(ctx, x + backHeight, rowTop + backHeight * 3, barWidth, barHeight, radii);
     ctx.fillStyle = player.skin.colors.back;
-    fillRoundedRect(ctx, x, padding2 + backHeight, barWidth, barHeight, radii, strokeWidth);
+    fillRoundedRect(ctx, x, rowTop + backHeight, barWidth, barHeight, radii, strokeWidth);
     ctx.fillStyle = player.skin.colors.main;
-    fillRoundedRect(ctx, x, padding2, barWidth, barHeight, radii, strokeWidth);
+    fillRoundedRect(ctx, x, rowTop, barWidth, barHeight, radii, strokeWidth);
     const asset = player.skin.assets.find((asset: Asset) => asset.pool && asset.pool.name === "flags");
     const roundedFlag = asset && asset.content.roundedFlag;
     if (roundedFlag) {
@@ -486,7 +486,7 @@ const renderLeaderboard = (ctx: CanvasRenderingContext2D, renderContext: RenderC
       const flagMargin = barHeight / 4;
       const flagScale = flagSize / roundedFlag.height;
       ctx.save();
-      ctx.translate(x + flagMargin, padding2 + barHeight / 2);
+      ctx.translate(x + flagMargin, rowTop + barHeight / 2);
       ctx.scale(flagScale, flagScale);
       ctx.drawImage(roundedFlag, 0, -roundedFlag.height / 2);
       ctx.restore();
@@ -499,7 +499,7 @@ const renderLeaderboard = (ctx: CanvasRenderingContext2D, renderContext: RenderC
     ctx.fillText(
       rank + " – " + player.schemes.print() + " " + player.name,
       x + halfBarHeight,
-      padding2 + halfBarHeight * 1.1
+      rowTop + halfBarHeight * 1.1
     );
   };
   const unit = game.units[0];
@@ -531,19 +531,19 @@ const drawScoreBar = (renderContext: RenderContext) => {
     0
   ]);
   const bestRatio = game.best ? Math.min(1, player!.schemes.scores() / game.best) : 1;
-  const barWidth2 = barWidth * (0.25 + bestRatio * 0.75);
+  const bestBarWidth = barWidth * (0.25 + bestRatio * 0.75);
   ctx.fillStyle = player!.skin.colors.back;
   fillRoundedRect(
     ctx,
     0,
     padding + backHeight,
-    barWidth2,
+    bestBarWidth,
     barHeight,
     [0, halfBarHeight, halfBarHeight, 0],
     strokeWidth
   );
   ctx.fillStyle = player!.skin.colors.main;
-  fillRoundedRect(ctx, 0, padding, barWidth2, barHeight, [0, halfBarHeight, halfBarHeight, 0], strokeWidth);
+  fillRoundedRect(ctx, 0, padding, bestBarWidth, barHeight, [0, halfBarHeight, halfBarHeight, 0], strokeWidth);
   ctx.fillStyle = player!.skin.colors.plate;
   ctx.font = uiFont;
   ctx.textAlign = "left";
@@ -563,21 +563,21 @@ const drawBestScore = (renderContext: RenderContext) => {
 const drawKillCounter = (renderContext: RenderContext) => {
   // Only called from renderGame when game.player is set.
   const { game, ctx, scaler, padding, backHeight, barHeight, halfBarHeight, fontSize, uiFont } = renderContext;
-  const padding2 = padding + barHeight + backHeight + fontSize + padding / 2 + 4;
+  const counterTop = padding + barHeight + backHeight + fontSize + padding / 2 + 4;
   ctx.font = uiFont;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   const text = "x" + game.player!.statistics.kills;
   ctx.fillStyle = "#00000088";
-  fillRoundedRect(ctx, 0, padding2, barHeight * 1.5 + ctx.measureText(text).width, barHeight, [
+  fillRoundedRect(ctx, 0, counterTop, barHeight * 1.5 + ctx.measureText(text).width, barHeight, [
     0,
     halfBarHeight,
     halfBarHeight,
     0
   ]);
-  drawSkullIcon(ctx, (barHeight * 1.4) / 2, padding2 + barHeight / 2, scaler);
+  drawSkullIcon(ctx, (barHeight * 1.4) / 2, counterTop + barHeight / 2, scaler);
   ctx.fillStyle = "#ffffffcc";
-  ctx.fillText(text, barHeight * 1.25, padding2 + halfBarHeight + barHeight * 0.03);
+  ctx.fillText(text, barHeight * 1.25, counterTop + halfBarHeight + barHeight * 0.03);
 };
 const drawNotification = (renderContext: RenderContext) => {
   const {
@@ -601,8 +601,8 @@ const drawNotification = (renderContext: RenderContext) => {
     if (notification.ready) {
       ctx.save();
       ctx.font = uiFont;
-      const barHeight2 = fontSize * 2 + padding;
-      const padding2 = notification.position() * (barHeight2 + padding) - barHeight2;
+      const boxHeight = fontSize * 2 + padding;
+      const boxTop = notification.position() * (boxHeight + padding) - boxHeight;
       const textWidth = Math.max(
         ctx.measureText(notification.title).width,
         ctx.measureText(notification.description).width
@@ -611,7 +611,7 @@ const drawNotification = (renderContext: RenderContext) => {
       const barWidth = textWidth + padding * 5 + iconSize;
       const innerPadding = padding / 2;
       ctx.fillStyle = "#00000088";
-      fillRoundedRect(ctx, (viewScreenWidth - barWidth) / 2, padding2, barWidth, barHeight2, [
+      fillRoundedRect(ctx, (viewScreenWidth - barWidth) / 2, boxTop, barWidth, boxHeight, [
         (barHeight + backHeight) / 2,
         (barHeight + backHeight) / 2,
         (barHeight + backHeight) / 2,
@@ -625,7 +625,7 @@ const drawNotification = (renderContext: RenderContext) => {
       ctx.fillText(
         notification.title,
         (viewScreenWidth - barWidth) / 2 + barWidth / 2 + iconSize / 2,
-        padding2 + innerPadding
+        boxTop + innerPadding
       );
       ctx.fillStyle = "#ffffff88";
       ctx.shadowColor = "#ffffff88";
@@ -634,7 +634,7 @@ const drawNotification = (renderContext: RenderContext) => {
       ctx.fillText(
         notification.description,
         (viewScreenWidth - barWidth) / 2 + barWidth / 2 + iconSize / 2,
-        padding2 + innerPadding + fontSize
+        boxTop + innerPadding + fontSize
       );
       ctx.shadowColor = "#ffffff";
       ctx.shadowBlur = 10;
@@ -642,7 +642,7 @@ const drawNotification = (renderContext: RenderContext) => {
         ctx.drawImage(
           notification.image,
           (viewScreenWidth - barWidth) / 2 + innerPadding,
-          padding2 + innerPadding,
+          boxTop + innerPadding,
           iconSize,
           iconSize
         );

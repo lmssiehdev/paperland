@@ -44,11 +44,11 @@ export function renderDebugOverlay(game: Game) {
   if (game.debugGraph) {
     const graphWidth = view.width / 3;
     const graphHeight = 100;
-    const path = new Path2D();
-    const path2 = new Path2D();
-    const path3 = new Path2D();
-    const path4 = new Path2D();
-    path4.moveTo(0, 0);
+    const updatePath = new Path2D();
+    const renderPath = new Path2D();
+    const framePath = new Path2D();
+    const totalPath = new Path2D();
+    totalPath.moveTo(0, 0);
     let maxFrameTime = 16.67;
     game.metrics.forEach(metric => {
       maxFrameTime = Math.max(maxFrameTime, metric.frameTime);
@@ -61,12 +61,12 @@ export function renderDebugOverlay(game: Game) {
     ctx.fillStyle = "#00000033";
     ctx.fillRect(0, -graphHeight, graphWidth, graphHeight);
     game.metrics.forEach((metric, index) => {
-      path.lineTo(stepX * index, -metric.updateTime * scaleY);
-      path2.lineTo(stepX * index, -metric.renderTime * scaleY);
-      path4.lineTo(stepX * index, -(metric.updateTime + metric.renderTime) * scaleY);
-      path3.lineTo(stepX * index, -metric.frameTime * scaleY);
+      updatePath.lineTo(stepX * index, -metric.updateTime * scaleY);
+      renderPath.lineTo(stepX * index, -metric.renderTime * scaleY);
+      totalPath.lineTo(stepX * index, -(metric.updateTime + metric.renderTime) * scaleY);
+      framePath.lineTo(stepX * index, -metric.frameTime * scaleY);
     });
-    path4.lineTo(stepX * (game.metrics.length - 1), 0);
+    totalPath.lineTo(stepX * (game.metrics.length - 1), 0);
     ctx.lineWidth = 1;
     const targetFrameY = scaleY * 16.67;
     ctx.strokeStyle = "red";
@@ -75,13 +75,13 @@ export function renderDebugOverlay(game: Game) {
     ctx.lineTo(graphWidth, -targetFrameY);
     ctx.stroke();
     ctx.fillStyle = "#ffff00a0";
-    ctx.fill(path4);
+    ctx.fill(totalPath);
     ctx.strokeStyle = "#990099cc";
-    ctx.stroke(path);
+    ctx.stroke(updatePath);
     ctx.strokeStyle = "#009900cc";
-    ctx.stroke(path2);
+    ctx.stroke(renderPath);
     ctx.strokeStyle = "#0000ffcc";
-    ctx.stroke(path3);
+    ctx.stroke(framePath);
     ctx.lineWidth = 0.5;
     game.metrics.forEach((metric, index) => {
       const { returns, kills } = metric.events;
