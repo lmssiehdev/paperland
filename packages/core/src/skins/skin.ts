@@ -3,7 +3,6 @@ import { PALETTE } from "../config";
 import { hexToRgb, hsvLighten, hsvMulValue, hsvSetValue, hsvToHex, rgbToHsv } from "../engine/color";
 import type { Rng } from "../engine/math";
 import { createRng } from "../engine/math";
-import type { Game } from "../game/game";
 import type { Unit } from "../game/units";
 import type { ImageHandle, SkinAvatarHandle, SkinPatternHandle } from "../handles";
 import { SkinDisplay } from "./skin-display";
@@ -181,8 +180,6 @@ class SkinManagerBase {
   assets: Record<string, RegisteredAsset>;
   unusedAssets: Record<string, RegisteredAsset>;
   rng: Rng;
-  /** Assigned externally by api.ts after the Game is created. */
-  declare game?: Game;
 
   constructor(seed: number) {
     this.usedBy = {};
