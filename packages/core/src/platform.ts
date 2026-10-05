@@ -1,9 +1,9 @@
 import type { ImageHandle, PathHandle } from "./handles";
 
-/** Key-value persistence (client: cookies via js-cookie). */
+/** Key-value JSON persistence (client: localStorage, see client/src/storage.ts). */
 export interface PlatformStorage {
   getJSON<T>(key: string): T | undefined;
-  set(key: string, value: object, options: { expires: number }): void;
+  set(key: string, value: object): void;
 }
 
 /**
@@ -31,7 +31,7 @@ export const platform: Platform = {
   createPath: () => headlessPath,
   loadImage: (_url, done) => done(null),
   storage: {
-    // SAFETY: each key is read back as the type its single writer (AchievementStore) stored.
+    // SAFETY: each key is read back as the type its single writer stored.
     getJSON: <T>(key: string) => memoryStorage.get(key) as T | undefined,
     set: (key, value) => {
       memoryStorage.set(key, value);

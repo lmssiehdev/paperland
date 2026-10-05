@@ -34,7 +34,7 @@ packages/
              skins/skin (skin pools + manager, by name), handles.ts, platform.ts, headless.ts
   protocol/  wire format shared by client + server: bit-stream.ts (BitStream), messages.ts (MsgType,
              Join/Joined/Input/Update/Died, encode/decode)
-  client/    browser: public/ (index.html, style.css, self-hosted PT Sans Caption), main.ts (boot), session.ts (GameSession: warm-up, loop, mode, language), render/,
+  client/    browser: public/ (index.html, style.css, self-hosted PT Sans Caption), main.ts (boot), storage.ts (localStorage), session.ts (GameSession: warm-up, loop, mode, language), render/,
              ui/ (Preact JSX; useGameSession,
              i18n.tsx = I18nProvider + useI18n),
              input/ (mouse/keyboard), skins/ (artwork: display, image-skins), core-handles.ts
@@ -84,7 +84,7 @@ Core was cut from the browser code with the smallest seams that work; gameplay c
   widens them to the real types by declaration merging (`client/src/core-handles.ts`, e.g.
   `interface PathHandle extends Path2D {}`), so the renderer reads `polygon.path` as a `Path2D` unchanged.
 - `core/src/platform.ts`: `createPath()`, `loadImage()`, `storage` with headless defaults (no-op path,
-  no images, in-memory storage). `client/src/main.ts` installs `Path2D`, `Image` and js-cookie via `setPlatform()`.
+  no images, in-memory storage). `client/src/main.ts` installs `Path2D`, `Image` and localStorage JSON (`storage.ts`, migrates the old cookies) via `setPlatform()`.
 - `GameHooks` (`renderer`, `input`, `territoryImage`, `requestFrame`), passed to `createGame()` by
   `client/src/session.ts`:
   `input` (`readInput()` delegates to it; body in `client/src/input/read-input.ts`), `territoryImage`

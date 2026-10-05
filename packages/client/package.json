@@ -6,11 +6,7 @@
   "dependencies": {
     "@paperio/core": "workspace:*",
     "@paperio/protocol": "workspace:*",
-    "js-cookie": "2",
     "preact": "^11.0.0"
-  },
-  "devDependencies": {
-    "@types/js-cookie": "2"
   },
   "scripts": {
     "build": "bun build src/main.ts --format=iife --define __DEV__=false --outfile dist/app2.js",

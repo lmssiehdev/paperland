@@ -4,19 +4,14 @@ import type { StateUpdater, Dispatch } from "preact/hooks";
 import type { GameResult } from "@paperio/core/game/game";
 import { MODES } from "@paperio/core/modes/index";
 import type { ModeId } from "@paperio/core/modes/index";
+import type { PlatformStorage } from "@paperio/core/platform";
 import { useI18n } from "./i18n";
 import { useGameSession } from "./session-context";
 
 /** Screens the root App can show. */
 export type Route = "menu" | "game" | "results" | "skins";
 
-/** Cookie storage (the js-cookie default export); only the methods the UI calls. */
-export interface CookieStorage {
-  getJSON<T>(name: string): T | undefined;
-  set(name: string, value: object, options?: { expires?: number }): void;
-}
-
-/** Persisted UI state in the "paper.io.storage" cookie. */
+/** Persisted UI state under the "paper.io.storage" key. */
 interface StoredProfile {
   nickName?: string;
   bestScore?: number;
@@ -289,7 +284,7 @@ const SkinsScreen = ({ skins, skin, route, setSkin }: SkinsScreenProps) => {
   );
 };
 export interface AppProps {
-  storage: CookieStorage;
+  storage: PlatformStorage;
   skins: SkinInfo[];
   /** Mode preselected in the menu (dev: ?mode=); default classic. */
   initialMode?: ModeId;
@@ -307,19 +302,12 @@ export const App = ({ storage, skins, initialMode = "classic" }: AppProps) => {
   const [bestScore, setBestScore] = useState(stored.bestScore || 0);
   const [skin, setSkin] = useState(stored.skin || "");
   const [mode, setMode] = useState<ModeId>(initialMode);
-  const cookieOptions = {
-    expires: 365
-  };
   if (nickName !== stored.nickName || bestScore !== stored.bestScore || skin !== stored.skin) {
-    storage.set(
-      storageKey,
-      {
-        nickName: nickName,
-        bestScore: bestScore,
-        skin: skin
-      },
-      cookieOptions
-    );
+    storage.set(storageKey, {
+      nickName: nickName,
+      bestScore: bestScore,
+      skin: skin
+    });
   }
   useEffect(() => {
     const unsubscribe = session.subscribe(setSessionState);

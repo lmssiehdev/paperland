@@ -4,7 +4,7 @@ import { platform } from "../platform";
 import type { Game } from "./game";
 import type { Player, Unit } from "./units";
 
-/** Cookie map of completed challenge ids ("c13", "geraldquest1", ...). */
+/** Stored map of completed challenge ids ("c13", "geraldquest1", ...). */
 export type ChallengeFlags = Record<string, boolean>;
 
 /** Progress tracker created per run for an unearned achievement. */
@@ -169,10 +169,7 @@ export class AchievementStore {
     }));
     const storage: AchievementStorage = platform.storage.getJSON(this.storageName) || {};
     storage.achievements = achievements;
-    const cookieOptions = {
-      expires: 365
-    };
-    platform.storage.set(this.storageName, storage, cookieOptions);
+    platform.storage.set(this.storageName, storage);
     const challenges: ChallengeFlags = platform.storage.getJSON("paperio_challenges") || {};
     const saveChallenge = (challengeId: string, achievementName: string) => {
       const achievement = this.achievements.find(achievement => achievement.name === achievementName);
@@ -187,7 +184,7 @@ export class AchievementStore {
     saveChallenge("sanitizerquest", "sanitizer");
     saveChallenge("doctorquest", "doctor");
     saveChallenge("covidquest", "covid");
-    platform.storage.set("paperio_challenges", challenges, cookieOptions);
+    platform.storage.set("paperio_challenges", challenges);
   }
 }
 export class AchievementsProfile {

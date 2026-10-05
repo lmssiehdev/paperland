@@ -12,10 +12,10 @@ import { ClassicScoreScheme, SchemesManager, TeamScoreScheme } from "@paperio/co
 import { Bot, Player, Unit } from "@paperio/core/game/units";
 import type { ModeId } from "@paperio/core/modes/index";
 import { setPlatform } from "@paperio/core/platform";
-import Cookies from "js-cookie";
 import { createElement, render } from "preact";
 import { ColoredPool, SkinManager } from "@paperio/core/skins/skin";
 import { GameSession } from "./session";
+import { localStorageJSON } from "./storage";
 import { ClassicSkinPool, createColorAvatar } from "./skins/image-skins";
 import type { SkinConfig } from "./skins/image-skins";
 import { App } from "./ui/components";
@@ -54,7 +54,7 @@ setPlatform({
     image.onerror = () => done(null);
     image.src = url;
   },
-  storage: Cookies
+  storage: localStorageJSON
 });
 // Dev-only URL overrides: ?seed=<number> fixes every game's seed, ?mode=<id> preselects a mode.
 const params = __DEV__ ? new URLSearchParams(location.search) : null;
@@ -102,7 +102,7 @@ Promise.all([languagesRequest, skinsRequest]).then(([languagesFile, skinsList]) 
           onChange: language => session.setLanguage(language.lng)
         },
         createElement(App, {
-          storage: Cookies,
+          storage: localStorageJSON,
           skins: skinsList,
           initialMode: modeParam === "teams" || modeParam === "classic" ? (modeParam satisfies ModeId) : undefined
         })

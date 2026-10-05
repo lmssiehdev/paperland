@@ -16,7 +16,7 @@ const allowed: Record<string, string[]> = {
 const external: Record<string, RegExp> = {
   core: /^$/,
   protocol: /^$/,
-  client: /^(preact|preact\/hooks|preact\/jsx-runtime|js-cookie)$/,
+  client: /^(preact|preact\/hooks|preact\/jsx-runtime)$/,
   server: /^(elysia|@elysiajs\/eden|bun|bun:test|node:.*)$/
 };
 
