@@ -1,7 +1,13 @@
 import { Elysia, t } from "elysia";
 import { ProtocolError } from "@paperio/protocol/bit-stream";
-import { JoinedMsg, MsgType, PROTOCOL_VERSION, decodeClientMessages, encodeMessages } from "@paperio/protocol/messages";
-import type { ClientMessage, ServerMessage } from "@paperio/protocol/messages";
+import {
+  JoinedMsg,
+  MsgType,
+  PROTOCOL_VERSION,
+  decodeClientMessages,
+  encodeMessages
+} from "@paperio/protocol/messages/index";
+import type { ClientMessage, ServerMessage } from "@paperio/protocol/messages/index";
 import type { RoomManager } from "./rooms";
 
 /** Close codes (4000-4999 are free for applications). */

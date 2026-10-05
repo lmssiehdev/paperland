@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { decodeServerMessages, encodeMessages, UpdateMsg } from "@paperio/protocol/messages";
+import { decodeServerMessages, encodeMessages, UpdateMsg } from "@paperio/protocol/messages/index";
 import { loadGameData } from "../src/game-data";
 import { Room } from "../src/room";
 

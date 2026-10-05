@@ -3,7 +3,7 @@ import type { Game } from "@paperio/core/game/game";
 import type { Unit } from "@paperio/core/game/units";
 import { createHeadlessGame } from "@paperio/core/headless";
 import type { ModeId } from "@paperio/core/modes/index";
-import { UpdateMsg } from "@paperio/protocol/messages";
+import { UpdateMsg } from "@paperio/protocol/messages/index";
 import type { GameData } from "./game-data";
 
 export interface RoomOptions {

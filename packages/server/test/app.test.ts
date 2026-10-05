@@ -7,8 +7,8 @@ import {
   UpdateMsg,
   decodeServerMessages,
   encodeMessages
-} from "@paperio/protocol/messages";
-import type { ServerMessage } from "@paperio/protocol/messages";
+} from "@paperio/protocol/messages/index";
+import type { ServerMessage } from "@paperio/protocol/messages/index";
 import { createApp } from "../src/app";
 import type { App } from "../src/app";
 import { loadGameData } from "../src/game-data";

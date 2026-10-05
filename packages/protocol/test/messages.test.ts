@@ -13,7 +13,7 @@ import {
   decodeClientMessages,
   decodeServerMessages,
   encodeMessages
-} from "../src/messages";
+} from "../src/messages/index";
 
 const posStep = Limits.MaxPosition / (2 ** Limits.PositionBits - 1);
 const pctStep = 1 / (2 ** Limits.PercentBits - 1);

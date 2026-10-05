@@ -9,7 +9,7 @@ const FindRequestSchema = t.Object({
 });
 const FindResponseSchema = t.Object({
   roomId: t.String(),
-  /** WebSocket path to connect to, e.g. "/play?room=<id>". Binary frames, see @paperio/protocol/messages. */
+  /** WebSocket path to connect to, e.g. "/play?room=<id>". Binary frames, see @paperio/protocol/messages/. */
   wsPath: t.String()
 });
 

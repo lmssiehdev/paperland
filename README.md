@@ -32,8 +32,9 @@ packages/
   core/      THE GAME, headless: config, engine/ (geometry, grid, vec2, color), game/ (Game loop/rules,
              units, base, track, scoring, achievements, particles state, names), ai/, modes/,
              skins/skin (skin pools + manager, by name), handles.ts, platform.ts, headless.ts
-  protocol/  wire format shared by client + server: bit-stream.ts (BitStream), messages.ts (MsgType,
-             Join/Joined/Input/Update/Died, encode/decode)
+  protocol/  wire format shared by client + server: bit-stream.ts (BitStream), messages/ (shared.ts:
+             MsgType + limits, one file per Join/Joined/Input/Update/Died, codec.ts: encode/decode,
+             index.ts barrel imported as `@paperio/protocol/messages/index`)
   client/    browser: public/ (index.html, style.css, self-hosted PT Sans Caption), main.ts (boot), storage.ts (localStorage), session.ts (GameSession: warm-up, loop, mode, language), render/,
              ui/ (Preact JSX; useGameSession,
              i18n.tsx = I18nProvider + useI18n),
@@ -126,7 +127,7 @@ keeps plain `LanguageStrings` on `game.language`, and the provider's `onChange` 
     used for the JSON HTTP API only.
   - If a JSON control channel is ever needed, give it its own Elysia `t` schema (a union with
     `t.Uint8Array()`), and Eden can then type it.
-- Messages (`protocol/src/messages.ts`): one-byte `MsgType` (append-only, `Join = 1`), fields packed by
+- Messages (`protocol/src/messages/`): one-byte `MsgType` (append-only, `Join = 1`), fields packed by
   `BitStream`, each message byte-aligned, several per frame. `InputMsg.angle` uses core's own
   `Game.angle` quantization (0..253). Phase 1: Join -> Joined + one full `UpdateMsg` snapshot; inputs
   are decoded and ignored; no players, culling or prediction yet.
