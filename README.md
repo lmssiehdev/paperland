@@ -33,7 +33,7 @@ packages/
              units, base, track, scoring, achievements, particles state, names), ai/, modes/,
              skins/skin (skin pools + manager, by name), handles.ts, platform.ts, headless.ts
   protocol/  wire format shared by client + server: bit-stream.ts (BitStream), messages.ts (MsgType,
-             Join/Joined/Input/Update/Died, encode/decode), api.ts (HTTP JSON shapes)
+             Join/Joined/Input/Update/Died, encode/decode)
   client/    browser: public/ (index.html, style.css, self-hosted PT Sans Caption), main.ts (boot), session.ts (GameSession: warm-up, loop, mode, language), render/,
              ui/ (Preact JSX; useGameSession,
              i18n.tsx = I18nProvider + useI18n),
@@ -67,8 +67,10 @@ server -> protocol -> core
 
 - core imports nothing outside core (no npm packages either).
 - protocol imports only core.
-- client never imports server; server never imports client. The browser types its HTTP calls with
-  `@paperio/protocol/api`, not with the server's Elysia app type.
+- client never imports server; server never imports client. The HTTP API's shapes live only in the
+  server's Elysia `t` schemas (`server/src/api.ts`); Eden Treaty reads them from `App`. Nothing in the
+  browser calls `/api/*` today; if it does, a type-only `import type { App }` is the way (it adds nothing
+  to the bundle) and this rule must allow it.
 - e2e may import anything (it is the cross-package test bench).
 
 `packages/e2e/test/dependency-rules.test.ts` checks this on every import, as part of `bun test`.
@@ -109,8 +111,7 @@ keeps plain `LanguageStrings` on `game.language`, and the provider's `onChange` 
 ## Server and protocol
 
 - `POST /api/find` `{ mode? }` -> `{ roomId, wsPath }`. Elysia `t` schemas validate it and give Eden
-  Treaty its types; a compile-time assertion keeps them equal to the plain interfaces in
-  `@paperio/protocol/api`.
+  Treaty its types; they are the only declaration of these shapes.
 - `ws /play?room=<id>`: binary frames only. Elysia types the socket from its schemas (`query` ->
   `ws.data.query`, `body` -> the `message` argument, `response` -> `ws.send`), but its JSON-oriented
   pipeline does not fit binary: text frames are JSON-parsed, `ws.send()` JSON-stringifies anything that
