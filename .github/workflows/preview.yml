@@ -1,0 +1,106 @@
+name: Preview
+
+# Per-PR preview on Cloudflare Workers (static assets only: the game runs fully in the browser).
+# Add the "preview" label to deploy; every new commit redeploys and edits the same comment.
+# Closing/merging the PR or removing the label deletes the worker.
+
+on:
+  pull_request:
+    types: [labeled, unlabeled, synchronize, reopened, closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+# Explicit bash = -eo pipefail, so `wrangler ... | tee` fails when wrangler does.
+defaults:
+  run:
+    shell: bash
+
+env:
+  WORKER: paperland-pr-${{ github.event.pull_request.number }}
+  WRANGLER: wrangler@4.147.0
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+  GH_TOKEN: ${{ github.token }}
+  PR: ${{ github.event.pull_request.number }}
+  MARKER: "<!-- paperland-preview -->"
+
+jobs:
+  deploy:
+    name: Deploy preview
+    # Same-repo PRs only: forks get no secrets. A label added by someone else must be "preview" itself.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.action != 'closed' && github.event.action != 'unlabeled' &&
+      contains(github.event.pull_request.labels.*.name, 'preview') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'preview')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      # Dev bundle: ?seed=, ?mode= and debug keys work in the preview.
+      - run: bun run build:site
+      - name: Deploy
+        id: deploy
+        run: |
+          bunx "$WRANGLER" deploy --name "$WORKER" --assets packages/client/dist/site \
+            --compatibility-date 2026-10-01 | tee deploy.log
+          url=$(grep -oE 'https://[^ ]+\.workers\.dev' deploy.log | head -1)
+          test -n "$url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      # New assets take a few seconds to reach the edge.
+      - name: Wait until live
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          for _ in $(seq 60); do
+            curl --silent --fail --output /dev/null "$URL/app2.js" && exit 0
+            sleep 2
+          done
+          echo "$URL did not come up in 2 minutes"
+          exit 1
+      - name: Comment
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          body="$MARKER
+          ### 🗺️ Preview
+          **$URL**
+
+          Commit ${SHA:0:7}. Dev build: try \`$URL/?mode=teams\` or \`$URL/?seed=42\`.
+          Removed when this PR is closed or the \`preview\` label is removed."
+          .github/scripts/sticky-comment.sh "$body"
+
+  cleanup:
+    name: Delete preview
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      ((github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'preview')) ||
+      (github.event.action == 'unlabeled' && github.event.label.name == 'preview'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Delete worker
+        run: |
+          if bunx "$WRANGLER" delete --name "$WORKER" --force 2>&1 | tee delete.log; then exit 0; fi
+          # Already gone (e.g. the deploy never ran) is fine.
+          grep -q 'does not exist' delete.log
+      - name: Comment
+        run: |
+          .github/scripts/sticky-comment.sh "$MARKER
+          ### 🗺️ Preview
+          Deleted."

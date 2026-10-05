@@ -22,6 +22,7 @@
   "scripts": {
     "build": "bun run --filter @paperio/client build",
     "build:dev": "bun run --filter @paperio/client build:dev",
+    "build:site": "bun run build:dev && rm -rf packages/client/dist/site && mkdir -p packages/client/dist/site && cp -R original/. packages/client/public/. packages/client/dist/app2.js packages/client/dist/site/",
     "dev": "bun packages/server/src/dev.ts",
     "serve": "bun packages/server/src/index.ts",
     "mirror": "bun packages/e2e/src/mirror.ts",
