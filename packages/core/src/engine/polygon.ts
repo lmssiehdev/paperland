@@ -1,5 +1,6 @@
 import { EPSILON, isZero, pointInPolygon } from "./math";
 import { Segment } from "./segment";
+import { cos, sin } from "./trig";
 import { Vec2 } from "./vec2";
 import { CELL_RADIUS, CELL_RADIUS_SQ } from "../game/constants";
 import type { Bounds, Polyline } from "./polyline";
@@ -239,7 +240,7 @@ export const circlePoints = (point: Vec2, baseCount: number, baseRadius: number)
   const step = fullTurn / baseCount;
   const result: Vec2[] = [];
   for (let i = 0; i < fullTurn - EPSILON; i += step) {
-    result.push(new Vec2(point.x + Math.cos(i) * baseRadius, point.y + Math.sin(i) * baseRadius));
+    result.push(new Vec2(point.x + cos(i) * baseRadius, point.y + sin(i) * baseRadius));
   }
   return result;
 };

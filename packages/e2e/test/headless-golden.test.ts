@@ -1,7 +1,6 @@
 // Proves core is headless AND behavior-identical to the browser build: bundles core's golden scenario
 // (no client code, no page, no DOM) and runs it inside Playwright's Chromium on about:blank. It must give
-// the browser golden hash. In Bun the same code gives a different hash only because JSC's sin/cos/atan2
-// differ from V8's by 1 ulp (see core/test/golden.test.ts).
+// the browser golden hash, as Bun does too (core/test/golden.test.ts): core's trig is engine-independent.
 import { expect, test } from "bun:test";
 import { chromium } from "playwright";
 import { BROWSER_GOLDEN_HASH, loadGoldenSetup } from "../../core/test/golden-scenario";

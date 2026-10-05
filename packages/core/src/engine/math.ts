@@ -1,6 +1,8 @@
+import * as trig from "./trig";
 import { Vec2 } from "./vec2";
 
-export const EPSILON = Math.pow(2, -26);
+/** 2^-26, written out: Math.pow (and **) may be approximated differently by each engine. */
+export const EPSILON = 1.4901161193847656e-8;
 export const isZero = (distance: number): boolean => Math.abs(distance) <= EPSILON;
 export const nearlyEqual = (a: number, b: number): boolean => Math.abs(a - b) <= EPSILON;
 export const lerp = (from: number, to: number, t: number): number => from + (to - from) * t;
@@ -80,13 +82,13 @@ export function fmt2(value: number): string {
   return value.toFixed(2);
 }
 export const TAU = Math.PI * 2;
-const BASE_ANGLE_COS = Math.cos(0);
-const BASE_ANGLE_SIN = Math.sin(0);
+const BASE_ANGLE_COS = trig.cos(0);
+const BASE_ANGLE_SIN = trig.sin(0);
 /** Number of per-frame metrics kept for the debug graph (Game.metrics). */
 export const METRICS_HISTORY_LENGTH = 240;
 export const vecFromAngle = (direction: number): Vec2 => {
-  const cos = Math.cos(direction);
-  const sin = Math.sin(direction);
+  const cos = trig.cos(direction);
+  const sin = trig.sin(direction);
   const x = BASE_ANGLE_COS * cos - BASE_ANGLE_SIN * sin;
   const y = BASE_ANGLE_COS * sin + BASE_ANGLE_SIN * cos;
   return Vec2.alloc(x, y);

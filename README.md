@@ -158,11 +158,26 @@ behavior-identical. Ads, analytics, the score upload and the domain lock are rem
 The same scenario runs headless (`core/test/golden-scenario.ts`):
 - `e2e/test/headless-golden.test.ts` bundles core alone (no client code, no page) and runs it in
   Playwright's Chromium: `11a98dae6745f942`, identical to the browser golden.
-- `core/test/golden.test.ts` runs it in Bun: `e969d562c614ced4`, deterministic. It differs only because
-  JavaScriptCore's `Math.sin/cos/atan2` differ from V8's in the last bit: on this run's inputs 5024/198153
-  `sin`, 5544/198153 `cos` and 757/70326 `atan2` results are 1 ulp off from Chromium 153 (Node 22's V8
-  differs from Chromium by 1 ulp too), and the sim amplifies that. The browser hash is thus tied to the
-  Chromium build; a server sim is deterministic per runtime but will not bit-match browsers.
+- `core/test/golden.test.ts` runs it in Bun: `11a98dae6745f942` too.
+
+### Engine-independent trig (`core/src/engine/trig.ts`)
+
+The spec lets engines approximate `Math.sin/cos/atan2/pow/...`: JavaScriptCore's (Bun, Safari) differ from
+V8's in the last bit (1 ulp) on ~2.5% of the game's inputs, Node 22's V8 differed from Chromium too, and the
+sim amplifies that (Bun used to give `e969d562c614ced4`). So core never calls them:
+
+- `trig.ts` `sin`, `cos`, `atan2` are TypeScript ports of what V8 15.3 (Chromium 153, Playwright 1.63)
+  runs: LLVM libc (`third_party/llvm-libc` @ 20fd93c3, `src/__support/math/{sin,cos,atan2}.h`), using
+  only IEEE double ops and bit access (little-endian host). sin/cos are correctly rounded upstream;
+  atan2 is not, so the port follows the FMA variant arm64 Chromium runs (software fma).
+  Tables: `trig-tables.ts`, the C hex literals verbatim. License: Apache-2.0 WITH LLVM-exception.
+- `e2e/test/trig-bit-exact.test.ts`: 0 mismatches against Chromium's native `Math.*` on 5.08M (sin, cos)
+  and 5.16M (atan2) inputs (`core/test/trig-inputs.ts`). `core/test/trig.test.ts` reproduces Chromium's
+  output hashes (`trig-fixture.ts`) in Bun.
+- `.oxlintrc.json` bans `Math.sin/cos/tan/atan2/pow/exp/log/hypot/...` in `packages/core/src`.
+- Client rendering may keep native `Math.*` (it does not feed the sim).
+- If a future Chromium changes its libm, its browser build would drift from this frozen port: the parity
+  test against the original game would then show it.
 
 Property renames went through `scripts/rename-props.ts` (TS language service, type-linked; still
 points at the old `src/` layout).

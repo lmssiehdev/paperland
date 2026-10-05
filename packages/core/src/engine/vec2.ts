@@ -1,4 +1,5 @@
 import { nearlyEqual } from "./math";
+import * as trig from "./trig";
 import type { Segment } from "./segment";
 import type { GridCell, SpatialGrid } from "./spatial-grid";
 
@@ -99,14 +100,14 @@ export class Vec2 {
   }
   rotate(rotation: number): this {
     const { x, y } = this;
-    const cos = Math.cos(rotation);
-    const sin = Math.sin(rotation);
+    const cos = trig.cos(rotation);
+    const sin = trig.sin(rotation);
     this.x = x * cos - y * sin;
     this.y = x * sin + y * cos;
     return this;
   }
   angle(point: Vec2): number {
-    return Math.atan2(this.cross(point), this.dot(point));
+    return trig.atan2(this.cross(point), this.dot(point));
   }
   invert(): this {
     return this.mulScalar(-1);

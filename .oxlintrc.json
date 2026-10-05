@@ -43,6 +43,119 @@
       "rules": { "anti-slop/require-safety-comment-for-type-assertion": "off" }
     },
     {
+      // The simulation must be bit-identical in every JS engine (golden hashes, client vs server). The spec lets
+      // engines approximate these Math functions (JavaScriptCore and V8 differ in the last bit), so core uses
+      // engine/trig.ts for sin/cos/atan2 and none of the others. sqrt, abs, floor, round, min, max... are exact.
+      "files": ["packages/core/src/**"],
+      "rules": {
+        "no-restricted-properties": [
+          "error",
+          { "object": "Math", "property": "sin", "message": "Use engine/trig.ts (bit-identical in every JS engine)." },
+          { "object": "Math", "property": "cos", "message": "Use engine/trig.ts (bit-identical in every JS engine)." },
+          {
+            "object": "Math",
+            "property": "tan",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "asin",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "acos",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "atan",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "atan2",
+            "message": "Use engine/trig.ts (bit-identical in every JS engine)."
+          },
+          {
+            "object": "Math",
+            "property": "sinh",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "cosh",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "tanh",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "asinh",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "acosh",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "atanh",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "exp",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "expm1",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "log",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "log1p",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "log2",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "log10",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "pow",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "cbrt",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          },
+          {
+            "object": "Math",
+            "property": "hypot",
+            "message": "Engine-dependent (spec allows approximation): the simulation must be bit-identical across JS engines."
+          }
+        ]
+      }
+    },
+    {
       // Ports of C floating-point code: reading and writing IEEE-754 bit fields is the point.
       "files": [
         "packages/core/src/engine/trig.ts",

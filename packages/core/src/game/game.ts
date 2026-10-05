@@ -11,6 +11,7 @@ import {
 } from "../engine/math";
 import { Polygon, circlePoints } from "../engine/polygon";
 import { Segment } from "../engine/segment";
+import { atan2 } from "../engine/trig";
 import { Vec2 } from "../engine/vec2";
 import { AchievementsProfile, AchievementStore } from "./achievements";
 import { Base } from "./base";
@@ -772,7 +773,7 @@ export class Game {
     }
     point.mulScalar((unitSpeed * dt) / 1000);
     const heading = vecFromAngle(unit.direction);
-    let angle = Math.atan2(heading.x * point.y - point.x * heading.y, heading.dot(point));
+    let angle = atan2(heading.x * point.y - point.x * heading.y, heading.dot(point));
     heading.release();
     const maxTurn = (TAU * dt) / 1000 / (unit.smoothness || 1);
     if (Math.abs(angle) > maxTurn) {
@@ -788,14 +789,14 @@ export class Game {
       const vector = segment.vector;
       if (intersections.length === 2) {
         const firstEdge = intersections[0].segment.vector;
-        const angle = Math.atan2(vector.x * firstEdge.y - firstEdge.x * vector.y, vector.dot(firstEdge));
+        const angle = atan2(vector.x * firstEdge.y - firstEdge.x * vector.y, vector.dot(firstEdge));
         hit = angle > 0 ? intersections[0] : intersections[1];
       } else {
         hit = intersections[0];
       }
       const { segment: wallSegment, point } = hit;
       const wall = wallSegment.vector;
-      const angle = Math.atan2(vector.x * wall.y - wall.x * vector.y, vector.dot(wall));
+      const angle = atan2(vector.x * wall.y - wall.x * vector.y, vector.dot(wall));
       if (angle < 0) {
         break;
       }
@@ -875,7 +876,7 @@ export class Game {
     if (!this.isTest) {
       this.readInput(dt);
     }
-    this.angle = Math.round((Math.atan2(this.direction.y, this.direction.x) / Math.PI) * 127 + 254) % 254;
+    this.angle = Math.round((atan2(this.direction.y, this.direction.x) / Math.PI) * 127 + 254) % 254;
     console.assert(this.angle >= 0 && this.angle < 256);
     if (this.replaying) {
       if (!this.replaying.read()) {

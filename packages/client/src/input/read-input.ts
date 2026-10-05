@@ -1,4 +1,5 @@
 import { TAU } from "@paperio/core/engine/math";
+import { atan2 } from "@paperio/core/engine/trig";
 import { Vec2 } from "@paperio/core/engine/vec2";
 import type { InputSource } from "@paperio/core/game/game";
 
@@ -36,7 +37,9 @@ export const readControllerInput: InputSource = (game, dt) => {
         keyDirection.add(new Vec2(1, 0));
       }
       if (keyDirection.magnitude()) {
-        let angle = Math.atan2(
+        // Core's atan2, not Math.atan2: this steers game.direction (simulation state), which must not depend on
+        // the browser's JS engine.
+        let angle = atan2(
           game.direction.x * keyDirection.y - keyDirection.x * game.direction.y,
           game.direction.x * keyDirection.x + game.direction.y * keyDirection.y
         );
