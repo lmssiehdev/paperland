@@ -34,7 +34,7 @@ packages/
              skins/skin (skin pools + manager, by name), handles.ts, platform.ts, headless.ts
   protocol/  wire format shared by client + server: bit-stream.ts (BitStream), messages.ts (MsgType,
              Join/Joined/Input/Update/Died, encode/decode), api.ts (HTTP JSON shapes)
-  client/    browser: main.ts (boot), session.ts (GameSession: warm-up, loop, mode, language), render/,
+  client/    browser: public/ (index.html, style.css, self-hosted PT Sans Caption), main.ts (boot), session.ts (GameSession: warm-up, loop, mode, language), render/,
              ui/ (Preact JSX; useGameSession,
              i18n.tsx = I18nProvider + useI18n),
              input/ (mouse/keyboard), skins/ (artwork: display, image-skins), core-handles.ts
@@ -44,7 +44,7 @@ packages/
   e2e/       Playwright + cross-package: src/ golden, parity, smoke, autopilot, check-teams, stress-teams,
              mirror (research mirror of paperio.site);
              test/ headless golden in Chromium, dependency rules
-original/    files extracted from the HAR (+ 8 missing skins); the server serves the page from here
+original/    files extracted from the HAR (+ 8 missing skins); assets are served from here, the page is client/public
 deob/        intermediate: stage1 (strings), stage2 (webcrack), game.js (renamed)
 modes/       captured Teams / Battle Royale / multiplayer builds and analyses
 scripts/     the historical deobfuscation pipeline (targets the old src/ layout)

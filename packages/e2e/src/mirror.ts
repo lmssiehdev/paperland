@@ -34,7 +34,10 @@ const cleanHtml = (html: string) =>
     .replace(/<script type="text\/javascript" >[\s\S]*?ym\([\s\S]*?<\/script>/, "")
     .replace("<head>", "<head>" + AD_STUBS);
 
-const classicHtml = cleanHtml(await file("original/index.html").text());
+// Our build gets our own page (packages/client/public); original builds still expect the original page's globals.
+const OUR_PAGE = "packages/client/public/";
+const classicHtml =
+  GAME_JS === "src" ? await file(OUR_PAGE + "index.html").text() : cleanHtml(await file("original/index.html").text());
 const html = (body: string) => new Response(body, { headers: { "content-type": "text/html" } });
 
 export async function siteFetch(req: Request): Promise<Response> {
@@ -61,6 +64,9 @@ export async function siteFetch(req: Request): Promise<Response> {
   }
 
   if (pathname === "/") return html(classicHtml);
+  if (GAME_JS === "src" && (pathname === "/style.css" || pathname.startsWith("/assets/fonts/"))) {
+    return new Response(file(OUR_PAGE + pathname.slice(1)));
+  }
   if (pathname === "/app2.js") return new Response(file(process.env.GAME_JS_PATH ?? JS_PATHS[GAME_JS]!));
   const asset = file(`original${pathname}`);
   if (await asset.exists()) return new Response(asset);

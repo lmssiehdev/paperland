@@ -28,6 +28,14 @@ await page.goto(url);
 await page.waitForFunction(() => (window as any).paperio2api, null, { timeout: 15000 });
 const apiKeys = await page.evaluate(() => Object.keys((window as any).paperio2api));
 await page.waitForSelector("#play");
+// The self-hosted UI font must actually load (no Google Fonts).
+const fontLoaded = await page.evaluate(async () => {
+  await document.fonts.ready;
+  await document.fonts.load("700 16px 'PT Sans Caption'");
+  return [...document.fonts].some(
+    font => font.family.replace(/["']/g, "") === "PT Sans Caption" && font.status === "loaded"
+  );
+});
 const menu = await page.evaluate(() => ({
   nick: !!document.getElementById("nick"),
   play: document.getElementById("play")?.textContent ?? null,
@@ -108,7 +116,17 @@ const teams = await page.evaluate(() => {
   return { mode: game.mode.id as string, teams: game.mode.teams.length as number, playerTeam: !!game.player.team };
 });
 const teamsOk = teams.mode === "teams" && teams.teams > 0 && teams.playerTeam;
-console.log(JSON.stringify({ teams, external }));
+console.log(JSON.stringify({ teams, external, fontLoaded }));
 await browser.close();
-if (external.length || !teamsOk || errors.length || !menuOk || !languageOk || !extraLifeOk || !unitsMoved || !hasPlayer)
+if (
+  external.length ||
+  !fontLoaded ||
+  !teamsOk ||
+  errors.length ||
+  !menuOk ||
+  !languageOk ||
+  !extraLifeOk ||
+  !unitsMoved ||
+  !hasPlayer
+)
   process.exit(1);

@@ -8,15 +8,7 @@ const ROOT = new URL("../../../", import.meta.url).pathname;
 const STATIC_ROOTS = [ROOT + "packages/client/public/", ROOT + "original/"];
 const BUNDLE = ROOT + "packages/client/dist/app2.js";
 
-// Until the client has its own page: the captured page minus its third-party scripts, plus stubs for the
-// ad globals it calls.
-const AD_STUBS =
-  "<script>window.GameAdsRenew=()=>{};window.aipDisplayTag={display(){}};window.aipPlayer=function(){return{startPreRoll(){}}};</script>";
-const page = (await Bun.file(ROOT + "original/index.html").text())
-  .replace(/<script[^>]*src="(https?:)?\/\/[^"]*"[^>]*><\/script>/g, "")
-  .replace(/<script[^>]*>\s*\(function\(g,a,m,e,A,d,s\)[\s\S]*?<\/script>/, "")
-  .replace(/<script type="text\/javascript" >[\s\S]*?ym\([\s\S]*?<\/script>/, "")
-  .replace("<head>", "<head>" + AD_STUBS);
+const PAGE = ROOT + "packages/client/public/index.html";
 
 async function staticFile(pathname: string): Promise<Response> {
   // URL parsing already resolves ".." segments; refuse anything odd anyway.
@@ -33,6 +25,6 @@ async function staticFile(pathname: string): Promise<Response> {
 }
 
 export const site = new Elysia({ name: "site" })
-  .get("/", () => new Response(page, { headers: { "content-type": "text/html; charset=utf-8" } }))
+  .get("/", () => new Response(Bun.file(PAGE)))
   .get("/app2.js", () => new Response(Bun.file(BUNDLE), { headers: { "content-type": "text/javascript" } }))
   .get("/*", ({ request }) => staticFile(new URL(request.url).pathname));
