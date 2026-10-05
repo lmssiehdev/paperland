@@ -2,6 +2,7 @@
   "name": "paperio",
   "type": "module",
   "private": true,
+  "packageManager": "bun@1.4.0",
   "workspaces": [
     "packages/*"
   ],
@@ -26,6 +27,8 @@
     "mirror": "bun packages/e2e/src/mirror.ts",
     "mirror:original": "GAME_JS=original bun packages/e2e/src/mirror.ts",
     "typecheck": "bun run --filter '*' typecheck",
+    "test:unit": "bun test --path-ignore-patterns=packages/e2e/test/headless-golden.test.ts --path-ignore-patterns=packages/e2e/test/trig-bit-exact.test.ts",
+    "test:chromium": "bun test ./packages/e2e/test/headless-golden.test.ts ./packages/e2e/test/trig-bit-exact.test.ts",
     "golden": "bun packages/e2e/src/golden.ts",
     "parity": "bun packages/e2e/src/parity.ts",
     "smoke": "bun packages/e2e/src/smoke.ts",

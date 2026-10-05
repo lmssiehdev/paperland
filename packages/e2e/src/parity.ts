@@ -2,7 +2,7 @@
 //   (a) the original obfuscated app2.js served under the real hostname https://paperio.site
 //       (so its domain lock passes and it behaves exactly like the live site), and
 //   (b) our build (dist/app2.js) on localhost,
-// for several seeds, and compares the state hashes.  usage: [BASE_URL=http://localhost:3000/] bun packages/e2e/src/parity.ts [seeds=5] [ticks=4000]
+// for several seeds, and compares the state hashes (exits 1 if any differs).  usage: [BASE_URL=http://localhost:3000/] bun packages/e2e/src/parity.ts [seeds=5] [ticks=4000]
 import { chromium, type Page } from "playwright";
 
 const seeds = Number(process.argv[2] ?? 5);
@@ -95,3 +95,4 @@ for (let seed = 1; seed <= seeds; seed++) {
 }
 console.log(`${same}/${seeds} seeds identical`);
 await browser.close();
+if (same < seeds) process.exit(1);

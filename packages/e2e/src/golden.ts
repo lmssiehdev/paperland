@@ -1,7 +1,9 @@
 // Deterministic regression check: seeded Math.random, fresh Game via paperio2api.create(),
 // fixed number of manual ticks, then a hash of the simulation state.
 // Same hash before/after a refactor => same behavior.  usage: [BASE_URL=http://localhost:3000/] bun packages/e2e/src/golden.ts [ticks=4000]
+// At the default 4000 ticks it exits 1 unless the hash is BROWSER_GOLDEN_HASH.
 import { chromium } from "playwright";
+import { BROWSER_GOLDEN_HASH } from "../../core/test/golden-scenario";
 
 const ticks = Number(process.argv[2] ?? 4000);
 const url = process.argv[3] ?? process.env.BASE_URL ?? "http://localhost:3000/";
@@ -50,3 +52,7 @@ const result = await page.evaluate(ticks => {
 const hash = new Bun.CryptoHasher("sha256").update(result.checkpoints.join("\n")).digest("hex").slice(0, 16);
 console.log(JSON.stringify({ hash, ticks, units: result.units, kills: result.kills }));
 await browser.close();
+if (ticks === 4000 && hash !== BROWSER_GOLDEN_HASH) {
+  console.error(`golden hash ${hash}, expected ${BROWSER_GOLDEN_HASH}`);
+  process.exit(1);
+}
