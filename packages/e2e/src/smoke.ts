@@ -43,7 +43,7 @@ const menu = await page.evaluate(() => ({
 }));
 await page.screenshot({ path: `${SHOTS}/${label}-menu.png` });
 
-// Language switch through the footer (I18nProvider) -> menu text and game strings (api.setLanguage).
+// Language switch through the footer (I18nProvider) -> menu text and game strings (GameSession.setLanguage).
 const playText = () => page.evaluate(() => document.getElementById("play")!.textContent);
 const gameStrings = () => page.evaluate(() => (window as any).paperio2api.game.language.btnPlay as string);
 const clickLanguage = (code: string) => page.locator("#lng li", { hasText: new RegExp(`^${code}$`) }).click();

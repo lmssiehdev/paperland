@@ -106,7 +106,7 @@ Core was cut from the browser code with the smallest seams that work; gameplay c
 `<I18nProvider languages initial onChange>` around `App`; components read strings with
 `const { t } = useI18n()` and the footer switches with `setLanguage`. Core never sees the UI context: it
 keeps plain `LanguageStrings` on `game.language`, and the provider's `onChange` forwards each switch via
-`api.setLanguage(strings)` (also used for the extra-life popup, which used to be hardcoded Russian).
+`session.setLanguage(strings)` (also used for the extra-life popup, which used to be hardcoded Russian).
 `extraLife` was added to the en and ru entries of languages.json (the only edit to a captured file).
 
 ## Server and protocol
