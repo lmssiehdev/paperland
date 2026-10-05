@@ -10,11 +10,12 @@ import type { RenderContext } from "./render-context";
 import type { Config } from "@paperio/core/config";
 import type { Asset } from "@paperio/core/skins/skin";
 import type { Tip } from "@paperio/core/game/achievements";
-import type { SkinAvatar, SkinDisplay, SkinImageSource, SkinLayer } from "../skins/display";
+import type { SkinDisplay } from "@paperio/core/skins/skin-display";
+import type { SkinAvatar, SkinImageSource, SkinLayer } from "../skins/display";
 
 type FillStyle = string | CanvasGradient | CanvasPattern;
 
-// Cache keys for the background gradient. Never assigned, so the gradient is rebuilt every frame (see report).
+// Cache keys for the background gradient. Never assigned, so the gradient is rebuilt every frame.
 let cachedGradient: CanvasGradient;
 let cachedTopColor: string | undefined;
 let cachedBottomColor: string | undefined;

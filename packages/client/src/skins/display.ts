@@ -1,9 +1,6 @@
 import type { Config } from "@paperio/core/config";
 import { platform } from "@paperio/core/platform";
 
-export { SkinDisplay } from "@paperio/core/skins/skin-display";
-export type { SkinDisplayLayer } from "@paperio/core/skins/skin-display";
-
 /** Bitmap a skin layer/pattern is drawn from (loaded image or generated canvas). */
 export type SkinImageSource = HTMLImageElement | HTMLCanvasElement;
 
