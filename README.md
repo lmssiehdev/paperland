@@ -42,7 +42,8 @@ page to see client changes). Use `PORT=3100 bun run serve` for another port.
 | `bun run dev` | Dev bundle + server, both in watch mode |
 | `bun run build:dev` | Dev bundle with debug keys, `?seed=` / `?mode=` and `window.paperio2api` |
 | `bun run check` | Typecheck, lint, format check and unit tests |
-| `bun test` | Unit tests of every package |
+| `bun run test:unit` | Unit tests in Bun: game logic, protocol, server, golden hash (no browser) |
+| `bun test` | The above plus the Chromium tests (trig bit-exactness, golden in Chromium) |
 | `bun run smoke` | Boots the game in headless Chromium, plays a round, saves screenshots to `shots/` |
 | `bun run golden` | Deterministic simulation hash on the real page (must not change on refactors) |
 | `bun run parity 6` | Compares 6 seeded games against the original build |
@@ -50,6 +51,9 @@ page to see client changes). Use `PORT=3100 bun run serve` for another port.
 
 The browser scripts (`smoke`, `golden`, `parity`, `autopilot`) use Playwright, need a dev build
 (`bun run build:dev`) and a running server. Set `BASE_URL` to point them elsewhere.
+
+CI runs typecheck, lint, format, build and `test:unit` on every push and PR. The Chromium tests and
+`parity` run only when `bun.lock` (the Chromium version), the trig port or the e2e tests change.
 
 ## Project layout
 
