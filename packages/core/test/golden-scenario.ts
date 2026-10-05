@@ -7,7 +7,7 @@ import type { HeadlessGameOptions } from "../src/headless";
 import type { LanguageStrings } from "../src/language";
 import type { Unit } from "../src/game/units";
 
-/** Expected hash in Chromium (Playwright's build): the browser golden, see README "Checks". */
+/** Expected hash in Chromium (Playwright's build): the browser golden, see docs/ARCHITECTURE.md "Checks". */
 export const BROWSER_GOLDEN_HASH = "11a98dae6745f942";
 
 export const mulberry32 = (seed: number) => {

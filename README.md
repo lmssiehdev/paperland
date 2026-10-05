@@ -1,5 +1,7 @@
 # PaperLand
 
+[![CI](https://github.com/lmssiehdev/paperland/actions/workflows/ci.yml/badge.svg)](https://github.com/lmssiehdev/paperland/actions/workflows/ci.yml)
+
 An open-source, Paper.io-style territory game: leave your base, draw a trail, close the loop to claim the
 land inside it. Don't let anyone cross your trail.
 

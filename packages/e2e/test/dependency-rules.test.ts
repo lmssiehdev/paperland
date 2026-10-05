@@ -1,4 +1,4 @@
-// Enforces the package dependency rules (README "Dependency rules") on the import specifiers of every
+// Enforces the package dependency rules (docs/ARCHITECTURE.md "Dependency rules") on the import specifiers of every
 // source file: client -> protocol -> core, server -> protocol -> core, core imports nothing outside core,
 // client and server never import each other.
 import { expect, test } from "bun:test";

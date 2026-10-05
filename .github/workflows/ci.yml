@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# arm64 runners on purpose: core/src/engine/trig.ts is bit-exact with Chromium on arm64 (atan2's FMA path).
+# Chromium on x86-64 may differ in the last bit, which would break the trig and golden tests.
+
+jobs:
+  check:
+    name: Typecheck, lint, format, build
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun run format:check
+      - run: bun run build
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - uses: ./.github/actions/playwright
+      # Includes the Chromium tests: headless golden, trig bit-exactness, dependency rules.
+      - run: bun test
+
+  e2e:
+    name: Browser (smoke, golden, parity)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    env:
+      BASE_URL: http://localhost:3000/
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - uses: ./.github/actions/playwright
+      # The browser scripts drive the game through window.paperio2api, which only dev builds expose.
+      - run: bun run build:dev
+      - name: Start server
+        run: |
+          bun run serve > server.log 2>&1 &
+          for _ in $(seq 30); do
+            curl --silent --fail --output /dev/null "$BASE_URL" && exit 0
+            sleep 1
+          done
+          echo "Server did not start in 30 s"
+          cat server.log
+          exit 1
+      - run: bun run smoke
+      - run: bun run golden
+      - run: bun run parity 6
+      - name: Server log
+        if: failure()
+        run: cat server.log
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: smoke-screenshots
+          path: shots/
+          if-no-files-found: ignore
