@@ -162,8 +162,8 @@ export const BOT_STATES: BotStates = {
       const index = ~~(bot.game.rng() * length);
       const start = bot.base.polygon.segments[index].start;
       const dist = start.distance(bot.position);
-      const dist2 = ctx.exitPoint.distance(bot.position);
-      if (dist > minDistance && dist < dist2) {
+      const exitPointDistance = ctx.exitPoint.distance(bot.position);
+      if (dist > minDistance && dist < exitPointDistance) {
         ctx.exitPoint = start;
       } else {
         if (!Object.values(ctx.exitPoint.segments).some(item => item && item.shape === bot.base.polygon)) {
@@ -192,18 +192,18 @@ export const BOT_STATES: BotStates = {
       if (bot.baseDistance < unitSpeed / 4 && bot.track.length > unitSpeed * 2 && borderDistance > 10) {
         return "back";
       }
-      const dist32 = 25;
-      const halfStep = dist32 / 2;
+      const steerStep = 25;
+      const halfStep = steerStep / 2;
       const halfStepSq = halfStep * halfStep;
       // exit/cut set bot.target before switching to capture.
-      if (bot.position.distance2(bot.target!) < halfStepSq && borderDistance > dist32) {
+      if (bot.position.distance2(bot.target!) < halfStepSq && borderDistance > steerStep) {
         return;
       }
       let loopArea = 0;
       for (let i = 1, count = bot.track.simplifiedPoints.length; i < count; i++) {
-        const point = bot.track.simplifiedPoints[i - 1];
-        const point2 = bot.track.simplifiedPoints[i];
-        loopArea += (point.x + point2.x) * (point2.y - point.y);
+        const previousPoint = bot.track.simplifiedPoints[i - 1];
+        const nextPoint = bot.track.simplifiedPoints[i];
+        loopArea += (previousPoint.x + nextPoint.x) * (nextPoint.y - previousPoint.y);
       }
       let point = bot.track.simplifiedPoints[bot.track.simplifiedPoints.length - 1];
       // The bot is outside its base here, so Unit.update set the baseNearestPoint* fields.
@@ -240,12 +240,12 @@ export const BOT_STATES: BotStates = {
       const farDistance = greedRange;
       const nearDistance = farDistance * 0.8;
       const delta = bot.target!.clone().sub(bot.position);
-      let point2;
+      let steer;
       if (bot.baseDistance > farDistance || returnUrge > 0.75) {
         bot.aspect = "приближение";
-        point2 = bot
+        steer = bot
           .baseNearestPointNormal!.clone()
-          .mulScalar(dist32)
+          .mulScalar(steerStep)
           .rotate((Math.PI / 2 + Math.PI / 4) * sign);
       } else if (bot.baseDistance < nearDistance) {
         bot.aspect = "отдаление";
@@ -255,55 +255,56 @@ export const BOT_STATES: BotStates = {
           bot.aspect = "отстрел";
           awayAngle = lerp((Math.PI / 2) * greed, 0, trackRatio);
         }
-        point2 = bot
+        steer = bot
           .baseNearestPointNormal!.clone()
-          .mulScalar(dist32)
+          .mulScalar(steerStep)
           .rotate((Math.PI / 2 - awayAngle) * sign);
       } else {
         bot.aspect = "проход";
-        point2 = bot
+        steer = bot
           .baseNearestPointNormal!.clone()
-          .mulScalar(dist32)
+          .mulScalar(steerStep)
           .rotate((Math.PI / 2) * sign);
         bot.smoothness = 1 + (1 - Math.min(1, bot.maxDanger)) * 3;
       }
       bot.smoothness = 1 + (1 - Math.min(1, bot.maxDanger)) * 1;
       if (
-        borderDistance < dist32 * 2 &&
-        borderDistance > dist32 / 4 &&
-        borderDistance < bot.position.clone().add(point2).distance(center)
+        borderDistance < steerStep * 2 &&
+        borderDistance > steerStep / 4 &&
+        borderDistance < bot.position.clone().add(steer).distance(center)
       ) {
-        const delta2 = bot.position.clone().sub(center);
-        const angle = delta2.angle(delta);
+        const fromCenter = bot.position.clone().sub(center);
+        const angle = fromCenter.angle(delta);
         const sign = Math.sign(angle);
-        let angle2 = delta2.angle(point2);
-        let sign2 = Math.sign(angle2);
-        if (sign !== sign2) {
-          angle2 *= -1;
-          sign2 *= -1;
-          point2.rotate(angle2 * 2);
+        let steerAngle = fromCenter.angle(steer);
+        let steerSign = Math.sign(steerAngle);
+        if (sign !== steerSign) {
+          steerAngle *= -1;
+          steerSign *= -1;
+          steer.rotate(steerAngle * 2);
         }
-        const absAngle = Math.abs(angle2);
+        const absAngle = Math.abs(steerAngle);
         if (absAngle < Math.PI / 4) {
-          point2.rotate((Math.PI / 4 - absAngle) * sign2);
+          steer.rotate((Math.PI / 4 - absAngle) * steerSign);
         }
       }
-      bot.target = bot.position.clone().add(point2);
-      if (bot.target.distance(center) > radius + dist32 * 0.75) {
-        const delta2 = bot.position.clone().sub(center);
-        const angle = delta2.angle(delta);
-        const dist2 = dist;
-        const dist33 = (radius * radius - dist32 * dist32 + dist2 * dist2) / (dist2 * 2);
-        const dist3 = Math.sqrt(radius * radius - dist33 * dist33);
+      bot.target = bot.position.clone().add(steer);
+      if (bot.target.distance(center) > radius + steerStep * 0.75) {
+        const fromCenter = bot.position.clone().sub(center);
+        const angle = fromCenter.angle(delta);
+        const centerDistance = dist;
+        const chordCenterDistance =
+          (radius * radius - steerStep * steerStep + centerDistance * centerDistance) / (centerDistance * 2);
+        const halfChord = Math.sqrt(radius * radius - chordCenterDistance * chordCenterDistance);
         const dir = bot.position.clone().sub(center).normalize();
-        const chordCenter = center.clone().add(dir.clone().mulScalar(dist33));
-        point2 = dir
+        const chordCenter = center.clone().add(dir.clone().mulScalar(chordCenterDistance));
+        steer = dir
           .clone()
           .rotate((Math.PI / 2) * angle)
           .rotate((Math.PI / 8) * -angle)
-          .mulScalar(dist3);
-        bot.target = chordCenter.clone().add(point2);
-      } else if (bot.target.distance(center) > radius && bot.target.distance(center) < radius + dist32 * 0.5) {
+          .mulScalar(halfChord);
+        bot.target = chordCenter.clone().add(steer);
+      } else if (bot.target.distance(center) > radius && bot.target.distance(center) < radius + steerStep * 0.5) {
         // ORIGINAL: empty branch (condition still evaluated).
       }
     }

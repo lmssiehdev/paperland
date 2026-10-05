@@ -68,7 +68,7 @@ export class SpatialGrid {
   }
   checkPoint(point: Vec2): Vec2 {
     const cell = this.cell(point);
-    return cell.points.find(point2 => point2.equal(point)) || point;
+    return cell.points.find(candidate => candidate.equal(point)) || point;
   }
   segmentsCount(): Record<string, Segment> {
     const result: Record<string, Segment> = {};
@@ -84,24 +84,24 @@ export class SpatialGrid {
     return result;
   }
   intersections(segment: Segment): Intersection[] {
-    const point = this.cell(segment.start);
-    const point2 = this.cell(segment.end);
-    const minCol = Math.max(0, Math.min(point.x, point2.x) - CELL_MARGIN);
-    const maxCol = Math.min(this.w - 1, Math.max(point.x, point2.x) + CELL_MARGIN);
-    const minRow = Math.max(0, Math.min(point.y, point2.y) - CELL_MARGIN);
-    const maxRow = Math.min(this.h - 1, Math.max(point.y, point2.y) + CELL_MARGIN);
+    const startCell = this.cell(segment.start);
+    const endCell = this.cell(segment.end);
+    const minCol = Math.max(0, Math.min(startCell.x, endCell.x) - CELL_MARGIN);
+    const maxCol = Math.min(this.w - 1, Math.max(startCell.x, endCell.x) + CELL_MARGIN);
+    const minRow = Math.max(0, Math.min(startCell.y, endCell.y) - CELL_MARGIN);
+    const maxRow = Math.min(this.h - 1, Math.max(startCell.y, endCell.y) + CELL_MARGIN);
     const mark = nextId();
     const result: Intersection[] = [];
     for (let i = minRow; i <= maxRow; i++) {
       for (let j = minCol; j <= maxCol; j++) {
         this.getCell(j, i).points.forEach(point => {
-          point.segments.forEach(segment2 => {
-            if (segment2.mark !== mark) {
-              const intersection = segment2.intersect(segment);
+          point.segments.forEach(candidate => {
+            if (candidate.mark !== mark) {
+              const intersection = candidate.intersect(segment);
               if (intersection) {
                 result.push(intersection);
               }
-              segment2.mark = mark;
+              candidate.mark = mark;
             }
           });
         });

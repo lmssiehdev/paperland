@@ -115,7 +115,7 @@ export class Track {
   truncateToBase() {
     const { polygon } = this.unit.base;
     const lastBaseContact = this.polyline.segments.reduce(
-      (acc, segment, index) => (segment.start.segments.some(segment2 => segment2.shape === polygon) ? index : acc),
+      (acc, segment, index) => (segment.start.segments.some(touching => touching.shape === polygon) ? index : acc),
       -1
     );
     if (lastBaseContact <= 0) {

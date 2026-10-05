@@ -458,31 +458,31 @@ export class Game {
   addUnit(unit: Unit) {
     this.units.push(unit);
   }
-  getSpawnPosition(zone: SpawnZone, baseRadius2?: number, near: Unit | null = this.player): Vec2 | undefined {
+  getSpawnPosition(zone: SpawnZone, spawnRadius?: number, near: Unit | null = this.player): Vec2 | undefined {
     const { center } = this.grid;
     const { radius } = this.border;
     const { baseRadius } = this.config;
-    let center2 = center;
+    let origin = center;
     if (zone === "near" && !near) {
       return;
     }
-    baseRadius2 = baseRadius2 || baseRadius;
+    spawnRadius = spawnRadius || baseRadius;
     const trackClearanceScale = this.player ? lerp(3, 1, this.player.percent) : 2;
-    const baseClearance = baseRadius2 + baseRadius * 2;
+    const baseClearance = spawnRadius + baseRadius * 2;
     const baseClearanceSq = baseClearance * baseClearance;
-    const trackClearance = baseRadius2 + baseRadius * 2 * trackClearanceScale;
+    const trackClearance = spawnRadius + baseRadius * 2 * trackClearanceScale;
     const trackClearanceSq = trackClearance * trackClearance;
     let y;
     switch (zone) {
       case "near":
         y = lerp(baseRadius * 12, baseRadius * 16, Math.random());
         // zone "near" without an anchor returned above.
-        center2 = near!.position;
+        origin = near!.position;
         break;
       case "bounds":
         y = lerp(
-          Math.max(0, radius - (baseRadius2 + baseRadius * 10)),
-          Math.max(0, radius - (baseRadius2 + baseRadius * 4)),
+          Math.max(0, radius - (spawnRadius + baseRadius * 10)),
+          Math.max(0, radius - (spawnRadius + baseRadius * 4)),
           Math.random()
         );
         break;
@@ -490,36 +490,36 @@ export class Game {
         y = lerp(0, radius / 3, Math.random());
         break;
       default:
-        y = lerp(0, Math.max(0, radius - (baseRadius2 + baseRadius)), Math.random());
+        y = lerp(0, Math.max(0, radius - (spawnRadius + baseRadius)), Math.random());
         break;
     }
     const offset = Vec2.alloc(0, y).rotate(Math.random() * Math.PI * 2);
-    const point3 = center2.clone().add(offset);
+    const candidate = origin.clone().add(offset);
     offset.release();
-    if (point3.distance(center) > radius - (baseRadius2 + baseRadius)) {
+    if (candidate.distance(center) > radius - (spawnRadius + baseRadius)) {
       return;
     }
     for (let i = 0; i < this.units.length; i++) {
       const unit = this.units[i];
-      if (unit.base.polygon.inside(point3)) {
+      if (unit.base.polygon.inside(candidate)) {
         return;
       }
       if (
         unit.base.polygon.simplifiedPoints.some(function (item: Vec2) {
-          return point3.distance2(item) < baseClearanceSq;
+          return candidate.distance2(item) < baseClearanceSq;
         })
       ) {
         return;
       }
       if (
         unit.track.simplifiedPoints.some(function (point: Vec2) {
-          return point3.distance2(point) < trackClearanceSq;
+          return candidate.distance2(point) < trackClearanceSq;
         })
       ) {
         return;
       }
     }
-    return point3;
+    return candidate;
   }
   /** Spawns one bot if there is room; returns it, or undefined when no bot was spawned. */
   spawnBot(zone: SpawnZone, { leader }: SpawnBotOptions = {}): Bot | undefined {
@@ -614,19 +614,19 @@ export class Game {
     }
     let position;
     let attempts = 0;
-    const baseRadius2 = extraLife ? Math.sqrt((this.arenaArea * extraLife) / Math.PI) : baseRadius;
+    const spawnRadius = extraLife ? Math.sqrt((this.arenaArea * extraLife) / Math.PI) : baseRadius;
     while (!position) {
       if (attempts++ > 50) {
         attempts = 0;
         removeMiddleUnit();
       }
-      position = this.getSpawnPosition("random", baseRadius2);
+      position = this.getSpawnPosition("random", spawnRadius);
     }
     const player = new Player(
       this,
       name || this.language.defaultPlayerName,
       position,
-      circlePoints(position, baseCount, baseRadius2),
+      circlePoints(position, baseCount, spawnRadius),
       undefined,
       this.schemesManager
     );
@@ -687,9 +687,9 @@ export class Game {
       const polygon = unit.base.polygon;
       polygon.segments.forEach(segment => {
         const { start, end } = segment;
-        const segment2 = start.segments.find(segment2 => segment2 === segment);
-        const segment3 = end.segments.find(segment2 => segment2 === segment);
-        if (!segment2 || !segment3) {
+        const startLink = start.segments.find(candidate => candidate === segment);
+        const endLink = end.segments.find(candidate => candidate === segment);
+        if (!startLink || !endLink) {
           throw new Error("точки сегмента не закоммичены");
         }
       });
@@ -726,9 +726,9 @@ export class Game {
     base.leave(unit);
     const baseRemoved = base.hosts.length === 0;
     if (baseRemoved) {
-      this.units.forEach(unit2 => {
-        if (unit2 !== unit && unit2.insideBase === base) {
-          unit2.insideBase = null;
+      this.units.forEach(other => {
+        if (other !== unit && other.insideBase === base) {
+          other.insideBase = null;
         }
       });
     }
@@ -742,7 +742,7 @@ export class Game {
     if (baseRemoved) {
       base.remove();
     }
-    const index = this.units.findIndex(unit2 => unit2 === unit);
+    const index = this.units.findIndex(candidate => candidate === unit);
     this.units.splice(index, 1);
     unit.killer = killer;
     if (killer) {
@@ -771,9 +771,9 @@ export class Game {
       return result;
     }
     point.mulScalar((unitSpeed * dt) / 1000);
-    const point2 = vecFromAngle(unit.direction);
-    let angle = Math.atan2(point2.x * point.y - point.x * point2.y, point2.dot(point));
-    point2.release();
+    const heading = vecFromAngle(unit.direction);
+    let angle = Math.atan2(heading.x * point.y - point.x * heading.y, heading.dot(point));
+    heading.release();
     const maxTurn = (TAU * dt) / 1000 / (unit.smoothness || 1);
     if (Math.abs(angle) > maxTurn) {
       angle = maxTurn * Math.sign(angle);
@@ -787,27 +787,27 @@ export class Game {
       let hit;
       const vector = segment.vector;
       if (intersections.length === 2) {
-        const vector2 = intersections[0].segment.vector;
-        const angle = Math.atan2(vector.x * vector2.y - vector2.x * vector.y, vector.dot(vector2));
+        const firstEdge = intersections[0].segment.vector;
+        const angle = Math.atan2(vector.x * firstEdge.y - firstEdge.x * vector.y, vector.dot(firstEdge));
         hit = angle > 0 ? intersections[0] : intersections[1];
       } else {
         hit = intersections[0];
       }
-      const { segment: segment2, point } = hit;
-      const vector2 = segment2.vector;
-      const angle = Math.atan2(vector.x * vector2.y - vector2.x * vector.y, vector.dot(vector2));
+      const { segment: wallSegment, point } = hit;
+      const wall = wallSegment.vector;
+      const angle = Math.atan2(vector.x * wall.y - wall.x * vector.y, vector.dot(wall));
       if (angle < 0) {
         break;
       }
       if (!isZero(hit.distance)) {
-        const segment2 = new Segment(segment.start, point);
-        result.push(segment2);
+        const approach = new Segment(segment.start, point);
+        result.push(approach);
       }
       segment = new Segment(point, segment.end);
-      const vector3 = segment.vector;
-      const slide = Vec2.clone(vector2)
+      const remainder = segment.vector;
+      const slide = Vec2.clone(wall)
         .normalize()
-        .mulScalar(vector3.dot(vector2) / vector2.magnitude());
+        .mulScalar(remainder.dot(wall) / wall.magnitude());
       segment = new Segment(point, point.clone().add(slide));
       slide.release();
       intersections = this.border.intersections(segment);
@@ -906,14 +906,14 @@ export class Game {
         unit.schemes.update(dt);
       }
       if (unit.labels.length) {
-        let vec2 = new Vec2(0, -35);
-        const vec22 = new Vec2(0, -10);
-        const vec23 = new Vec2(0, -10);
+        let labelOffset = new Vec2(0, -35);
+        const labelVelocity = new Vec2(0, -10);
+        const labelSpacing = new Vec2(0, -10);
         unit.labels.forEach(label => {
           this.labels.push(
-            new FloatingLabel(label.text, label.color, label.unit, vec2, vec22, label.time, label.fading)
+            new FloatingLabel(label.text, label.color, label.unit, labelOffset, labelVelocity, label.time, label.fading)
           );
-          vec2 = vec2.clone().add(vec23);
+          labelOffset = labelOffset.clone().add(labelSpacing);
         });
         unit.labels = [];
       }
@@ -986,17 +986,17 @@ export class Game {
       let min = Infinity;
       this.units.forEach(unit => {
         if (unit instanceof Bot && !areAllies(unit, player)) {
-          let min2 = Infinity;
+          let trailDistance = Infinity;
           player.track.simplifiedPoints.forEach(point => {
             const distSq = point.distance2(unit.position);
-            if (distSq < min2) {
-              min2 = distSq;
+            if (distSq < trailDistance) {
+              trailDistance = distSq;
             }
           });
-          min2 = Math.sqrt(min2);
-          if (min2 < min) {
+          trailDistance = Math.sqrt(trailDistance);
+          if (trailDistance < min) {
             nearestBot = unit;
-            min = min2;
+            min = trailDistance;
           }
         }
       });
@@ -1081,11 +1081,11 @@ export class Game {
       const silverCountry = countries[1] && countries[1].country;
       const bronzeCountry = countries[2] && countries[2].country;
       this.units.forEach(unit => {
-        const asset = unit.skin.assets.find((asset: Asset) => asset.pool.name === "shields");
-        const asset2 = unit.skin.assets.find((asset: Asset) => asset.pool.name === "flags");
-        if (asset && asset2) {
+        const shieldAsset = unit.skin.assets.find((asset: Asset) => asset.pool.name === "shields");
+        const flagAsset = unit.skin.assets.find((asset: Asset) => asset.pool.name === "flags");
+        if (shieldAsset && flagAsset) {
           let shieldName = "gray";
-          switch (asset2.name) {
+          switch (flagAsset.name) {
             case goldCountry:
               shieldName = "gold";
               break;
@@ -1096,9 +1096,9 @@ export class Game {
               shieldName = "bronze";
               break;
           }
-          if (asset.name !== shieldName) {
+          if (shieldAsset.name !== shieldName) {
             // SAFETY: TODO(types): Skin has no removeAsset (flag/shield mode only, unreachable in this build)
-            (unit.skin as Skin & { removeAsset(asset: Asset): void }).removeAsset(asset);
+            (unit.skin as Skin & { removeAsset(asset: Asset): void }).removeAsset(shieldAsset);
             if ("shieldSkinAssets" in this.skinManager) {
               unit.skin.addAsset(
                 // SAFETY: guarded by the "shieldSkinAssets" in-check above (flag mode only, unreachable in this build).
@@ -1141,23 +1141,23 @@ export class Game {
     this.events.returns++;
     const polylineCopy = trail.polyline.clone();
     const { base } = returningUnit;
-    const index = base.polygon.segments.findIndex(segment => segment.start === polylineCopy.start);
-    const index2 = base.polygon.segments.findIndex(segment => segment.start === polylineCopy.end);
+    const startVertex = base.polygon.segments.findIndex(segment => segment.start === polylineCopy.start);
+    const endVertex = base.polygon.segments.findIndex(segment => segment.start === polylineCopy.end);
     if (returningUnit.team) {
       // Team modes (as the original teams build): a trail end that is no longer on the outline captures nothing,
       // and a trail that leaves and re-enters at the same vertex is a self-intersection.
-      if (index === -1 || index2 === -1) {
+      if (startVertex === -1 || endVertex === -1) {
         this.teamEvents.droppedReturns++;
         return;
       }
-      if (index === index2) {
+      if (startVertex === endVertex) {
         this.kill(returningUnit, undefined, DEATH_SELF_INTERSECT);
         return;
       }
     }
-    const startIndex = Math.min(index2, index);
-    const endIndex = Math.max(index2, index);
-    if (startIndex !== index) {
+    const startIndex = Math.min(endVertex, startVertex);
+    const endIndex = Math.max(endVertex, startVertex);
+    if (startIndex !== startVertex) {
       polylineCopy.reverse();
     }
     const trackPoints = polylineCopy.points();
@@ -1211,39 +1211,39 @@ export class Game {
         return;
       }
       const removed = trail.polyline.points().splice(startT, endT - startT + 1);
-      const index = owner.polygon.segments.findIndex(segment => segment === enter);
-      const index2 = owner.polygon.segments.findIndex(segment => segment === leave);
-      const cutStart = Math.min(index2, index);
-      const cutEnd = Math.max(index2, index);
-      if (cutStart !== index) {
+      const enterIndex = owner.polygon.segments.findIndex(segment => segment === enter);
+      const leaveIndex = owner.polygon.segments.findIndex(segment => segment === leave);
+      const cutStart = Math.min(leaveIndex, enterIndex);
+      const cutEnd = Math.max(leaveIndex, enterIndex);
+      if (cutStart !== enterIndex) {
         removed.reverse();
       }
       const points = owner.polygon.points();
-      const removed2 = points.splice(cutStart, cutEnd - cutStart + 1, ...removed);
-      removed2.shift();
-      removed2.pop();
-      removed2.push(...removed.slice().reverse());
-      const polygon = new Polygon(removed2);
-      const polygon2 = new Polygon(points);
+      const cutOffPoints = points.splice(cutStart, cutEnd - cutStart + 1, ...removed);
+      cutOffPoints.shift();
+      cutOffPoints.pop();
+      cutOffPoints.push(...removed.slice().reverse());
+      const cutPolygon = new Polygon(cutOffPoints);
+      const keptPolygon = new Polygon(points);
       let lost: Polygon;
       // Each host is on the side of the chord where it stands (home) or where its trail starts (outside).
       // Classic has one host, so exactly one side is non-empty.
       const hostsCut = owner.hosts.filter(host =>
         host.insideBase === host.base
-          ? polygon.inside(host.position)
-          : polygon.inside(host.track.polyline.start || host.position)
+          ? cutPolygon.inside(host.position)
+          : cutPolygon.inside(host.track.polyline.start || host.position)
       );
       const hostsKept = owner.hosts.filter(host => !hostsCut.includes(host));
       if (hostsCut.length && hostsKept.length) {
-        this.splitBase(owner, removed2, hostsCut, points, hostsKept);
+        this.splitBase(owner, cutOffPoints, hostsCut, points, hostsKept);
         return;
       }
       if (hostsCut.length) {
         owner.polygon.right(removed, cutStart, cutEnd);
-        lost = polygon2;
+        lost = keptPolygon;
       } else {
         owner.polygon.left(removed, cutStart, cutEnd);
-        lost = polygon;
+        lost = cutPolygon;
       }
       owner.area -= lost.area();
       owner.polygon.calcPath();
@@ -1271,10 +1271,10 @@ export class Game {
             continue;
           }
           const byOwner = new Map<Base, Segment[]>();
-          point.segments.forEach(segment2 => {
-            const owner = segment2.shape?.owner;
+          point.segments.forEach(touching => {
+            const owner = touching.shape?.owner;
             if (owner instanceof Base && owner !== returningUnit.base) {
-              byOwner.set(owner, [...(byOwner.get(owner) ?? []), segment2]);
+              byOwner.set(owner, [...(byOwner.get(owner) ?? []), touching]);
             }
           });
           if (!byOwner.size) {
@@ -1295,8 +1295,8 @@ export class Game {
                 });
                 friendlyVisits.set(visit.owner, visits);
               } else {
-                const enter = visit.owner.polygon.segments.find(segment2 => segment2.start === visit.entryPoint);
-                const leave = visit.owner.polygon.segments.find(segment2 => segment2.start === point);
+                const enter = visit.owner.polygon.segments.find(candidate => candidate.start === visit.entryPoint);
+                const leave = visit.owner.polygon.segments.find(candidate => candidate.start === point);
                 if (enter && leave) {
                   cutBase({
                     owner: visit.owner,
@@ -1325,15 +1325,15 @@ export class Game {
       const point = i === count ? segments[i - 1].end : segments[i].start;
       // Segments held by a point are committed, so their shape is set.
       // In team modes a trail vertex can be shared with a teammate's trail; only bases are contacts.
-      const segments2 = point.segments.filter(
+      const contactSegments = point.segments.filter(
         segment =>
           segment.shape!.owner !== returningUnit.track &&
           segment.shape!.owner !== returningUnit.base &&
           segment.start === point &&
           (!returningUnit.team || segment.shape!.owner instanceof Base)
       );
-      if (segments2.length) {
-        let contacts = segments2.map((item): TrackContact => ({
+      if (contactSegments.length) {
+        let contacts = contactSegments.map((item): TrackContact => ({
           owner: item.shape!.owner,
           point: point,
           segment: item,
@@ -1355,8 +1355,8 @@ export class Game {
           });
         } else {
           const matching = openContacts.filter(item =>
-            contacts.some(item2 => {
-              return item2.owner === item.owner;
+            contacts.some(contact => {
+              return contact.owner === item.owner;
             })
           );
           if (matching.length) {
@@ -1551,8 +1551,8 @@ export class Game {
         if (nextMark === -1) {
           return skip();
         }
-        for (let trackIndex2 = trackIndex; trackIndex2 < min; trackIndex2++) {
-          merged.push(trail[trackIndex2]);
+        for (let trailIndex = trackIndex; trailIndex < min; trailIndex++) {
+          merged.push(trail[trailIndex]);
         }
         i = nextMark - 1;
       }
@@ -1765,8 +1765,8 @@ export class Game {
                   this.teamEvents.unifiedPoints++;
                 } else {
                   pointGroups[index].point = intersection.point;
-                  pointGroups[index].intersections.forEach(intersection2 => {
-                    intersection2.point = intersection.point;
+                  pointGroups[index].intersections.forEach(grouped => {
+                    grouped.point = intersection.point;
                   });
                 }
               } else {
@@ -1801,18 +1801,18 @@ export class Game {
             }
           });
           while (shapes.length) {
-            const index = shapes.findIndex(shape => shape.owner === unit.insideBase);
-            if (index > 0) {
+            const insideShapeIndex = shapes.findIndex(shape => shape.owner === unit.insideBase);
+            if (insideShapeIndex > 0) {
               const swapped = shapes[0];
-              shapes[0] = shapes[index];
-              shapes[index] = swapped;
+              shapes[0] = shapes[insideShapeIndex];
+              shapes[insideShapeIndex] = swapped;
             }
             // Shapes in the grid are unit bases and tracks, which always have an owner.
-            const index2 = shapes.findIndex(shape => shape.owner!.isTrack);
-            if (index2 > 0) {
+            const trackShapeIndex = shapes.findIndex(shape => shape.owner!.isTrack);
+            if (trackShapeIndex > 0) {
               const swapped = shapes[0];
-              shapes[0] = shapes[index2];
-              shapes[index2] = swapped;
+              shapes[0] = shapes[trackShapeIndex];
+              shapes[trackShapeIndex] = swapped;
             }
             const currentShape = shapes.shift()!;
             const shapeIntersections: Intersection[] = [];

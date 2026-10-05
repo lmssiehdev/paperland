@@ -87,19 +87,19 @@ export class Segment {
     return cross2d(a2, b2, normalX, normalY);
   }
   intersect(segment: Segment): Intersection | null {
-    const a2 = segment.normalX;
-    const b2 = segment.normalY;
-    const c2 = segment.lineOffset;
-    const start2 = segment.start;
-    const end2 = segment.end;
+    const otherNormalX = segment.normalX;
+    const otherNormalY = segment.normalY;
+    const otherLineOffset = segment.lineOffset;
+    const otherStart = segment.start;
+    const otherEnd = segment.end;
     const { normalX, normalY, lineOffset, start, end } = this;
-    const distance = cross2d(a2, b2, normalX, normalY);
+    const distance = cross2d(otherNormalX, otherNormalY, normalX, normalY);
     if (!isZero(distance)) {
-      const x = -cross2d(c2, b2, lineOffset, normalY) / distance;
-      const y = -cross2d(a2, c2, normalX, lineOffset) / distance;
+      const x = -cross2d(otherLineOffset, otherNormalY, lineOffset, normalY) / distance;
+      const y = -cross2d(otherNormalX, otherLineOffset, normalX, lineOffset) / distance;
       const point =
-        inRange(start2.x, end2.x, x) &&
-        inRange(start2.y, end2.y, y) &&
+        inRange(otherStart.x, otherEnd.x, x) &&
+        inRange(otherStart.y, otherEnd.y, y) &&
         inRange(start.x, end.x, x) &&
         inRange(start.y, end.y, y) &&
         new Vec2(x, y);
@@ -110,43 +110,43 @@ export class Segment {
         point:
           (start.equal(point) && start) ||
           (end.equal(point) && end) ||
-          (start2.equal(point) && start2) ||
-          (end2.equal(point) && end2) ||
+          (otherStart.equal(point) && otherStart) ||
+          (otherEnd.equal(point) && otherEnd) ||
           point,
         segment: this,
-        distance: point.distance2(start2),
+        distance: point.distance2(otherStart),
         overlay: false,
         zn: Math.sign(distance)
       };
     }
-    const overlapX = rangeOverlap(start2.x, end2.x, start.x, end.x);
-    const overlapY = rangeOverlap(start2.y, end2.y, start.y, end.y);
+    const overlapX = rangeOverlap(otherStart.x, otherEnd.x, start.x, end.x);
+    const overlapY = rangeOverlap(otherStart.y, otherEnd.y, start.y, end.y);
     if (
-      isZero(cross2d(a2, c2, normalX, lineOffset)) &&
-      isZero(cross2d(b2, c2, normalY, lineOffset)) &&
+      isZero(cross2d(otherNormalX, otherLineOffset, normalX, lineOffset)) &&
+      isZero(cross2d(otherNormalY, otherLineOffset, normalY, lineOffset)) &&
       overlapX >= -EPSILON &&
       overlapY >= -EPSILON
     ) {
       if (overlapX >= EPSILON || overlapY >= EPSILON) {
         let overlapPoint;
-        if (inRange(start.x, end.x, start2.x) && inRange(start.y, end.y, start2.y)) {
-          overlapPoint = (start.equal(start2) && start) || (end.equal(start2) && end) || start2;
+        if (inRange(start.x, end.x, otherStart.x) && inRange(start.y, end.y, otherStart.y)) {
+          overlapPoint = (start.equal(otherStart) && start) || (end.equal(otherStart) && end) || otherStart;
         } else {
-          overlapPoint = start2.distance2(start) >= start2.distance2(end) ? end : start;
+          overlapPoint = otherStart.distance2(start) >= otherStart.distance2(end) ? end : start;
         }
         return {
           point: overlapPoint,
           segment: this,
-          distance: overlapPoint.distance2(start2),
+          distance: overlapPoint.distance2(otherStart),
           overlay: true,
           zn: 0
         };
       }
-      const touchPoint = start.equal(start2) || start.equal(end2) ? start : end;
+      const touchPoint = start.equal(otherStart) || start.equal(otherEnd) ? start : end;
       return {
         point: touchPoint,
         segment: this,
-        distance: touchPoint.distance2(start2),
+        distance: touchPoint.distance2(otherStart),
         overlay: false,
         zn: 0
       };

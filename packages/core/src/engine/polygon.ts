@@ -8,11 +8,11 @@ import type { Base } from "../game/base";
 import type { PathHandle } from "../handles";
 import { platform } from "../platform";
 
-const rayCrossingSign = (point: Vec2, point2: Vec2, point3: Vec2) => {
-  const dx = point.x - point3.x;
-  const dy = point.y - point3.y;
-  const dx2 = point2.x - point3.x;
-  const dy2 = point2.y - point3.y;
+const rayCrossingSign = (edgeStart: Vec2, edgeEnd: Vec2, probe: Vec2) => {
+  const dx = edgeStart.x - probe.x;
+  const dy = edgeStart.y - probe.y;
+  const dx2 = edgeEnd.x - probe.x;
+  const dy2 = edgeEnd.y - probe.y;
   if (dy * dy2 > 0) {
     return 1;
   }
@@ -69,7 +69,7 @@ export class Polygon {
   }
   insert(segment: Segment, end: Vec2): void {
     if (!segment.has(end)) {
-      const index = this.segments.findIndex(segment2 => segment2 === segment);
+      const index = this.segments.findIndex(candidate => candidate === segment);
       const firstHalf = new Segment(segment.start, end).commit(this);
       const secondHalf = new Segment(end, segment.end).commit(this);
       segment.remove();
@@ -94,19 +94,19 @@ export class Polygon {
     this.segments = removed.concat(polylineCopy.reverse().segments);
     polylineCopy.commit(this);
   }
-  left(removed2: Vec2[], startIndex: number, endIndex: number): void {
+  left(replacementPoints: Vec2[], startIndex: number, endIndex: number): void {
     const newSegments: Segment[] = [];
-    for (let i = 0; i < removed2.length - 1; i++) {
-      newSegments.push(new Segment(removed2[i], removed2[i + 1]));
+    for (let i = 0; i < replacementPoints.length - 1; i++) {
+      newSegments.push(new Segment(replacementPoints[i], replacementPoints[i + 1]));
     }
     const removed = this.segments.splice(startIndex, endIndex - startIndex, ...newSegments);
     newSegments.forEach(item => item.commit(this));
     removed.forEach(item => item.remove());
   }
-  right(removed2: Vec2[], startIndex: number, endIndex: number): void {
+  right(replacementPoints: Vec2[], startIndex: number, endIndex: number): void {
     const newSegments: Segment[] = [];
-    for (let i = 0; i < removed2.length - 1; i++) {
-      newSegments.push(new Segment(removed2[i], removed2[i + 1]));
+    for (let i = 0; i < replacementPoints.length - 1; i++) {
+      newSegments.push(new Segment(replacementPoints[i], replacementPoints[i + 1]));
     }
     const removed = this.segments.splice(startIndex, endIndex - startIndex);
     this.remove();
@@ -129,17 +129,17 @@ export class Polygon {
     if (result.length > 1) {
       result.sort((a, b) => a.distance - b.distance);
       result = result.filter(function (item, index) {
-        return result.findIndex(item2 => item2.point === item.point) === index;
+        return result.findIndex(candidate => candidate.point === item.point) === index;
       });
     }
     return result;
   }
-  inside(point3: Vec2): boolean {
+  inside(point: Vec2): boolean {
     const { length } = this.segments;
     let crossingSign = 1;
     for (let i = 0; i < length; i++) {
       const { start, end } = this.segments[i];
-      const crossing = rayCrossingSign(start, end, point3);
+      const crossing = rayCrossingSign(start, end, point);
       if (crossing === 0) {
         return true;
       }
@@ -206,26 +206,26 @@ export class Polygon {
   }
   updateBounds(): void {
     this.calcSimplify();
-    let min = Infinity;
-    let max = -Infinity;
-    let min2 = Infinity;
-    let max2 = -Infinity;
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
     this.simplifiedPoints.forEach(item => {
       const { x, y } = item;
-      min = Math.min(min, x);
-      max = Math.max(max, x);
-      min2 = Math.min(min2, y);
-      max2 = Math.max(max2, y);
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
     });
-    min -= CELL_RADIUS;
-    max += CELL_RADIUS;
-    min2 -= CELL_RADIUS;
-    max2 += CELL_RADIUS;
+    minX -= CELL_RADIUS;
+    maxX += CELL_RADIUS;
+    minY -= CELL_RADIUS;
+    maxY += CELL_RADIUS;
     this.bounds = {
-      left: min,
-      right: max,
-      top: min2,
-      bottom: max2
+      left: minX,
+      right: maxX,
+      top: minY,
+      bottom: maxY
     };
   }
 }

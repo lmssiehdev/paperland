@@ -153,10 +153,10 @@ export class AchievementStore {
     const storage: AchievementStorage = platform.storage.getJSON(this.storageName) || {};
     if (storage.achievements) {
       storage.achievements.forEach(achievement => {
-        const achievement2 = this.achievements.find(achievement2 => achievement2.name === achievement.name);
-        if (achievement2) {
-          achievement2.best = achievement.best || 0;
-          achievement2.earned = achievement.earned || false;
+        const target = this.achievements.find(candidate => candidate.name === achievement.name);
+        if (target) {
+          target.best = achievement.best || 0;
+          target.earned = achievement.earned || false;
         }
       });
     }
