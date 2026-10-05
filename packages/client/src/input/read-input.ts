@@ -55,7 +55,7 @@ export const readControllerInput: InputSource = (game, dt) => {
       (game.keyboard.x !== game.controller.mouse.x && game.keyboard.y !== game.controller.mouse.y)
     ) {
       game.keyboard = null;
-      // A controller (and so mouse input) only exists for a game with a view (see api.ts).
+      // A controller (and so mouse input) only exists for a game with a view (see GameSession in session.ts).
       game.direction = new Vec2(game.controller.mouse.x, game.controller.mouse.y)
         .sub(new Vec2(game.view!.clientWidth / 2, game.view!.clientHeight / 2))
         .normalize();

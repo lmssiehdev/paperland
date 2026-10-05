@@ -249,7 +249,7 @@ export interface TeamEvents {
 }
 
 export class Game {
-  /** Best score so far; assigned by api.start() right before spawnPlayer (read only for the player's result/HUD). */
+  /** Best score so far; assigned by GameSession.start() (client/src/session.ts) right before spawnPlayer (read only for the player's result/HUD). */
   best!: number;
   isTest: boolean | undefined;
   playerDeathCallback: (() => void) | undefined;
@@ -259,17 +259,17 @@ export class Game {
   topListChanged: boolean;
   /** Country -> city name lookup (flag mode only; never set in this build). */
   citiesManager: { get(country: string): string } | undefined;
-  /** Assigned by api.ts. */
+  /** From GameHooks via createGame() (client: session.ts). */
   renderer: GameRenderer | undefined;
-  /** Assigned by api.ts; without one readInput() does nothing (headless). */
+  /** From GameHooks via createGame(); without one readInput() does nothing (headless). */
   input: InputSource | undefined;
-  /** Assigned by api.ts; without one GameResult.image is undefined (headless). */
+  /** From GameHooks via createGame(); without one GameResult.image is undefined (headless). */
   territoryImage: TerritoryImager | undefined;
-  /** Assigned by api.ts (requestAnimationFrame); the headless default waits one tick. */
+  /** From GameHooks via createGame() (client: requestAnimationFrame); the headless default waits one tick. */
   requestFrame: FrameScheduler = callback => {
     setTimeout(callback, TICK_MS);
   };
-  /** Mode-specific rules (spawning, win condition). Set by createApi; classic by default. */
+  /** Mode-specific rules (spawning, win condition). Set by createGame(); classic by default. */
   mode: GameMode = new ClassicMode();
   rng: Rng;
   build: number;

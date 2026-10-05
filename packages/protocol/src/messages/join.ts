@@ -7,7 +7,7 @@ export class JoinMsg implements Msg {
   readonly type = MsgType.Join;
   protocolVersion = PROTOCOL_VERSION;
   name = "";
-  /** Skin asset name ("" for a random colored skin), as in api.start(). */
+  /** Skin asset name ("" for a random colored skin), as in GameSession.start(). */
   skin = "";
 
   serialize(s: BitStream): void {

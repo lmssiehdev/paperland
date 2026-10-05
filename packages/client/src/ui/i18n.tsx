@@ -65,7 +65,7 @@ export interface I18nProviderProps {
   languages: Language[];
   /** Starting language (main.ts: the browser's, else English). */
   initial: Language;
-  /** Called after every switch; main.ts forwards the strings to the game via api.setLanguage(). */
+  /** Called after every switch; main.ts forwards the strings to the game via session.setLanguage(). */
   onChange?: (language: Language) => void;
   children?: ComponentChildren;
 }
