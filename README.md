@@ -52,8 +52,8 @@ page to see client changes). Use `PORT=3100 bun run serve` for another port.
 The browser scripts (`smoke`, `golden`, `parity`, `autopilot`) use Playwright, need a dev build
 (`bun run build:dev`) and a running server. Set `BASE_URL` to point them elsewhere.
 
-CI runs typecheck, lint, format, build and `test:unit` on every push and PR. The Chromium tests and
-`parity` run only when `bun.lock` (the Chromium version), the trig port or the e2e tests change.
+CI runs typecheck, lint, format, build and `test:unit` on every push and PR. Run `bun run test:chromium`
+and `bun run parity 6` by hand after upgrading Playwright or touching `packages/core/src/engine/trig.ts`.
 
 ## Project layout
 
