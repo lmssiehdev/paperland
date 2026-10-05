@@ -1,5 +1,5 @@
 import type { Config } from "@paperio/core/config";
-import { loadImage } from "../engine/load-image";
+import { platform } from "@paperio/core/platform";
 
 export { SkinDisplay } from "@paperio/core/skins/skin-display";
 export type { SkinDisplayLayer } from "@paperio/core/skins/skin-display";
@@ -66,19 +66,19 @@ export class SkinLayer {
       y: 0.5,
       ...layerConfig.pivot
     };
-    const sourcePromise: Promise<SkinImageSource> | null = this.url
-      ? loadImage(this.url)
-      : this.src
-        ? Promise.resolve(this.src)
-        : null;
-    if (sourcePromise) {
-      sourcePromise.then(src => {
-        this.src = src;
-        this.rescale(1);
-        if (onLoad) {
-          onLoad(this);
-        }
-      });
+    const onSource = (src: SkinImageSource): void => {
+      this.src = src;
+      this.rescale(1);
+      if (onLoad) {
+        onLoad(this);
+      }
+    };
+    if (this.url) {
+      // A layer whose image fails to load stays unloaded (its avatar never becomes ready), as before.
+      platform.loadImage(this.url, image => image && onSource(image));
+    } else if (this.src) {
+      // Deferred, never synchronous: SkinAvatar's onLayerLoad must run after its constructor finished.
+      void Promise.resolve(this.src).then(onSource);
     }
   }
   rescale(scale: number) {
@@ -127,7 +127,11 @@ export class SkinPattern {
     this.src = null;
     this.ready = false;
     const { maxScale } = config;
-    loadImage(this.url).then(src => {
+    // A pattern whose image fails to load stays not ready (renderers use the main color), as before.
+    platform.loadImage(this.url, src => {
+      if (!src) {
+        return;
+      }
       this.src = src;
       const srcWidth = ~~(src.naturalWidth || src.width);
       const srcHeight = ~~(src.naturalHeight || src.height);
