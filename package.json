@@ -15,7 +15,6 @@
     "oxfmt": "^0.71.0",
     "oxlint": "^1.86.0",
     "oxlint-plugin-anti-slop": "github:dmmulroy/anti-slop#c44ef22",
-    "prettier": "^3.9.9",
     "ts-morph": "^28.0.0",
     "webcrack": "^2.16.0"
   },
