@@ -1,11 +1,16 @@
 import { Elysia, t } from "elysia";
+import { MODES } from "@paperio/core/modes/index";
 import type { RoomManager } from "./rooms";
 
 // JSON over HTTP. These `t` schemas are the single source of truth: Elysia validates with them and Eden
 // Treaty infers its types from them (`treaty<App>`). A client that needs the shapes imports them type-only
 // (`import type { App }` from app.ts), which pulls nothing into a bundle.
+
+// Every mode core offers, so a new mode in MODES reaches the API without touching this file. Passed as a
+// non-empty tuple literal so the schema's static type is ModeId, not string.
+const [firstMode, ...otherModes] = MODES.map(mode => mode.id);
 const FindRequestSchema = t.Object({
-  mode: t.Optional(t.Union([t.Literal("classic"), t.Literal("teams")]))
+  mode: t.Optional(t.UnionEnum([firstMode, ...otherModes]))
 });
 const FindResponseSchema = t.Object({
   roomId: t.String(),
