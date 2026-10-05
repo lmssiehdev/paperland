@@ -41,6 +41,15 @@
       // ((window as any).paperio2api ...); there is no invariant to state per assertion.
       "files": ["packages/e2e/src/**"],
       "rules": { "anti-slop/require-safety-comment-for-type-assertion": "off" }
+    },
+    {
+      // Ports of C floating-point code: reading and writing IEEE-754 bit fields is the point.
+      "files": [
+        "packages/core/src/engine/trig.ts",
+        "packages/core/test/trig-inputs.ts",
+        "packages/e2e/test/trig-bit-exact.entry.ts"
+      ],
+      "rules": { "no-bitwise": "off" }
     }
   ]
 }
