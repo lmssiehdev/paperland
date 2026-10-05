@@ -2,12 +2,11 @@
 import { createApp } from "./app";
 import { loadGameData } from "./game-data";
 import { RoomManager } from "./rooms";
-import { siteDescription } from "./site";
 
 const port = Number(process.env.PORT ?? 3000);
 const rooms = new RoomManager(await loadGameData());
 const app = createApp(rooms).listen(port);
-console.log(`serving ${siteDescription} on http://localhost:${port}/  (POST /api/find, ws /play)`);
+console.log(`serving http://localhost:${port}/  (POST /api/find, ws /play)`);
 
 const shutdown = () => {
   rooms.stopAll();

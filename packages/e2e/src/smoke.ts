@@ -11,7 +11,13 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 
 // Block anything that isn't our local mirror.
-await page.route("**/*", r => (new URL(r.request().url()).hostname === "localhost" ? r.continue() : r.abort()));
+const external: string[] = [];
+await page.route("**/*", r => {
+  const requested = new URL(r.request().url());
+  if (requested.hostname === "localhost") return r.continue();
+  external.push(requested.href);
+  return r.abort();
+});
 
 const errors: string[] = [];
 const logs: string[] = [];
@@ -91,5 +97,18 @@ console.log(
     2
   )
 );
+// Teams: fresh page, pick Teams, Play -> a teams round with the player in it.
+await page.reload();
+await page.waitForSelector("#mode-teams");
+await page.click("#mode-teams");
+await page.click("#play");
+await page.waitForFunction(() => !!(window as any).paperio2api.game.player, null, { timeout: 10000 });
+const teams = await page.evaluate(() => {
+  const game = (window as any).paperio2api.game;
+  return { mode: game.mode.id as string, teams: game.mode.teams.length as number, playerTeam: !!game.player.team };
+});
+const teamsOk = teams.mode === "teams" && teams.teams > 0 && teams.playerTeam;
+console.log(JSON.stringify({ teams, external }));
 await browser.close();
-if (errors.length || !menuOk || !languageOk || !extraLifeOk || !unitsMoved || !hasPlayer) process.exit(1);
+if (external.length || !teamsOk || errors.length || !menuOk || !languageOk || !extraLifeOk || !unitsMoved || !hasPlayer)
+  process.exit(1);

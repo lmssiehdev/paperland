@@ -4,8 +4,7 @@
 //   /teams/          teams mode       (MODE_JS=deob|original, default deob)
 //   /battleroyale/   battle royale    (MODE_JS=deob|original, default deob)
 // Game-over POSTs (results.php) are swallowed. Recorded responses (lb.php, token.php) are replayed.
-// Mounted as the catch-all route of the Elysia app (app.ts); was the root server.ts.
-import { Elysia } from "elysia";
+// Research tool, not the product server (packages/server): bun run mirror  (PORT, default 3001).
 
 // Paths are relative to the repo root, whatever the cwd.
 const ROOT = new URL("../../../", import.meta.url).pathname;
@@ -69,7 +68,5 @@ export async function siteFetch(req: Request): Promise<Response> {
   return new Response("not found", { status: 404 });
 }
 
-export const siteDescription = `classic=${GAME_JS}, modes=${MODE_JS}`;
-
-/** Everything not matched by /api or /play: the page, app2.js and the captured assets. */
-export const site = new Elysia({ name: "site" }).all("/*", ({ request }) => siteFetch(request));
+const server = Bun.serve({ port: Number(process.env.PORT ?? 3001), fetch: siteFetch });
+console.log(`mirror: classic=${GAME_JS}, modes=${MODE_JS} on ${server.url}`);

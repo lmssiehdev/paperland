@@ -6,18 +6,21 @@ Reverse-engineering of the Paper.io 2 clone at paperio.site.
 
 ```sh
 bun install
-bun run build            # packages/client -> packages/client/dist/app2.js
-bun run serve            # Elysia server on :3000 (PORT=3100 bun run serve for another port)
-bun run dev              # build once, then serve with --watch on the server
+bun run build            # production client bundle -> packages/client/dist/app2.js (__DEV__=false)
+bun run build:dev        # dev bundle (__DEV__=true): window.paperio2api/__paperio, debug keys, ?seed= ?mode=
+bun run serve            # product server (Elysia) on :3000 (PORT=3100 bun run serve for another port)
+bun run dev              # dev bundle with --watch + server with --watch (reload the page for client changes)
+bun run mirror           # research mirror of paperio.site on :3001 (GAME_JS=src|game|deob|original, /teams/, /battleroyale/)
 bun run typecheck        # every package with tsgo (TypeScript 7 native), 0 errors
 bun test                 # unit tests of every package (+ the Chromium headless golden, needs Playwright)
 bun run smoke            # headless boot + start round + units move + screenshots in shots/
 bun run autopilot 5 180  # 5 trials x 180 simulated seconds, straight-line vs AI autopilot
 ```
 
-`GAME_JS=src|game|deob|original bun run serve` picks which `app2.js` is served (`src` = the client build).
-All Playwright scripts take `BASE_URL` (default `http://localhost:3000/`), e.g.
-`BASE_URL=http://localhost:3100/ bun run golden`.
+The Playwright scripts (golden, parity, smoke, stress, autopilot) drive the game through
+`window.paperio2api`, which only dev builds expose: run `bun run build:dev` first. They take `BASE_URL`
+(default `http://localhost:3000/`), e.g. `BASE_URL=http://localhost:3100/ bun run golden`. The simulation
+does not depend on `__DEV__`.
 
 ## Layout
 
@@ -31,12 +34,15 @@ packages/
              skins/skin (skin pools + manager, by name), handles.ts, platform.ts, headless.ts
   protocol/  wire format shared by client + server: bit-stream.ts (BitStream), messages.ts (MsgType,
              Join/Joined/Input/Update/Died, encode/decode), api.ts (HTTP JSON shapes)
-  client/    browser: main.ts (boot), api.ts (window.paperio2api), render/ (canvas), ui/ (Preact JSX;
+  client/    browser: main.ts (boot), session.ts (GameSession: warm-up, loop, mode, language), render/,
+             ui/ (Preact JSX; useGameSession,
              i18n.tsx = I18nProvider + useI18n),
              input/ (mouse/keyboard), skins/ (artwork: display, image-skins), core-handles.ts
-  server/    Bun + Elysia: index.ts (entry), app.ts, site.ts (page + assets), api.ts (POST /api/find),
+  server/    Bun + Elysia, product only: index.ts (entry), dev.ts, app.ts, static.ts (page, bundle, assets),
+             api.ts (POST /api/find),
              play.ts (ws /play), room.ts/rooms.ts (headless rooms ticking at 20 Hz)
-  e2e/       Playwright + cross-package: src/ golden, parity, smoke, autopilot, check-teams;
+  e2e/       Playwright + cross-package: src/ golden, parity, smoke, autopilot, check-teams, stress-teams,
+             mirror (research mirror of paperio.site);
              test/ headless golden in Chromium, dependency rules
 original/    files extracted from the HAR (+ 8 missing skins); the server serves the page from here
 deob/        intermediate: stage1 (strings), stage2 (webcrack), game.js (renamed)
@@ -77,7 +83,8 @@ Core was cut from the browser code with the smallest seams that work; gameplay c
   `interface PathHandle extends Path2D {}`), so the renderer reads `polygon.path` as a `Path2D` unchanged.
 - `core/src/platform.ts`: `createPath()`, `loadImage()`, `storage` with headless defaults (no-op path,
   no images, in-memory storage). `client/src/main.ts` installs `Path2D`, `Image` and js-cookie via `setPlatform()`.
-- `Game` hooks next to the existing `renderer`, all set by `client/src/api.ts`:
+- `GameHooks` (`renderer`, `input`, `territoryImage`, `requestFrame`), passed to `createGame()` by
+  `client/src/session.ts`:
   `input` (`readInput()` delegates to it; body in `client/src/input/read-input.ts`), `territoryImage`
   (results-screen PNG, `client/src/render/territory-image.ts`), `requestFrame` (`requestAnimationFrame`;
   headless default is a one-tick timeout).
@@ -85,8 +92,9 @@ Core was cut from the browser code with the smallest seams that work; gameplay c
   `Particle.draw`/`FloatingLabel.draw` (`render/effects.ts`), `ImageAsset`/`ClassicSkinPool`/colored-skin
   canvases (`skins/image-skins.ts`; core's `ColoredPool` takes an optional avatar factory).
 - Moved to core: `SkinDisplay` (`skins/skin-display.ts`), `LanguageStrings` (`language.ts`).
-- `core/src/headless.ts`: `createHeadlessGame()` = the client's `api.create()` minus view, input,
-  renderer and images. Used by tests and server rooms.
+- `core/src/create-game.ts`: `createGame()`, the one Game factory (mode, schemes, grid, border, skins,
+  seed, hooks), used by the browser `GameSession` and by `core/src/headless.ts` `createHeadlessGame()`
+  (no view, input, renderer or images; tests and server rooms).
 
 ## UI language (i18n)
 
@@ -200,7 +208,7 @@ Patches vs the original (both applied by `split.ts`):
 | Entities | `Unit` -> `Player`, `Bot`; each has a `Base` (polygon) and `Track` (trail) |
 | Bot AI | `StateMachine` + `BOT_STATES` |
 | Game | `Game` (`update`, `handleUnitMovements`, `handleReturn`, `kill`, `spawnBot`, `loop`) |
-| Entry | `createApi` (client) -> `window.paperio2api` (`create/prepare/start/startGame/game`); `createHeadlessGame` (core) |
+| Entry | `GameSession` (client, `useGameSession()`; dev builds: `window.paperio2api`); `createGame`/`createHeadlessGame` (core) |
 | Config | `DEFAULT_CONFIG`: arena 2000, speed 90/s, 15 bots, turn rate TAU rad/s |
 
 ## Mechanics found
