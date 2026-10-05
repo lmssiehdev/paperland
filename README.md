@@ -55,6 +55,14 @@ The browser scripts (`smoke`, `golden`, `parity`, `autopilot`) use Playwright, n
 CI runs typecheck, lint, format, build and `test:unit` on every push and PR. Run `bun run test:chromium`
 and `bun run parity 6` by hand after upgrading Playwright or touching `packages/core/src/engine/trig.ts`.
 
+## PR previews
+
+Add the `preview` label to a pull request to deploy it to Cloudflare Workers at
+`https://paperland-pr-<number>.lmssieh.workers.dev` (dev build, so `?mode=teams` and `?seed=` work). New
+commits redeploy and update the same comment. Closing or merging the PR, or removing the label, deletes it.
+Only PRs from branches of this repo can be previewed (forks get no secrets). `bun run build:site` builds
+the same static site locally into `packages/client/dist/site`.
+
 ## Project layout
 
 ```
