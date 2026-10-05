@@ -102,7 +102,6 @@ Promise.all([languagesRequest, skinsRequest]).then(([languagesFile, skinsList]) 
           onChange: language => session.setLanguage(language.lng)
         },
         createElement(App, {
-          storage: localStorageJSON,
           skins: skinsList,
           initialMode: MODES.find(mode => mode.id === modeParam)?.id
         })

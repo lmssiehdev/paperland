@@ -4,19 +4,12 @@ import type { StateUpdater, Dispatch } from "preact/hooks";
 import type { GameResult } from "@paperio/core/game/game";
 import { MODES } from "@paperio/core/modes/index";
 import type { ModeId } from "@paperio/core/modes/index";
-import type { PlatformStorage } from "@paperio/core/platform";
 import { useI18n } from "./i18n";
 import { useGameSession } from "./session-context";
+import { useStoredProfile } from "./stored-profile";
 
 /** Screens the root App can show. */
 export type Route = "menu" | "game" | "results" | "skins";
-
-/** Persisted UI state under the "paper.io.storage" key. */
-interface StoredProfile {
-  nickName?: string;
-  bestScore?: number;
-  skin?: string;
-}
 
 /** One entry of assets/skins/skins.json; the UI only needs the name. */
 export interface SkinInfo {
@@ -58,7 +51,7 @@ const LanguageFooter = () => {
 };
 interface MainMenuProps {
   nickName: string;
-  setNickName: Setter<string>;
+  setNickName: (nickName: string) => void;
   start: () => void;
   route: Setter<Route>;
   skin: string;
@@ -123,7 +116,7 @@ const MainMenu = ({ nickName, setNickName, start, route, skin, mode, setMode }: 
 interface GameScreenProps {
   nickName: string;
   bestScore: number;
-  setBestScore: Setter<number>;
+  setBestScore: (bestScore: number) => void;
   setResults: Setter<GameResult | null>;
   route: Setter<Route>;
   skin: string;
@@ -231,7 +224,7 @@ interface SkinPickerProps {
   skins: SkinInfo[];
   skin: string;
   menu: () => void;
-  setSkin: Setter<string>;
+  setSkin: (skin: string) => void;
 }
 const SkinPicker = ({ skins, skin, menu, setSkin }: SkinPickerProps) => {
   const { t } = useI18n();
@@ -266,7 +259,7 @@ interface SkinsScreenProps {
   skins: SkinInfo[];
   skin: string;
   route: Setter<Route>;
-  setSkin: Setter<string>;
+  setSkin: (skin: string) => void;
 }
 const SkinsScreen = ({ skins, skin, route, setSkin }: SkinsScreenProps) => {
   const goToMenu = () => route("menu");
@@ -284,31 +277,22 @@ const SkinsScreen = ({ skins, skin, route, setSkin }: SkinsScreenProps) => {
   );
 };
 export interface AppProps {
-  storage: PlatformStorage;
   skins: SkinInfo[];
   /** Mode preselected in the menu (dev: ?mode=); default classic. */
   initialMode?: ModeId;
 }
-export const App = ({ storage, skins, initialMode = "classic" }: AppProps) => {
+export const App = ({ skins, initialMode = "classic" }: AppProps) => {
   const session = useGameSession();
   const viewRef = useRef<HTMLCanvasElement>(null);
   const [route, setRoute] = useState<Route>("menu");
   const [sessionState, setSessionState] = useState(session.state);
   const preparing = sessionState === "preparing";
   const [results, setResults] = useState<GameResult | null>(null);
-  const storageKey = "paper.io.storage";
-  const stored: StoredProfile = storage.getJSON<StoredProfile>(storageKey) || {};
-  const [nickName, setNickName] = useState(stored.nickName || "");
-  const [bestScore, setBestScore] = useState(stored.bestScore || 0);
-  const [skin, setSkin] = useState(stored.skin || "");
+  const [{ nickName, bestScore, skin }, updateProfile] = useStoredProfile();
+  const setNickName = (value: string) => updateProfile({ nickName: value });
+  const setBestScore = (value: number) => updateProfile({ bestScore: value });
+  const setSkin = (value: string) => updateProfile({ skin: value });
   const [mode, setMode] = useState<ModeId>(initialMode);
-  if (nickName !== stored.nickName || bestScore !== stored.bestScore || skin !== stored.skin) {
-    storage.set(storageKey, {
-      nickName: nickName,
-      bestScore: bestScore,
-      skin: skin
-    });
-  }
   useEffect(() => {
     const unsubscribe = session.subscribe(setSessionState);
     // The canvas is mounted by this render, so the ref is set when the effect runs.
