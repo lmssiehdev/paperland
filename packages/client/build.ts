@@ -41,7 +41,12 @@ async function build(): Promise<boolean> {
     return false;
   }
   await mkdir(OUT + "assets", { recursive: true });
-  await cp(ROOT + "original/assets/", OUT + "assets/", { recursive: true });
+  // The client shows the WebP logo; the captured logo.png (kept for the original game) and the unused
+  // heart.gif stay out of the site.
+  await cp(ROOT + "original/assets/", OUT + "assets/", {
+    recursive: true,
+    filter: path => !/(images\/logo\.png|\.gif)$/.test(path)
+  });
   await cp(CLIENT + "public/assets/fonts/", OUT + "assets/fonts/", {
     recursive: true,
     filter: path => !path.endsWith(".css")
