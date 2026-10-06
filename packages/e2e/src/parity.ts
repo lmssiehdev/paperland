@@ -1,7 +1,7 @@
 // 1:1 check against the hosted game: runs the golden simulation on
 //   (a) the original obfuscated app2.js served under the real hostname https://paperio.site
 //       (so its domain lock passes and it behaves exactly like the live site), and
-//   (b) our build (dist/app2.js) on localhost,
+//   (b) our build (packages/client/dist/site) on localhost,
 // for several seeds, and compares the state hashes (exits 1 if any differs).  usage: [BASE_URL=http://localhost:3000/] bun packages/e2e/src/parity.ts [seeds=5] [ticks=4000]
 import { chromium, type Page } from "playwright";
 

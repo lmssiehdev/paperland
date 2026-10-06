@@ -1,6 +1,6 @@
 {
   "name": "@paperio/server",
-  "description": "Bun + Elysia server: static site, HTTP /api/*, WebSocket /play, headless game rooms.",
+  "description": "Bun + Elysia server: HTTP /api/*, WebSocket /play, headless game rooms (+ the client build at / when SITE_DIR is set). Compiles to one binary.",
   "type": "module",
   "private": true,
   "dependencies": {
@@ -10,7 +10,8 @@
   },
   "scripts": {
     "start": "bun src/index.ts",
-    "dev": "bun --watch src/index.ts",
+    "dev": "SITE_DIR=../client/dist/site bun --watch src/index.ts",
+    "build": "bun build src/index.ts --compile --minify-whitespace --minify-syntax --sourcemap --outfile dist/paperio-server",
     "typecheck": "tsgo --noEmit -p ."
   },
   "devDependencies": {

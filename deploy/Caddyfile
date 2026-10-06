@@ -1,0 +1,29 @@
+# Production front (Caddy 2): serves the client build from disk and proxies /api and /play to the Bun
+# server (paperio.service). Replace the hostname; Caddy obtains and renews the TLS certificate itself.
+paperio.example.com {
+	@server path /api/* /play
+	handle @server {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	handle {
+		root * /srv/paperio/site
+		# static/: content-hashed names, a change is a new URL -> cache forever.
+		@hashed path /static/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		# Everything else (index.html, assets/*) has a fixed name -> browsers keep it but revalidate on every
+		# load (a 304 via ETag), so a redeploy is picked up immediately.
+		@fixed not path /static/*
+		header @fixed Cache-Control "no-cache"
+		# .br/.gz files are written at build time (packages/client/build.ts): no per-request compression.
+		file_server {
+			precompressed br gzip
+		}
+	}
+
+	# Never let a browser cache an error (a 404 on a hashed URL during a deploy would otherwise stick).
+	handle_errors {
+		header Cache-Control "no-store"
+		respond "{err.status_code} {err.status_text}"
+	}
+}

@@ -1,6 +1,7 @@
 // Local mirror of paperio.site. Third-party ads/analytics are stripped.
-//   /                classic mode; GAME_JS=src|game|deob|original picks which app2.js is served
-//                    (GAME_JS_PATH=<file> overrides it, e.g. a build from a git worktree)
+//   /                classic mode; GAME_JS=src|game|deob|original picks the game:
+//                    src = our client build (packages/client/dist/site, or SITE_DIR=<dir>, e.g. a worktree's),
+//                    the others = that app2.js on the original page (GAME_JS_PATH=<file> overrides the file)
 //   /teams/          teams mode       (MODE_JS=deob|original, default deob)
 //   /battleroyale/   battle royale    (MODE_JS=deob|original, default deob)
 // Game-over POSTs (results.php) are swallowed. Recorded responses (lb.php, token.php) are replayed.
@@ -14,8 +15,7 @@ const MODE_JS = process.env.MODE_JS ?? "deob";
 const JS_PATHS: Record<string, string> = {
   original: "original/app2.js",
   deob: "deob/stage2/deobfuscated.js",
-  game: "deob/game.js",
-  src: "packages/client/dist/app2.js"
+  game: "deob/game.js"
 };
 
 // mode prefix -> { dir, js file name in page, deobfuscated build }
@@ -34,10 +34,10 @@ const cleanHtml = (html: string) =>
     .replace(/<script type="text\/javascript" >[\s\S]*?ym\([\s\S]*?<\/script>/, "")
     .replace("<head>", "<head>" + AD_STUBS);
 
-// Our build gets our own page (packages/client/public); original builds still expect the original page's globals.
-const OUR_PAGE = "packages/client/public/";
-const classicHtml =
-  GAME_JS === "src" ? await file(OUR_PAGE + "index.html").text() : cleanHtml(await file("original/index.html").text());
+// Our build is a whole site (its own page, hashed bundle names): served as built, read per request so a
+// rebuild shows up on reload. Original builds still expect the original page's globals.
+const OUR_SITE = process.env.SITE_DIR ?? "packages/client/dist/site";
+const originalHtml = cleanHtml(await file("original/index.html").text());
 const html = (body: string) => new Response(body, { headers: { "content-type": "text/html" } });
 
 export async function siteFetch(req: Request): Promise<Response> {
@@ -63,11 +63,13 @@ export async function siteFetch(req: Request): Promise<Response> {
     return new Response("not found", { status: 404 });
   }
 
-  if (pathname === "/") return html(classicHtml);
-  if (GAME_JS === "src" && (pathname === "/style.css" || pathname.startsWith("/assets/fonts/"))) {
-    return new Response(file(OUR_PAGE + pathname.slice(1)));
+  if (GAME_JS === "src") {
+    const built = file(`${OUR_SITE}/${pathname === "/" ? "index.html" : pathname.slice(1)}`);
+    if (await built.exists()) return new Response(built);
+  } else {
+    if (pathname === "/") return html(originalHtml);
+    if (pathname === "/app2.js") return new Response(file(process.env.GAME_JS_PATH ?? JS_PATHS[GAME_JS]!));
   }
-  if (pathname === "/app2.js") return new Response(file(process.env.GAME_JS_PATH ?? JS_PATHS[GAME_JS]!));
   const asset = file(`original${pathname}`);
   if (await asset.exists()) return new Response(asset);
   console.log("[404]", pathname);

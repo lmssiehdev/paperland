@@ -1,12 +1,10 @@
 import { expect, test } from "bun:test";
 import { decodeServerMessages, encodeMessages, UpdateMsg } from "@paperio/protocol/messages/index";
-import { loadGameData } from "../src/game-data";
+import { GAME_DATA } from "../src/game-data";
 import { Room } from "../src/room";
 
-const data = await loadGameData();
-
 test("room ticks a headless core game at 20 Hz under Bun, with no clients", async () => {
-  const room = new Room({ id: "t", data, tickRate: 20, warmUp: false });
+  const room = new Room({ id: "t", data: GAME_DATA, tickRate: 20, warmUp: false });
   room.start();
   await Bun.sleep(500);
   const before = new Map(room.game.units.map(unit => [unit, unit.position.clone()] as const));
@@ -23,14 +21,14 @@ test("room ticks a headless core game at 20 Hz under Bun, with no clients", asyn
 });
 
 test("warm-up runs core's bot-only prepare phase", () => {
-  const room = new Room({ id: "w", data });
+  const room = new Room({ id: "w", data: GAME_DATA });
   expect(room.game.cycle).toBe(room.game.config.prepareCounter);
   expect(room.game.units.length).toBe(room.game.config.botsCount);
   room.stop();
 });
 
 test("snapshot round-trips through the protocol", () => {
-  const room = new Room({ id: "s", data, warmUp: false });
+  const room = new Room({ id: "s", data: GAME_DATA, warmUp: false });
   for (let i = 0; i < 20; i++) room.tick();
   const [decoded] = decodeServerMessages(encodeMessages(room.snapshot()));
   expect(decoded).toBeInstanceOf(UpdateMsg);

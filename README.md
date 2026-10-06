@@ -28,7 +28,7 @@ Requires [Bun](https://bun.sh).
 
 ```sh
 bun install
-bun run build    # build the browser bundle
+bun run build    # client site + server binary
 bun run serve    # start the server on http://localhost:3000
 ```
 
@@ -55,6 +55,32 @@ The browser scripts (`smoke`, `golden`, `parity`, `autopilot`) use Playwright, n
 CI runs typecheck, lint, format, build and `test:unit` on every push and PR. Run `bun run test:chromium`
 and `bun run parity 6` by hand after upgrading Playwright or touching `packages/core/src/engine/trig.ts`.
 
+## Deploy
+
+One machine: Caddy serves the client build and terminates TLS; the game server is one compiled binary
+under systemd, reachable only from Caddy.
+
+```
+browser --https--> Caddy --- /api/*, /play --> 127.0.0.1:3000  paperio-server (bun build --compile)
+                         \--- everything else -> /srv/paperio/site  (packages/client/dist/site)
+```
+
+- `packages/client/dist/site/`: `index.html`; `static/` = everything with a content hash in its name (JS,
+  CSS, manifest, icon); `assets/` = files fetched by computed path (skins, languages.json, fonts). Text files
+  have `.br`/`.gz` twins written at build time.
+- Caching (`deploy/Caddyfile`): `static/*` is `immutable` for a year (a change is a new URL); everything
+  else is `no-cache`, so browsers revalidate (304) on every load and a redeploy shows up at once. Errors are
+  `no-store`.
+- The server binary embeds its data (skins.json, languages.json): it reads no files.
+
+First time, on the server: install Caddy, copy `deploy/Caddyfile` to `/etc/caddy/Caddyfile` (set the
+hostname), `sudo mkdir -p /srv/paperio/site /opt/paperio` (owned by the deploy user), then
+`sudo cp deploy/paperio.service /etc/systemd/system/ && sudo systemctl enable paperio`.
+
+Every deploy, from a checkout: `deploy/deploy.sh user@host` (`TARGET=bun-linux-arm64` for ARM). It uploads
+new hashed files before `index.html` and never deletes old ones, so a page loaded mid-deploy keeps
+working. Restarting the server ends running games (rooms are in memory).
+
 ## Project layout
 
 ```
@@ -64,6 +90,7 @@ packages/
   client/    browser: Preact UI, canvas renderer, input
   server/    Bun + Elysia: HTTP API, WebSocket rooms
   e2e/       Playwright tests and cross-package checks
+deploy/      production: Caddyfile, systemd unit, deploy.sh (see Deploy)
 ```
 
 Dependencies only point one way: `client -> protocol -> core` and `server -> protocol -> core`. A test

@@ -1,6 +1,9 @@
 import type { LanguageStrings } from "@paperio/core/language";
+// Imported, not read at runtime: the bundler inlines both, so the compiled server binary needs no asset files.
+import languages from "../../../original/assets/languages.json";
+import skins from "../../../original/assets/skins/skins.json";
 
-/** Static data a headless game needs, read from the captured site assets (original/assets). */
+/** Static data a headless game needs, from the captured site assets (original/assets). */
 export interface GameData {
   /** Image skin names in skins.json order (the client registers the same list). */
   skinNames: string[];
@@ -8,12 +11,8 @@ export interface GameData {
   language: LanguageStrings;
 }
 
-const assets = new URL("../../../original/assets/", import.meta.url).pathname;
-
-export async function loadGameData(): Promise<GameData> {
-  // SAFETY: captured asset file with a fixed shape (the client reads the same file).
-  const skins = (await Bun.file(assets + "skins/skins.json").json()) as { name: string }[];
+export const GAME_DATA: GameData = {
+  skinNames: skins.map(skin => skin.name),
   // SAFETY: captured asset file; "en" is complete (see LanguagesFile).
-  const languages = (await Bun.file(assets + "languages.json").json()) as { en: LanguageStrings };
-  return { skinNames: skins.map(skin => skin.name), language: languages.en };
-}
+  language: languages.en as LanguageStrings
+};
