@@ -376,16 +376,33 @@ button img {
   flex-grow: 1;
 }
 
-.skin-view img {
+.skin-view .skin-image {
   display: block;
   margin-top: 10px;
   margin-left: auto;
   margin-right: auto;
 }
 
+/* A skin drawn from its SVG layers (components.tsx SkinImage), each layer placed inside the box. */
+span.skin-image {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+span.skin-image img {
+  position: absolute;
+  margin: 0;
+  /* A layer may overflow the box (Bat's wings); it must not block the arrow buttons. */
+  pointer-events: none;
+}
+
 .skin-view h3 {
   margin: 0;
   text-align: center;
+  /* Above a skin that overflows its box (Nyan cat, Teletubby). */
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes kf_slider {

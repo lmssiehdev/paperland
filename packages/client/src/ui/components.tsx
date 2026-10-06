@@ -4,6 +4,7 @@ import type { StateUpdater, Dispatch } from "preact/hooks";
 import type { GameResult } from "@paperio/core/game/game";
 import { MODES } from "@paperio/core/modes/index";
 import type { ModeId } from "@paperio/core/modes/index";
+import type { SkinConfig } from "../skins/image-skins";
 import { useI18n } from "./i18n";
 import { useGameSession } from "./session-context";
 import { useStoredProfile } from "./stored-profile";
@@ -11,10 +12,8 @@ import { useStoredProfile } from "./stored-profile";
 /** Screens the root App can show. */
 export type Route = "menu" | "game" | "results" | "skins";
 
-/** One entry of assets/skins/skins.json; the UI only needs the name. */
-export interface SkinInfo {
-  name: string;
-}
+/** One entry of assets/skins/skins.json ("No skin" has no avatar). */
+export type SkinInfo = Pick<SkinConfig, "name" | "avatar">;
 
 type Setter<T> = Dispatch<StateUpdater<T>>;
 
@@ -54,11 +53,12 @@ interface MainMenuProps {
   setNickName: (nickName: string) => void;
   start: () => void;
   route: Setter<Route>;
+  skins: SkinInfo[];
   skin: string;
   mode: ModeId;
   setMode: Setter<ModeId>;
 }
-const MainMenu = ({ nickName, setNickName, start, route, skin, mode, setMode }: MainMenuProps) => {
+const MainMenu = ({ nickName, setNickName, start, route, skins, skin, mode, setMode }: MainMenuProps) => {
   const { t } = useI18n();
   const onNickInput = (event: TargetedEvent<HTMLInputElement, Event>) => setNickName(event.currentTarget.value);
   const onPlayClick = (event: TargetedEvent<HTMLButtonElement, MouseEvent>) => {
@@ -70,7 +70,7 @@ const MainMenu = ({ nickName, setNickName, start, route, skin, mode, setMode }: 
       <div id="left_side" />
       <div class="uibox">
         <div class="logo">
-          <img src="assets/images/logo.png" />
+          <img src="assets/images/logo.webp" />
         </div>
         <Tips messages={t.messages} />
         <div class="play">
@@ -88,11 +88,7 @@ const MainMenu = ({ nickName, setNickName, start, route, skin, mode, setMode }: 
             {t.btnPlay}
           </button>
           <button id="skins" name="skins" class="orange noPadding" onClick={() => route("skins")}>
-            <img
-              width="30"
-              height="30"
-              src={"assets/skins/select/" + (skin || "noskin").toLowerCase().replace(/\s+/g, "") + ".png"}
-            />
+            <SkinImage key={skin} skin={skins.find(candidate => candidate.name === skin)} size={30} />
           </button>
         </div>
         <div class="modes">
@@ -166,7 +162,7 @@ const Results = ({ bestScore, results, route }: ResultsProps) => {
       <div id="left_side" />
       <div class="uibox">
         <div class="logo">
-          <img src="assets/images/logo.png" />
+          <img src="assets/images/logo.webp" />
         </div>
         <div class="nav">
           <button class="yellow slider-5" id="menu" onClick={goToMenu}>
@@ -207,15 +203,72 @@ const Results = ({ bestScore, results, route }: ResultsProps) => {
     </>
   );
 };
-interface SkinPreviewProps {
-  name: string;
+interface SkinImageProps {
+  skin: SkinInfo | undefined;
+  size: number;
 }
-const SkinPreview = ({ name }: SkinPreviewProps) => {
+/**
+ * A skin as seen from above: its in-game SVG front layers (level >= 1) stacked in level order, placed by
+ * their scale, pivot and offset from skins.json, then fitted into the size x size box once every layer's
+ * aspect ratio is known. "No skin" (no avatar) shows the captured cube. Remount per skin (key).
+ */
+const SkinImage = ({ skin, size }: SkinImageProps) => {
+  const [ratios, setRatios] = useState<Record<string, number>>({});
+  const avatar = skin?.avatar;
+  const layers = (avatar?.layers ?? [])
+    .filter(layer => layer.url && (layer.level ?? 0) >= 1)
+    .sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
+  if (!avatar || layers.length === 0) {
+    return <img class="skin-image" width={size} height={size} src="assets/skins/select/noskin.png" />;
+  }
+  // Layer rects in track widths, as the game draws them (game-renderer.ts drawSkinLayer).
+  const rects = layers.map(layer => {
+    const width = (avatar.scale ?? 1) * (layer.scale ?? 1);
+    const height = width * (ratios[layer.url!] ?? 1);
+    const x = (avatar.x ?? 0) + (layer.x ?? 0) - (layer.pivot?.x ?? 0.5) * width;
+    const y = (avatar.y ?? 0) + (layer.y ?? 0) - (layer.pivot?.y ?? 0.5) * height;
+    return { x, y, width, height };
+  });
+  const left = Math.min(...rects.map(rect => rect.x));
+  const top = Math.min(...rects.map(rect => rect.y));
+  const boxWidth = Math.max(...rects.map(rect => rect.x + rect.width)) - left;
+  const boxHeight = Math.max(...rects.map(rect => rect.y + rect.height)) - top;
+  // Fit the longer side, but count it as at most 1.4x the shorter one: a long, thin skin (Bat's wings,
+  // 2.1:1) stays big and overflows the box instead of shrinking; every other skin is within 1.3:1.
+  const fit = size / Math.max(Math.min(boxWidth, boxHeight * 1.4), Math.min(boxHeight, boxWidth * 1.4));
+  const originX = (size - boxWidth * fit) / 2 - left * fit;
+  const originY = (size - boxHeight * fit) / 2 - top * fit;
+  const ready = layers.every(layer => ratios[layer.url!] !== undefined);
+  return (
+    <span class="skin-image" style={{ width: `${size}px`, height: `${size}px` }}>
+      {layers.map((layer, index) => (
+        <img
+          key={layer.url}
+          src={"assets/skins/" + layer.url}
+          onLoad={event => {
+            const image = event.currentTarget;
+            setRatios(known => ({ ...known, [layer.url!]: image.naturalHeight / image.naturalWidth }));
+          }}
+          style={{
+            visibility: ready ? "visible" : "hidden",
+            left: `${originX + rects[index].x * fit}px`,
+            top: `${originY + rects[index].y * fit}px`,
+            width: `${rects[index].width * fit}px`
+          }}
+        />
+      ))}
+    </span>
+  );
+};
+interface SkinPreviewProps {
+  skin: SkinInfo;
+}
+const SkinPreview = ({ skin }: SkinPreviewProps) => {
   return (
     <div class="skin">
       <div class="skin-view">
-        <h3>{name}</h3>
-        <img src={"assets/skins/select/" + name.toLowerCase().replace(/\s+/g, "") + ".png"} />
+        <h3>{skin.name}</h3>
+        <SkinImage key={skin.name} skin={skin} size={96} />
       </div>
     </div>
   );
@@ -242,7 +295,7 @@ const SkinPicker = ({ skins, skin, menu, setSkin }: SkinPickerProps) => {
         <button name="left" class="orange" onClick={() => selectSkin(selectedIndex - 1)}>
           {"<"}
         </button>
-        <SkinPreview name={skins[selectedIndex].name} />
+        <SkinPreview skin={skins[selectedIndex]} />
         <button name="right" class="orange" onClick={() => selectSkin(selectedIndex + 1)}>
           {">"}
         </button>
@@ -268,7 +321,7 @@ const SkinsScreen = ({ skins, skin, route, setSkin }: SkinsScreenProps) => {
       <div id="left_side" />
       <div class="uibox">
         <div class="logo">
-          <img src="assets/images/logo.png" />
+          <img src="assets/images/logo.webp" />
         </div>
         <SkinPicker skins={[{ name: "No skin" }].concat(skins)} menu={goToMenu} setSkin={setSkin} skin={skin} />
       </div>
@@ -315,6 +368,7 @@ export const App = ({ skins, initialMode = "classic" }: AppProps) => {
             setNickName={setNickName}
             start={startGame}
             route={setRoute}
+            skins={skins}
             skin={skin}
             mode={mode}
             setMode={setMode}

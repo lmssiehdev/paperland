@@ -1,4 +1,6 @@
 import { afterAll, expect, test } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { treaty } from "@elysiajs/eden";
 import {
   JoinedMsg,
@@ -11,18 +13,24 @@ import {
 import type { ServerMessage } from "@paperio/protocol/messages/index";
 import { createApp } from "../src/app";
 import type { App } from "../src/app";
-import { loadGameData } from "../src/game-data";
+import { GAME_DATA } from "../src/game-data";
 import { CloseCode } from "../src/play";
 import { RoomManager } from "../src/rooms";
 
-const rooms = new RoomManager(await loadGameData(), { warmUp: false });
-const app = createApp(rooms).listen(0);
+// A stand-in site; the /api and /play tests run with it on.
+const siteDir = await mkdtemp(tmpdir() + "/paperio-site-");
+await Bun.write(siteDir + "/index.html", "<!doctype html><title>site</title>");
+await Bun.write(siteDir + "/assets/skins/skins.json", "[]");
+
+const rooms = new RoomManager(GAME_DATA, { warmUp: false });
+const app = createApp(rooms, { siteDir }).listen(0);
 const base = `http://localhost:${app.server!.port}`;
 const client = treaty<App>(base);
 
 afterAll(async () => {
   rooms.stopAll();
   await app.stop();
+  await rm(siteDir, { recursive: true });
 });
 
 /** Opens /play and collects frames until `count` messages or a close. */
@@ -103,10 +111,9 @@ test("ws /play: text/JSON frames are rejected by the body schema", async () => {
   c.ws.close();
 });
 
-test("static site: page and captured assets", async () => {
+test("site route: SITE_DIR is served at / without shadowing /api or /play", async () => {
   const page = await fetch(base + "/");
-  expect(page.headers.get("content-type")).toContain("text/html");
-  expect(await page.text()).toContain("app2.js");
+  expect(await page.text()).toContain("<title>site</title>");
   expect((await fetch(base + "/assets/skins/skins.json")).status).toBe(200);
   expect((await fetch(base + "/nope.txt")).status).toBe(404);
 });

@@ -15,17 +15,18 @@ packages/
   protocol/  wire format shared by client + server: bit-stream.ts (BitStream), messages/ (shared.ts:
              MsgType + limits, one file per Join/Joined/Input/Update/Died, codec.ts: encode/decode,
              index.ts barrel imported as `@paperio/protocol/messages/index`)
-  client/    browser: public/ (index.html, style.css, self-hosted PT Sans Caption), main.ts (boot), storage.ts (localStorage), session.ts (GameSession: warm-up, loop, mode, language), render/,
+  client/    browser: build.ts (-> dist/site), public/ (index.html, style.css, self-hosted PT Sans Caption), main.ts (boot), storage.ts (localStorage), session.ts (GameSession: warm-up, loop, mode, language), render/,
              ui/ (Preact JSX; useGameSession,
              i18n.tsx = I18nProvider + useI18n),
              input/ (mouse/keyboard), skins/ (artwork: display, image-skins), core-handles.ts
-  server/    Bun + Elysia, product only: index.ts (entry), dev.ts, app.ts, static.ts (page, bundle, assets),
-             api.ts (POST /api/find),
+  server/    Bun + Elysia, product only: index.ts (entry), app.ts (+ the site at / when SITE_DIR is set),
+             game-data.ts, api.ts (POST /api/find),
              play.ts (ws /play), room.ts/rooms.ts (headless rooms ticking at 20 Hz)
   e2e/       Playwright + cross-package: src/ golden, parity, smoke, autopilot, check-teams, stress-teams,
              mirror (research mirror of paperio.site);
              test/ headless golden in Chromium, dependency rules
-original/    files extracted from the HAR (+ 8 missing skins); assets are served from here, the page is client/public
+original/    files extracted from the HAR (+ 8 missing skins); its assets/ is copied into the client build, the page is client/public
+deploy/      production: Caddyfile, paperio.service (systemd), deploy.sh (see README "Deploy")
 deob/        intermediate: stage1 (strings), stage2 (webcrack), game.js (renamed)
 modes/       captured Teams / Battle Royale / multiplayer builds and analyses
 scripts/     the historical deobfuscation pipeline (targets the old src/ layout)
@@ -47,6 +48,7 @@ server -> protocol -> core
 ```
 
 - core imports nothing outside core (no npm packages either).
+- server may also import the captured JSON in `original/assets/` (game data, inlined into its binary).
 - protocol imports only core.
 - client never imports server; server never imports client. The HTTP API's shapes live only in the
   server's Elysia `t` schemas (`server/src/api.ts`); Eden Treaty reads them from `App`. Nothing in the
@@ -177,7 +179,7 @@ and `regen` were removed from package.json since the code now lives in `packages
 | Top-level names | `scripts/rename.ts` (hand map, ~160) | `deob/game.js` |
 | Local names | `scripts/rename-locals.ts` (evidence-based, ~900 of 1665) | `deob/game.js` |
 | Split into modules | `scripts/split.ts` (imports/exports from scope analysis) | `src/` (now `packages/core` + `packages/client`) |
-| Bundle | `bun build` | `packages/client/dist/app2.js` |
+| Bundle | `packages/client/build.ts` | `packages/client/dist/site/` |
 
 Local names are inferred from what survived obfuscation: `this.game = x` -> `game`,
 `{ game: x }` -> `game`, `units.forEach(x =>` -> `unit`, `new Vec2()` -> `vec2`, `x / 1000` -> `dt`,

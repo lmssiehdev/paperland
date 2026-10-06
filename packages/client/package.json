@@ -1,6 +1,6 @@
 {
   "name": "@paperio/client",
-  "description": "Browser client: canvas renderer, Preact UI, input, skins artwork. Bundled to dist/app2.js.",
+  "description": "Browser client: canvas renderer, Preact UI, input, skins artwork. Built to dist/site/ (bun run build).",
   "type": "module",
   "private": true,
   "dependencies": {
@@ -9,8 +9,9 @@
     "preact": "^11.0.0"
   },
   "scripts": {
-    "build": "bun build src/main.ts --format=iife --define __DEV__=false --outfile dist/app2.js",
-    "typecheck": "tsgo --noEmit -p .",
-    "build:dev": "bun build src/main.ts --format=iife --define __DEV__=true --outfile dist/app2.js"
+    "build": "bun build.ts",
+    "build:dev": "bun build.ts --dev",
+    "dev": "bun build.ts --dev --watch",
+    "typecheck": "tsgo --noEmit -p . && tsgo --noEmit -p tsconfig.build.json"
   }
 }

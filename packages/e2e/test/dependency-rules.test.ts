@@ -19,6 +19,8 @@ const external: Record<string, RegExp> = {
   client: /^(preact|preact\/hooks|preact\/jsx-runtime)$/,
   server: /^(elysia|@elysiajs\/eden|bun|bun:test|node:.*)$/
 };
+// Captured data outside packages/ a package may import (inlined by the bundler): the server's game data.
+const data: Record<string, RegExp> = { server: /^\.\.\/original\/assets\/[\w/-]+\.json$/ };
 
 const importsOf = (source: string) =>
   [
@@ -33,7 +35,11 @@ for (const [pkg, may] of Object.entries(allowed)) {
       for (const spec of importsOf(await Bun.file(abs).text())) {
         let target: string | undefined;
         if (spec.startsWith("@paperio/")) target = spec.split("/")[1];
-        else if (spec.startsWith(".")) target = relative(packages, resolve(dirname(abs), spec)).split("/")[0];
+        else if (spec.startsWith(".")) {
+          const path = relative(packages, resolve(dirname(abs), spec));
+          if (data[pkg]?.test(path)) continue;
+          target = path.split("/")[0];
+        }
         if (
           target !== undefined
             ? !may.includes(target)

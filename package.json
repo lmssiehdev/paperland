@@ -20,10 +20,10 @@
     "webcrack": "^2.16.0"
   },
   "scripts": {
-    "build": "bun run --filter @paperio/client build",
+    "build": "bun run --filter @paperio/client --filter @paperio/server build",
     "build:dev": "bun run --filter @paperio/client build:dev",
-    "dev": "bun packages/server/src/dev.ts",
-    "serve": "bun packages/server/src/index.ts",
+    "dev": "bun run --parallel --filter @paperio/client --filter @paperio/server dev",
+    "serve": "SITE_DIR=packages/client/dist/site bun packages/server/src/index.ts",
     "mirror": "bun packages/e2e/src/mirror.ts",
     "mirror:original": "GAME_JS=original bun packages/e2e/src/mirror.ts",
     "typecheck": "bun run --filter '*' typecheck",

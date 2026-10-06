@@ -11,6 +11,9 @@ export interface SkinLayerConfig {
   src?: SkinImageSource;
   rotation?: number;
   scale?: number;
+  /** Offset from the avatar center, in track widths. */
+  x?: number;
+  y?: number;
   /** "target": layer rotates toward the unit's target instead of its heading. */
   direction?: string;
   pivot?: { x?: number; y?: number };
